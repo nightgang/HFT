@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background: #0A0A0A;
+  --color-surface: #121212;
+  --color-primary: #8A2BE2;
+  --color-primary-light: #A855F7;
+  --color-secondary: #B084F5;
+  --color-accent: #FF0033;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #D1D5DB;
+
+  --radius-card: 16px;
+  --radius-panel: 24px;
+
+  --shadow-glow-primary: 0 0 20px rgba(138, 43, 226, 0.6);
+  --shadow-glow-soft: 0 0 10px rgba(168, 85, 247, 0.4);
+
+  --blur-glass: 12px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(138, 43, 226, 0.16);
+  box-shadow: var(--shadow-glow-soft);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border-radius: var(--radius-panel);
+}
+
+.card-surface {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.18);
+  border-radius: var(--radius-card);
+}
