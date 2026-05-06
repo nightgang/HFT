@@ -1,0 +1,24 @@
+{
+  "name": "solana-trading-frontend",
+  "version": "1.0.0",
+  "description": "Institutional-grade Solana trading system frontend",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "reconnecting-websocket": "^4.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react-oxc": "^1.0.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.3",
+    "vite": "^8.0.10"
+  }
+}

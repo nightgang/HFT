@@ -1,0 +1,81 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+.env*
+.env.development
+.env.production
+
+# Vite / Frontend Build
+dist/
+build/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.mypy_cache/
+.coverage
+.pytest_cache/
+tox/
+.DS_Store
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Testing / Coverage
+coverage/
+.nyc_output/
+.coverage
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependencies (lockfiles already present, but ignore extras)
+yarn.lock
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# HFT / Potential custom (keys, temp data)
+private_keys.json
+wallet.json
+*.key
+config.private.json
+data/temp/
+trades_history.json
+
