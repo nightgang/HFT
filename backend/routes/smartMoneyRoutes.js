@@ -1,10 +1,11 @@
 const express = require('express');
 const logger = require('../utils/logger');
 const smartMoneyEngine = require('../services/engines/smartmoney.engine');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/signal/random', async (req, res) => {
+router.get('/signal/random', authenticate, async (req, res) => {
   try {
     const signal = await smartMoneyEngine.getRandomSmartMoneySignal();
     res.json(signal);
@@ -14,7 +15,7 @@ router.get('/signal/random', async (req, res) => {
   }
 });
 
-router.get('/signal/:walletAddress', async (req, res) => {
+router.get('/signal/:walletAddress', authenticate, async (req, res) => {
   try {
     const { walletAddress } = req.params;
     const signal = await smartMoneyEngine.getSmartMoneySignal(walletAddress);
@@ -25,7 +26,7 @@ router.get('/signal/:walletAddress', async (req, res) => {
   }
 });
 
-router.get('/signals', async (req, res) => {
+router.get('/signals', authenticate, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit, 10) || 5;
     const signals = await smartMoneyEngine.getSampleSmartMoneySignals(limit);
@@ -36,7 +37,7 @@ router.get('/signals', async (req, res) => {
   }
 });
 
-router.get('/:walletAddress', async (req, res) => {
+router.get('/:walletAddress', authenticate, async (req, res) => {
   try {
     const { walletAddress } = req.params;
     const analysis = await smartMoneyEngine.analyzeWallet(walletAddress);

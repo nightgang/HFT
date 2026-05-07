@@ -1,10 +1,11 @@
 const express = require('express');
 const logger = require('../utils/logger');
 const sniperEngine = require('../services/engines/sniper.engine');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/start', (req, res) => {
+router.post('/start', authenticate, (req, res) => {
   try {
     sniperEngine.start();
     res.json({ success: true, message: 'Sniper started' });
@@ -14,7 +15,7 @@ router.post('/start', (req, res) => {
   }
 });
 
-router.post('/stop', (req, res) => {
+router.post('/stop', authenticate, (req, res) => {
   try {
     sniperEngine.stop();
     res.json({ success: true, message: 'Sniper stopped' });
@@ -28,7 +29,7 @@ router.get('/status', (req, res) => {
   res.json(sniperEngine.getStatus());
 });
 
-router.post('/detect', async (req, res) => {
+router.post('/detect', authenticate, async (req, res) => {
   try {
     await sniperEngine.processTokenDetection(req.body);
     res.json({ success: true, message: 'Token detection processed' });
@@ -38,7 +39,7 @@ router.post('/detect', async (req, res) => {
   }
 });
 
-router.post('/enable-auto-trade', (req, res) => {
+router.post('/enable-auto-trade', authenticate, (req, res) => {
   try {
     sniperEngine.enableAutoTrade();
     res.json({ success: true, message: 'Auto trade enabled' });
@@ -48,7 +49,7 @@ router.post('/enable-auto-trade', (req, res) => {
   }
 });
 
-router.post('/disable-auto-trade', (req, res) => {
+router.post('/disable-auto-trade', authenticate, (req, res) => {
   try {
     sniperEngine.disableAutoTrade();
     res.json({ success: true, message: 'Auto trade disabled' });
