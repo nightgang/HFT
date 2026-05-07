@@ -16,22 +16,29 @@ class HeliusWebhookProcessor {
       try {
         const metadata = await heliusService.getTokenMetadata(tokenMint);
         if (!metadata) {
-          logger.warn(`No metadata found for mint ${tokenMint}`);
-          continue;
+          logger.warn(`No metadata found for mint ${tokenMint}, using fallback values`);
         }
 
         const tokenData = {
           mint: tokenMint,
-          name: metadata.name || metadata.symbol || 'UNKNOWN',
-          symbol: metadata.symbol || metadata.name || 'TOKEN',
-          decimals: metadata.decimals != null ? metadata.decimals : 0,
-          supply: metadata.supply?.toString() || '0',
-          creator: metadata.creator || '',
+          name: metadata?.name || metadata?.symbol || `TOKEN_${tokenMint.slice(0, 6)}`,
+          symbol: metadata?.symbol || metadata?.name || tokenMint.slice(0, 5),
+          decimals: metadata?.decimals != null ? metadata.decimals : 0,
+          supply: metadata?.supply?.toString() || '0',
+          creator: metadata?.creator || '',
           timestamp: Date.now(),
         };
 
         tokenDetectionSchema.parse(tokenData);
         await sniperEngine.processTokenDetection(tokenData);
+
+        // Broadcast token detection to frontend
+        const websocketServer = require('../ws/websocket.server');
+        websocketServer.broadcast({
+          type: 'TOKEN_DETECTED',
+          data: tokenData,
+        });
+
         processed++;
       } catch (error) {
         logger.error('Helius webhook processing error:', error.message);
@@ -48,6 +55,8 @@ class HeliusWebhookProcessor {
   }
 
   findTokenMints(item) {
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
     if (Array.isArray(item)) {
       return item.flatMap((entry) => this.findTokenMints(entry));
     }
@@ -55,8 +64,18 @@ class HeliusWebhookProcessor {
     if (item && typeof item === 'object') {
       const found = [];
 
-      if (typeof item.mint === 'string' && item.mint.length >= 32 && item.mint.length <= 44) {
-        found.push(item.mint);
+      const candidateFields = [
+        'mint',
+        'tokenMint',
+        'address',
+        'tokenAddress',
+        'account',
+      ];
+
+      for (const field of candidateFields) {
+        if (typeof item[field] === 'string' && base58Regex.test(item[field])) {
+          found.push(item[field]);
+        }
       }
 
       for (const value of Object.values(item)) {
@@ -64,6 +83,10 @@ class HeliusWebhookProcessor {
       }
 
       return found;
+    }
+
+    if (typeof item === 'string' && base58Regex.test(item)) {
+      return [item];
     }
 
     return [];

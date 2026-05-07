@@ -81,29 +81,45 @@ class EventPoller {
   }
 
   collectTokenMints(payload) {
-    if (!payload || typeof payload !== 'object') {
+    if (!payload) {
       return [];
     }
 
-    const candidateMints = [];
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const candidateMints = new Set();
     const stack = [payload];
 
     while (stack.length > 0) {
       const item = stack.pop();
-      if (!item || typeof item !== 'object') continue;
+      if (item === null || item === undefined) continue;
 
-      if (typeof item.mint === 'string' && item.mint.length >= 32 && item.mint.length <= 44) {
-        candidateMints.push(item.mint);
+      if (typeof item === 'string' && base58Regex.test(item)) {
+        candidateMints.add(item);
+        continue;
       }
 
-      for (const value of Object.values(item)) {
-        if (typeof value === 'object') {
+      if (typeof item === 'object') {
+        const candidateFields = [
+          'mint',
+          'tokenMint',
+          'address',
+          'tokenAddress',
+          'account',
+        ];
+
+        for (const field of candidateFields) {
+          if (typeof item[field] === 'string' && base58Regex.test(item[field])) {
+            candidateMints.add(item[field]);
+          }
+        }
+
+        for (const value of Object.values(item)) {
           stack.push(value);
         }
       }
     }
 
-    return [...new Set(candidateMints)];
+    return Array.from(candidateMints);
   }
 }
 

@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { Keypair, PublicKey } = require('@solana/web3.js');
 const logger = require('../../utils/logger');
 const { tradeBuyRequestSchema, tradeSellRequestSchema } = require('../../utils/validator');
@@ -5,12 +7,86 @@ const jupiterService = require('../../integrations/jupiter.service');
 const heliusService = require('../../integrations/helius.service');
 const smartMoneyEngine = require('./smartmoney.engine');
 const websocketServer = require('../../ws/websocket.server');
+const { encrypt, decrypt } = require('../../middleware/auth');
 
 class TradingEngine {
   constructor() {
     this.wallets = new Map(); // Store wallets by public key
     this.activeWallet = null;
     this.tradeHistory = []; // Store trade history
+    this.dataDir = path.resolve(__dirname, '../../data');
+    this.storePath = path.join(this.dataDir, 'wallets.json');
+    this.loadWalletStore();
+  }
+
+  loadWalletStore() {
+    try {
+      if (!fs.existsSync(this.storePath)) {
+        return;
+      }
+      const raw = fs.readFileSync(this.storePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.wallets)) {
+        parsed.wallets.forEach((wallet) => {
+          if (wallet.secretKey) {
+            try {
+              // Decrypt the secret key
+              const decryptedKey = decrypt(wallet.secretKey);
+              const keypair = Keypair.fromSecretKey(Buffer.from(decryptedKey, 'base64'));
+              wallet.keypair = keypair;
+              wallet.publicKey = keypair.publicKey;
+            } catch (decryptError) {
+              logger.error(`Failed to decrypt wallet ${wallet.name}:`, decryptError.message);
+              // Skip this wallet if decryption fails
+              return;
+            }
+          } else {
+            wallet.publicKey = new PublicKey(wallet.publicKey);
+          }
+          this.wallets.set(wallet.publicKey.toString(), wallet);
+        });
+      }
+      if (parsed.tradeHistory && Array.isArray(parsed.tradeHistory)) {
+        this.tradeHistory = parsed.tradeHistory;
+      }
+      if (parsed.activeWallet) {
+        this.activeWallet = this.wallets.get(parsed.activeWallet) || null;
+      }
+      logger.info('Loaded wallet store from disk (decrypted)');
+    } catch (error) {
+      logger.warn('Failed to load wallet store:', error.message);
+    }
+  }
+
+  saveWalletStore() {
+    try {
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+      const wallets = Array.from(this.wallets.values()).map((wallet) => {
+        const payload = {
+          name: wallet.name,
+          publicKey: wallet.publicKey.toString(),
+          external: wallet.external || false,
+          created: wallet.created,
+          connected: wallet.connected || null,
+        };
+        if (wallet.keypair && !wallet.external) {
+          // Encrypt the secret key before storing
+          payload.secretKey = encrypt(Buffer.from(wallet.keypair.secretKey).toString('base64'));
+        }
+        return payload;
+      });
+      const payload = {
+        wallets,
+        activeWallet: this.activeWallet ? this.activeWallet.publicKey.toString() : null,
+        tradeHistory: this.tradeHistory,
+      };
+      fs.writeFileSync(this.storePath, JSON.stringify(payload, null, 2), 'utf-8');
+      logger.info('Wallet store persisted to disk (encrypted)');
+    } catch (error) {
+      logger.error('Failed to save wallet store:', error.message);
+    }
   }
 
   // Wallet management
@@ -31,6 +107,7 @@ class TradingEngine {
     };
 
     this.wallets.set(keypair.publicKey.toString(), wallet);
+    this.saveWalletStore();
     logger.info(`Created wallet: ${keypair.publicKey.toString()}`);
     return wallet;
   }
@@ -44,6 +121,7 @@ class TradingEngine {
     };
 
     this.wallets.set(publicKey, wallet);
+    this.saveWalletStore();
     logger.info(`Connected external wallet: ${publicKey}`);
     return wallet;
   }
@@ -54,6 +132,7 @@ class TradingEngine {
       throw new Error('Wallet not found');
     }
     this.activeWallet = wallet;
+    this.saveWalletStore();
     logger.info(`Active wallet set to: ${publicKey}`);
   }
 
@@ -101,6 +180,7 @@ class TradingEngine {
     if (this.tradeHistory.length > 1000) {
       this.tradeHistory = this.tradeHistory.slice(0, 1000);
     }
+    this.saveWalletStore();
     logger.info(`Recorded trade: ${trade.id}`);
     return trade;
   }
@@ -210,6 +290,18 @@ class TradingEngine {
         status: 'success',
       });
 
+      // Broadcast trade update
+      websocketServer.broadcast({
+        type: 'TRADE_EXECUTED',
+        data: {
+          trade: tradeRecord,
+          wallet: {
+            name: this.activeWallet.name,
+            publicKey: this.activeWallet.publicKey.toString(),
+          },
+        },
+      });
+
       return {
         success: true,
         signature: result.signature,
@@ -269,6 +361,19 @@ class TradingEngine {
         signature: result.signature,
         status: 'success',
       });
+
+      // Broadcast trade update
+      websocketServer.broadcast({
+        type: 'TRADE_EXECUTED',
+        data: {
+          trade: tradeRecord,
+          wallet: {
+            name: this.activeWallet.name,
+            publicKey: this.activeWallet.publicKey.toString(),
+          },
+        },
+      });
+
       return {
         success: true,
         signature: result.signature,

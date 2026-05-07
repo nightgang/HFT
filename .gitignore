@@ -15,6 +15,9 @@ dist/
 build/
 .vite/
 
+# Backend runtime data
+/backend/data/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,10 +1,11 @@
 const express = require('express');
 const logger = require('../utils/logger');
 const arbitrageEngine = require('../services/engines/arbitrage.engine');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/check/:tokenMint', async (req, res) => {
+router.get('/check/:tokenMint', authenticate, async (req, res) => {
   try {
     const { tokenMint } = req.params;
     const result = await arbitrageEngine.detectArbitrageOpportunity(tokenMint);
