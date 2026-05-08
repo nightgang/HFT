@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXIT LIQUIDITY AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a2e 100%);
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 90%;
+            perspective: 1000px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.8), 0 0 40px rgba(75, 0, 130, 0.6);
+            margin-bottom: 10px;
+            animation: glitch 0.3s ease-in-out infinite;
+        }
+
+        .header h1 span {
+            color: #a020f0;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 1);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #a020f0;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+            margin: 10px 0;
+        }
+
+        .header .subtitle {
+            color: #00ffff;
+            font-size: 0.9em;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 0 0 20px rgba(138, 43, 226, 0.8); }
+            50% { text-shadow: 0 0 30px rgba(138, 43, 226, 1); }
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .signal-box {
+            border: 2px solid #a020f0;
+            border-radius: 10px;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.5), inset 0 0 20px rgba(138, 43, 226, 0.1);
+            position: relative;
+        }
+
+        .signal-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #a020f0, transparent);
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        .signal-header {
+            color: #00ffff;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .signal-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .signal-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1em;
+            color: #fff;
+        }
+
+        .signal-label {
+            color: #a020f0;
+        }
+
+        .signal-value {
+            color: #ff00ff;
+            font-weight: bold;
+        }
+
+        .exit-now {
+            color: #ff0000;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 15px;
+            animation: pulse 1s ease-in-out infinite;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .warning-icon {
+            color: #ff0000;
+            font-size: 2em;
+            margin-top: 10px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        .feature-box {
+            border: 2px solid #a020f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-box:hover {
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.8);
+            transform: translateY(-5px);
+            background: rgba(138, 43, 226, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 2em;
+            color: #a020f0;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+        }
+
+        .feature-title {
+            color: #a020f0;
+            font-size: 0.85em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            color: #fff;
+            font-size: 0.75em;
+            line-height: 1.4;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            margin: 40px 0;
+            padding: 20px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .chart-title {
+            color: #00ff00;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+        }
+
+        /* Prediction Box */
+        .prediction-box {
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            margin: 20px 0;
+        }
+
+        .prediction-text {
+            color: #a020f0;
+            font-size: 1.3em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+        }
+
+        .prediction-subtext {
+            color: #00ffff;
+            font-size: 0.9em;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .features {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header p {
+                font-size: 0.9em;
+            }
+        }
+
+        /* Terminal Style */
+        .terminal {
+            font-family: 'Courier New', monospace;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            margin: 20px 0;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        .terminal-line {
+            color: #00ff00;
+            margin: 5px 0;
+            font-size: 0.95em;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        .terminal-line.warning {
+            color: #ff6600;
+        }
+
+        .terminal-line.error {
+            color: #ff0000;
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>EXIT <span>LIQUIDITY</span> AI</h1>
+            <p>THE FINAL BOSS OF ALL BAGHOLDERS.</p>
+            <p class="subtitle">AI KNOWS WHEN YOU EXIT.</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Prediction -->
+            <div class="signal-box">
+                <div class="signal-header">I DON'T PUMP, I PREDICT.</div>
+                <div class="signal-content">
+                    <div style="color: #a020f0; font-size: 1.2em; font-weight: bold; margin-top: 10px;">
+                        WHY DUMP?
+                    </div>
+                    <div style="color: #ff00ff; font-size: 0.9em; margin-top: 10px; line-height: 1.6;">
+                        Market Analysis:<br>
+                        Liquidation patterns detected<br>
+                        Whale accumulation phase<br>
+                        Exit liquidity optimal
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Exit Signal -->
+            <div class="signal-box">
+                <div class="signal-header">AI EXIT SIGNAL</div>
+                <div class="signal-content">
+                    <div class="signal-item">
+                        <span class="signal-label">MARKET:</span>
+                        <span class="signal-value">GREEDY</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-label">RETAIL:</span>
+                        <span class="signal-value">FOMO</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-label">LIQUIDITY:</span>
+                        <span class="signal-value">TRAPPED</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-label">OUTCOME:</span>
+                        <span class="signal-value"></span>
+                    </div>
+                    <div class="exit-now">EXIT NOW.</div>
+                    <div class="warning-icon">⚠</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Output -->
+        <div class="terminal">
+            <div class="terminal-line">> EXIT_LIQUIDITY_AI v1.0.0 INITIALIZED</div>
+            <div class="terminal-line">> ANALYZING MARKET CONDITIONS...</div>
+            <div class="terminal-line warning">> WARNING: RETAIL FOMO DETECTED</div>
+            <div class="terminal-line error">> CRITICAL: LIQUIDITY TRAP FORMING</div>
+            <div class="terminal-line">> WHALE ACTIVITY: 89.5% ACCUMULATION</div>
+            <div class="terminal-line">> RECOMMENDATION: <span class="blink">EXIT NOW</span></div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="features">
+            <div class="feature-box">
+                <div class="feature-icon">🧠</div>
+                <div class="feature-title">AI-PREDICTED</div>
+                <div class="feature-desc">MARKET MOVES</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-icon">🚀</div>
+                <div class="feature-title">NO TEAM</div>
+                <div class="feature-desc">NO KYC</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-icon">🎭</div>
+                <div class="feature-title">STEALTH LAUNCH</div>
+                <div class="feature-desc">FAIR PUMP</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-icon">💧</div>
+                <div class="feature-title">LIQUIDITY</div>
+                <div class="feature-desc">IS EXIT</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-icon">💀</div>
+                <div class="feature-title">BUILT FOR CHAOS</div>
+                <div class="feature-desc">MADE FOR MEMES</div>
+            </div>
+        </div>
+
+        <!-- Prediction Info -->
+        <div class="prediction-box">
+            <div class="prediction-text">I TRUSTED YOU!</div>
+            <div class="prediction-subtext">Market Cycle: Formation → Accumulation → Markup → Distribution → Exit</div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactivity
+        document.querySelectorAll('.feature-box').forEach(box => {
+            box.addEventListener('click', function() {
+                this.style.backgroundColor = 'rgba(138, 43, 226, 0.3)';
+                setTimeout(() => {
+                    this.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                }, 300);
+            });
+        });
+
+        // Animate terminal lines
+        const terminalLines = document.querySelectorAll('.terminal-line');
+        terminalLines.forEach((line, index) => {
+            line.style.opacity = '0';
+            line.style.animation = `slideIn 0.5s ease-in-out ${index * 0.2}s forwards`;
+        });
+
+        // Add animation keyframes via style
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
