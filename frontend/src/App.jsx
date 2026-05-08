@@ -3,9 +3,11 @@ import Dashboard from './pages/Dashboard';
 import Sniper from './pages/Sniper';
 import Portfolio from './pages/Portfolio';
 import Logs from './pages/Logs';
+import ThemeToggle from './components/ThemeToggle';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [theme, setTheme] = useState('dark');
   const [systemStatus, setSystemStatus] = useState({
     sniperActive: false,
     autoTradeEnabled: false,
@@ -25,6 +27,10 @@ function App() {
     const interval = setInterval(fetchSystemStatus, 5000); // Update every 5 seconds
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('light-theme', theme === 'light');
+  }, [theme]);
 
   const fetchSystemStatus = async () => {
     try {
@@ -49,7 +55,7 @@ function App() {
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || Dashboard;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white font-mono">
+    <div className={`${theme === 'dark' ? 'min-h-screen bg-gray-950 text-white' : 'min-h-screen bg-slate-100 text-slate-900'} font-mono`}>
       {/* Terminal Header */}
       <header className="bg-black/60 border-b-2 border-green-500/40 backdrop-blur-sm p-4 shadow-lg">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
@@ -87,6 +93,9 @@ function App() {
               <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
               <span>CLIENTS: {systemStatus.connectedClients}</span>
             </div>
+          </div>
+          <div className="mt-4 lg:mt-0">
+            <ThemeToggle theme={theme} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
           </div>
         </div>
       </header>

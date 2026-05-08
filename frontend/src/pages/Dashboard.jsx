@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import LiveFeed from '../components/LiveFeed';
+import AdvancedChart from '../components/AdvancedChart';
+import ChartPanel from '../components/ChartPanel';
+import TradeConfirmation from '../components/TradeConfirmation';
+import RiskVisualization from '../components/RiskVisualization';
 
 function Dashboard() {
   const walletId = process.env.REACT_APP_DEFAULT_WALLET_ID || 'demo-wallet-1';
@@ -17,6 +21,32 @@ function Dashboard() {
   });
 
   const [tradeHeatmap, setTradeHeatmap] = useState(null);
+  const [pendingTrade, setPendingTrade] = useState({
+    pair: 'SOL/USDC',
+    type: 'BUY',
+    size: '12.5 SOL',
+    price: '$168.35',
+    slippage: '0.25%',
+    description: 'Confirm routed execution through the exchange with priority fee optimization.',
+  });
+  const [positions, setPositions] = useState([
+    { symbol: 'SOL', amount: 24.8, avgPrice: 164.9, pnl: 8.4 },
+    { symbol: 'USDC', amount: 6500, avgPrice: 1.0, pnl: 0.0 },
+    { symbol: 'RAY', amount: 280, avgPrice: 8.7, pnl: -1.8 },
+  ]);
+  const [riskData, setRiskData] = useState({
+    riskScore: 38,
+    exposure: '45%',
+    alerts: [
+      { title: 'Margin usage high', description: 'Portfolio exposure is near the configured threshold.' },
+      { title: 'Slippage alert', description: 'Price impact exceeded safe channel for the last position.' },
+    ],
+  });
+
+  const chartData = Array.from({ length: 20 }, (_, index) => ({
+    time: `2026-05-${String(index + 1).padStart(2, '0')}`,
+    value: Math.round(85 + Math.sin(index / 2) * 6 + Math.random() * 6),
+  }));
 
   const [systemHealth, setSystemHealth] = useState({
     cpuUsage: 0,
@@ -117,6 +147,14 @@ function Dashboard() {
     }
   };
 
+  const confirmPendingTrade = () => {
+    setPendingTrade(null);
+  };
+
+  const cancelPendingTrade = () => {
+    setPendingTrade(null);
+  };
+
   const getStatusColor = (value, thresholds = { good: 30, warning: 60 }) => {
     if (value <= thresholds.good) return 'text-green-400';
     if (value <= thresholds.warning) return 'text-yellow-400';
@@ -203,6 +241,19 @@ function Dashboard() {
             <div className="text-xs text-gray-400 mt-2">Open Positions</div>
           </div>
         </div>
+
+        <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+          <AdvancedChart data={chartData} />
+          <RiskVisualization riskScore={riskData.riskScore} exposure={riskData.exposure} alerts={riskData.alerts} />
+        </div>
+
+        {pendingTrade ? (
+          <TradeConfirmation
+            trade={pendingTrade}
+            onConfirm={confirmPendingTrade}
+            onCancel={cancelPendingTrade}
+          />
+        ) : null}
 
         {/* Heatmap Activity */}
         <div className="border border-violet-500/30 bg-violet-500/5 backdrop-blur-sm p-4 rounded-lg">
@@ -328,6 +379,58 @@ function Dashboard() {
           {/* Live Feed - spans 2 columns */}
           <div className="lg:col-span-2">
             <LiveFeed recentTrades={recentTrades} />
+          </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div className="rounded-3xl border border-slate-700/70 bg-slate-900/70 p-5 shadow-glowSoft">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-200">Position Management</div>
+                <div className="text-[11px] text-slate-500">Manage active holdings and watch exposure</div>
+              </div>
+              <div className="text-xs text-slate-400">Overview</div>
+            </div>
+            <div className="space-y-3">
+              {positions.map((position) => (
+                <div key={position.symbol} className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4">
+                  <div>
+                    <div className="text-xs text-slate-500">Asset</div>
+                    <div className="text-lg font-semibold text-white">{position.symbol}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-slate-500">Unrealized P&L</div>
+                    <div className={`text-lg font-semibold ${position.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {position.pnl >= 0 ? '+' : ''}{position.pnl.toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500">Amount</div>
+                  <div className="font-medium text-slate-100">{position.amount}</div>
+                  <div className="text-xs text-slate-500">Avg Price</div>
+                  <div className="font-medium text-slate-100">${position.avgPrice.toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-700/70 bg-slate-950/70 p-5 shadow-glowSoft">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-200">Order Controls</div>
+                <div className="text-[11px] text-slate-500">Quick toggles for closing and rerating positions</div>
+              </div>
+              <div className="text-xs text-slate-400">Actions</div>
+            </div>
+            <div className="grid gap-3">
+              <button type="button" className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
+                Close Selected Position
+              </button>
+              <button type="button" className="rounded-full border border-slate-700/70 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500">
+                Adjust Risk Limits
+              </button>
+              <button type="button" className="rounded-full border border-slate-700/70 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500">
+                Refresh Balance
+              </button>
+            </div>
           </div>
         </div>
 

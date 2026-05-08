@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const auditLogger = require('../utils/audit');
 
 // JWT Authentication Middleware
@@ -89,11 +90,44 @@ const validatePassword = (password) => {
          hasSpecialChar;
 };
 
+const hashPassword = async (password) => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+};
+
+const comparePasswords = async (rawPassword, hashedPassword) => {
+  if (!hashedPassword) return false;
+  return bcrypt.compare(rawPassword, hashedPassword);
+};
+
+const verifyWebhookSignature = (payload, signature) => {
+  if (!signature || !process.env.WEBHOOK_SIGNATURE_SECRET) {
+    return false;
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.WEBHOOK_SIGNATURE_SECRET)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(expectedSignature, 'hex'),
+      Buffer.from(signature, 'hex')
+    );
+  } catch (error) {
+    return false;
+  }
+};
+
 module.exports = {
   authenticate,
   authenticateApiKey,
   encrypt,
   decrypt,
   generateToken,
-  validatePassword
+  validatePassword,
+  hashPassword,
+  comparePasswords,
+  verifyWebhookSignature
 };

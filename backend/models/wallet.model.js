@@ -9,6 +9,11 @@ class WalletModel {
       wallet_address,
       wallet_name,
       wallet_type = 'standard',
+      parent_wallet_id = null,
+      spending_limit_usd = 0,
+      daily_spending_usd = 0,
+      address_whitelist = null,
+      address_blacklist = null,
       multisig_signers = null,
       multisig_threshold = null,
       multisig_address = null,
@@ -27,11 +32,13 @@ class WalletModel {
     const sql = `
       INSERT INTO wallets (
         wallet_address, wallet_name, wallet_type,
+        parent_wallet_id, spending_limit_usd, daily_spending_usd,
+        address_whitelist, address_blacklist,
         multisig_signers, multisig_threshold,
         multisig_address, metadata,
         encrypted_private_key, key_derivation_path, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `;
 
@@ -40,6 +47,11 @@ class WalletModel {
         wallet_address,
         wallet_name,
         wallet_type,
+        parent_wallet_id,
+        spending_limit_usd,
+        daily_spending_usd,
+        address_whitelist,
+        address_blacklist,
         multisig_signers,
         multisig_threshold,
         multisig_address,
@@ -102,6 +114,17 @@ class WalletModel {
       return result.rows;
     } catch (error) {
       logger.error('Error getting all active wallets:', error);
+      throw error;
+    }
+  }
+
+  static async getChildWallets(parentWalletId) {
+    const sql = 'SELECT * FROM wallets WHERE parent_wallet_id = $1 AND is_active = true ORDER BY created_at DESC';
+    try {
+      const result = await query(sql, [parentWalletId]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting child wallets:', error);
       throw error;
     }
   }

@@ -5,7 +5,7 @@
 
 const cron = require('node-cron');
 const emailService = require('./email.service');
-const executionAnalyticsService = require('./execution-analytics.service');
+const diContainer = require('./di-container');
 const logger = require('../utils/logger');
 
 class EmailScheduler {
@@ -86,6 +86,7 @@ class EmailScheduler {
       for (const wallet of subscribedWallets) {
         try {
           // Generate analytics for the past week
+          const executionAnalyticsService = diContainer.get('executionAnalyticsService');
           const analytics = await executionAnalyticsService.generateExecutionAnalytics(wallet.id, 7);
 
           const reportData = {
@@ -128,6 +129,7 @@ class EmailScheduler {
       for (const wallet of subscribedWallets) {
         try {
           // Generate analytics for the past day
+          const executionAnalyticsService = diContainer.get('executionAnalyticsService');
           const analytics = await executionAnalyticsService.generateExecutionAnalytics(wallet.id, 1);
 
           const summaryData = {

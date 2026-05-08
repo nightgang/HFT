@@ -3,6 +3,8 @@ const logger = require('../utils/logger');
 const tradingEngine = require('../services/engines/trading.engine');
 const { authenticate } = require('../middleware/auth');
 const auditLogger = require('../utils/audit');
+const WalletModel = require('../models/wallet.model');
+const walletRepository = require('../repositories/wallet.repository');
 const correlationService = require('../services/correlation.service');
 const rebalancingService = require('../services/portfolio-rebalancing.service');
 const twapService = require('../services/twap.service');
@@ -11,6 +13,17 @@ const backtestingService = require('../services/backtesting.service');
 const emailService = require('../services/email.service');
 const emailScheduler = require('../services/email-scheduler.service');
 const taxExportService = require('../services/tax-export.service');
+const walletRecoveryService = require('../services/wallet-recovery.service');
+const {
+  createWalletSchema,
+  connectWalletSchema,
+  multisigWalletSchema,
+  taxExportRequestSchema,
+  walletHierarchySchema,
+  walletLimitsSchema,
+  walletRecoverySchema,
+  addressListSchema
+} = require('../utils/validator');
 
 const router = express.Router();
 
@@ -43,7 +56,7 @@ const router = express.Router();
  */
 router.post('/wallet/create', authenticate, (req, res) => {
   try {
-    const { name, deterministic } = req.body;
+    const { name, deterministic } = createWalletSchema.parse(req.body);
     const wallet = tradingEngine.createWallet(name, deterministic);
 
     // Audit wallet creation
@@ -94,7 +107,7 @@ router.post('/wallet/create', authenticate, (req, res) => {
  */
 router.post('/wallet/connect', authenticate, (req, res) => {
   try {
-    const { publicKey, name } = req.body;
+    const { publicKey, name } = connectWalletSchema.parse(req.body);
     const wallet = tradingEngine.connectExternalWallet(publicKey, name);
 
     // Audit wallet connection
@@ -159,6 +172,162 @@ router.get('/wallets/multisig', authenticate, async (req, res) => {
     res.json({ success: true, wallets });
   } catch (error) {
     logger.error('Get multisig wallets error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/wallet/parent', authenticate, async (req, res) => {
+  try {
+    const { childWalletAddress, parentWalletAddress } = walletHierarchySchema.parse(req.body);
+    const childWallet = await walletRepository.getByAddress(childWalletAddress);
+    const parentWallet = await walletRepository.getByAddress(parentWalletAddress);
+
+    if (!childWallet || !parentWallet) {
+      return res.status(404).json({ success: false, error: 'Child or parent wallet not found' });
+    }
+
+    const updated = await walletRepository.update(childWallet.wallet_id, {
+      parent_wallet_id: parentWallet.wallet_id,
+      metadata: {
+        ...childWallet.metadata,
+        hierarchy: {
+          parent: parentWallet.wallet_address,
+          updatedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    auditLogger.logWalletOperation('assign-parent-wallet', childWallet.wallet_address, true, req.ip, req.get('User-Agent'));
+    res.json({ success: true, wallet: updated });
+  } catch (error) {
+    auditLogger.logWalletOperation('assign-parent-wallet', null, false, req.ip, req.get('User-Agent'));
+    logger.error('Assign parent wallet error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/wallet/settings', authenticate, async (req, res) => {
+  try {
+    const { walletAddress, spendingLimitUsd, dailySpendingUsd } = walletLimitsSchema.parse(req.body);
+    const wallet = await walletRepository.getByAddress(walletAddress);
+
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'Wallet not found' });
+    }
+
+    const updated = await walletRepository.update(wallet.wallet_id, {
+      spending_limit_usd: spendingLimitUsd,
+      daily_spending_usd: dailySpendingUsd ?? wallet.daily_spending_usd ?? 0
+    });
+
+    auditLogger.logWalletOperation('update-wallet-limits', walletAddress, true, req.ip, req.get('User-Agent'));
+    res.json({ success: true, wallet: updated });
+  } catch (error) {
+    auditLogger.logWalletOperation('update-wallet-limits', null, false, req.ip, req.get('User-Agent'));
+    logger.error('Update wallet limits error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/wallets/recover', authenticate, async (req, res) => {
+  try {
+    const { walletAddress, targetWalletAddress, execute } = walletRecoverySchema.parse(req.body);
+    const plan = await walletRecoveryService.prepareRecoveryPlan(walletAddress, targetWalletAddress);
+
+    if (execute) {
+      const result = await walletRecoveryService.executeRecoveryPlan(walletAddress, targetWalletAddress);
+      auditLogger.logWalletOperation('wallet-fund-recovery', walletAddress, true, req.ip, req.get('User-Agent'));
+      return res.json({ success: true, plan, result });
+    }
+
+    auditLogger.logWalletOperation('wallet-fund-recovery-plan', walletAddress, true, req.ip, req.get('User-Agent'));
+    res.json({ success: true, plan });
+  } catch (error) {
+    auditLogger.logWalletOperation('wallet-fund-recovery', req.body.walletAddress || null, false, req.ip, req.get('User-Agent'));
+    logger.error('Wallet recovery error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/wallets/whitelist', authenticate, async (req, res) => {
+  try {
+    const { walletAddress, addresses } = addressListSchema.parse(req.body);
+    const wallet = await walletRepository.getByAddress(walletAddress);
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'Wallet not found' });
+    }
+
+    const updated = await walletRepository.update(wallet.wallet_id, {
+      address_whitelist: addresses,
+      metadata: {
+        ...wallet.metadata,
+        whitelistUpdatedAt: new Date().toISOString(),
+      }
+    });
+
+    auditLogger.logWalletOperation('update-wallet-whitelist', walletAddress, true, req.ip, req.get('User-Agent'));
+    res.json({ success: true, wallet: updated });
+  } catch (error) {
+    auditLogger.logWalletOperation('update-wallet-whitelist', null, false, req.ip, req.get('User-Agent'));
+    logger.error('Update wallet whitelist error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/wallets/blacklist', authenticate, async (req, res) => {
+  try {
+    const { walletAddress, addresses } = addressListSchema.parse(req.body);
+    const wallet = await walletRepository.getByAddress(walletAddress);
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'Wallet not found' });
+    }
+
+    const updated = await walletRepository.update(wallet.wallet_id, {
+      address_blacklist: addresses,
+      metadata: {
+        ...wallet.metadata,
+        blacklistUpdatedAt: new Date().toISOString(),
+      }
+    });
+
+    auditLogger.logWalletOperation('update-wallet-blacklist', walletAddress, true, req.ip, req.get('User-Agent'));
+    res.json({ success: true, wallet: updated });
+  } catch (error) {
+    auditLogger.logWalletOperation('update-wallet-blacklist', null, false, req.ip, req.get('User-Agent'));
+    logger.error('Update wallet blacklist error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/wallets/filters/:walletAddress', authenticate, async (req, res) => {
+  try {
+    const wallet = await walletRepository.getByAddress(req.params.walletAddress);
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'Wallet not found' });
+    }
+
+    res.json({
+      success: true,
+      whitelist: wallet.address_whitelist || [],
+      blacklist: wallet.address_blacklist || []
+    });
+  } catch (error) {
+    logger.error('Get wallet filters error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/wallets/performance/:walletAddress', authenticate, async (req, res) => {
+  try {
+    const wallet = await walletRepository.getByAddress(req.params.walletAddress);
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'Wallet not found' });
+    }
+
+    const performance = await WalletModel.getPerformance(wallet.wallet_id);
+    res.json({ success: true, performance });
+  } catch (error) {
+    logger.error('Get wallet performance error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -648,7 +817,7 @@ router.get('/scheduler/status', authenticate, async (req, res) => {
 router.post('/exports/tax/:walletId', authenticate, async (req, res) => {
   try {
     const { walletId } = req.params;
-    const { format = 'csv', year } = req.body;
+    const { format, year } = taxExportRequestSchema.parse(req.body);
 
     const result = await taxExportService.generateTaxExport(walletId, format, year);
     res.json(result);

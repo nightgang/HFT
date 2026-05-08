@@ -6,10 +6,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 const logger = require('./utils/logger');
 const { testConnection } = require('./db/connection');
 const metricsService = require('./services/monitoring/metrics.service');
-const { authenticate, authenticateApiKey, generateToken } = require('./middleware/auth');
+const { authenticate, authenticateApiKey, generateToken, verifyWebhookSignature } = require('./middleware/auth');
 const websocketServer = require('./ws/websocket.server');
 const eventPoller = require('./services/eventPoller');
 const heliusWebhookProcessor = require('./services/heliusWebhook.processor');
@@ -18,6 +20,13 @@ const sniperRoutes = require('./routes/sniperRoutes');
 const tradingRoutes = require('./routes/tradingRoutes');
 const smartMoneyRoutes = require('./routes/smartMoneyRoutes');
 const arbitrageRoutes = require('./routes/arbitrageRoutes');
+const backupService = require('./services/backup.service');
+const executionAnalyticsService = require('./services/execution-analytics.service');
+const emailScheduler = require('./services/email-scheduler.service');
+const diContainer = require('./services/di-container');
+
+diContainer.register('executionAnalyticsService', executionAnalyticsService);
+diContainer.register('emailScheduler', emailScheduler);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -71,9 +80,26 @@ const corsOptions = {
 
 app.set('trust proxy', 1); // Trust first proxy for rate limiting
 app.use(cors(corsOptions));
-app.use(limiter);
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production'
+  }
+});
+
+app.use((req, res, next) => {
+  if (req.path === '/webhook/helius' || req.path === '/metrics' || req.path.startsWith('/api-docs') || req.path === '/swagger.json') {
+    return next();
+  }
+  return csrfProtection(req, res, next);
+});
+
+app.use(limiter);
 
 // Swagger API Documentation
 const swaggerJSDoc = require('swagger-jsdoc');
@@ -134,6 +160,10 @@ app.get('/swagger.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
+app.get('/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
@@ -152,7 +182,7 @@ app.get('/metrics', async (req, res) => {
 });
 
 // Authentication routes
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', strictLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -204,8 +234,13 @@ app.use('/api/trading/exports', express.static(exportsDir));
 
 // Legacy routes: preserve older frontend/CLI paths
 app.get('/sniper/status', (req, res) => res.redirect('/api/sniper/status'));
-app.post('/webhook/helius', authenticateApiKey, async (req, res) => {
+app.post('/webhook/helius', strictLimiter, authenticateApiKey, async (req, res) => {
   try {
+    const signature = req.headers['x-webhook-signature'];
+    if (!verifyWebhookSignature(req.body, signature)) {
+      return res.status(401).json({ success: false, error: 'Invalid webhook signature' });
+    }
+
     const result = await heliusWebhookProcessor.processWebhook(req.body);
 
     // Audit webhook reception
@@ -254,6 +289,16 @@ app.use(['/api/trading', '/trade', '/'], tradingRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
+  if (err && err.code === 'EBADCSRFTOKEN') {
+    logger.warn('CSRF token mismatch:', err);
+    return res.status(403).json({ error: 'Invalid CSRF token.' });
+  }
+
+  if (err instanceof AppError) {
+    logger.warn(`Handled app error: ${err.code}`);
+    return res.status(err.statusCode).json({ error: err.message, code: err.code, details: err.details });
+  }
+
   logger.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
@@ -322,6 +367,9 @@ app.listen(PORT, () => {
   logger.info('  /api/trading/*');
   logger.info('  /api/smart-money/*');
   logger.info('  /api/arbitrage/*');
+  backupService.startScheduledBackups().catch(error => {
+    logger.error('Failed to start backup scheduler:', error);
+  });
 });
 
 const websocketPort = parseInt(process.env.WS_PORT, 10) || 3002;
