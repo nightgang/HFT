@@ -1,3 +1,40 @@
+-- Migration: Initial schema setup
+-- Run this after creating the database
+
+-- Create custom types
+DO $$ BEGIN
+    CREATE TYPE trade_status AS ENUM ('pending', 'executing', 'completed', 'failed', 'cancelled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE trade_direction AS ENUM ('buy', 'sell');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE transaction_status AS ENUM ('pending', 'confirmed', 'failed');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE risk_violation_type AS ENUM ('daily_loss_limit', 'position_size', 'blacklist', 'exposure_limit', 'cooldown_violation');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Create schema_migrations table first
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    migration_id SERIAL PRIMARY KEY,
+    migration_name VARCHAR(255) NOT NULL UNIQUE,
+    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    success BOOLEAN DEFAULT true,
+    error_message TEXT
+);
+
 -- Core Schema for HFT Trading System
 -- Persistence Layer: Trade History, Wallet State, Risk Logs, Audit Trail
 
@@ -430,3 +467,6 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO hft_app_role;
 -- Restrict audit schema
 GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role;
 REVOKE INSERT, UPDATE, DELETE ON audit.key_access_logs FROM hft_app_role;
+
+-- Insert this migration record
+INSERT INTO schema_migrations (migration_name) VALUES ('001_initial_schema');

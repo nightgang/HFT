@@ -7,10 +7,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const logger = require('./utils/logger');
+const { testConnection } = require('./db/connection');
+const metricsService = require('./services/monitoring/metrics.service');
 const { authenticate, authenticateApiKey, generateToken } = require('./middleware/auth');
 const websocketServer = require('./ws/websocket.server');
 const eventPoller = require('./services/eventPoller');
 const heliusWebhookProcessor = require('./services/heliusWebhook.processor');
+const { shutdownManager } = require('./services/resilience.service');
 const sniperRoutes = require('./routes/sniperRoutes');
 const tradingRoutes = require('./routes/tradingRoutes');
 const smartMoneyRoutes = require('./routes/smartMoneyRoutes');
@@ -75,6 +78,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+  try {
+    const metrics = await metricsService.getMetricsString();
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.send(metrics);
+  } catch (error) {
+    logger.error('Metrics endpoint error:', error);
+    res.status(500).send('Error generating metrics');
+  }
 });
 
 // Authentication routes
@@ -204,6 +219,24 @@ if (missingEnv.length > 0) {
   process.exit(1);
 }
 
+// Test database connection
+(async () => {
+  const dbConnected = await testConnection();
+  if (!dbConnected) {
+    logger.error('Failed to connect to database. Exiting...');
+    process.exit(1);
+  }
+
+  // Run database migrations
+  const DatabaseMigrator = require('./db/migrate');
+  const migrator = new DatabaseMigrator();
+  const migrationSuccess = await migrator.runMigrations();
+  if (!migrationSuccess) {
+    logger.error('Database migrations failed. Exiting...');
+    process.exit(1);
+  }
+})();
+
 // Start servers
 app.listen(PORT, () => {
   logger.info(`🚀 HTTP API server running on port ${PORT}`);
@@ -218,18 +251,24 @@ const websocketPort = parseInt(process.env.WS_PORT, 10) || 3002;
 websocketServer.start(websocketPort);
 eventPoller.start();
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
+// Register shutdown handlers
+shutdownManager.registerHandler(async () => {
+  logger.info('Closing WebSocket server...');
   websocketServer.stop();
-  eventPoller.stop();
-  process.exit(0);
 });
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  websocketServer.stop();
+shutdownManager.registerHandler(async () => {
+  logger.info('Stopping event poller...');
   eventPoller.stop();
-  process.exit(0);
 });
+
+shutdownManager.registerHandler(async () => {
+  logger.info('Closing database connections...');
+  const { pool } = require('./db/connection');
+  await pool.end();
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => shutdownManager.shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdownManager.shutdown('SIGINT'));
 
