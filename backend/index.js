@@ -11,11 +11,23 @@ const csurf = require('csurf');
 const logger = require('./utils/logger');
 const { testConnection } = require('./db/connection');
 const metricsService = require('./services/monitoring/metrics.service');
+const monitoringService = require('./services/monitoring/monitoring.service');
+const circuitBreakerService = require('./services/resilience/circuit-breaker.service');
+const errorHandlingService = require('./services/resilience/error-handling.service');
+const gracefulShutdownManager = require('./services/resilience/graceful-shutdown.service');
+const failedTradeRecoveryService = require('./services/resilience/failed-trade-recovery.service');
 const { authenticate, authenticateApiKey, generateToken, verifyWebhookSignature } = require('./middleware/auth');
+const {
+  requestIdMiddleware,
+  requestLoggingMiddleware,
+  errorHandlingMiddleware,
+  healthCheckHandler,
+  readinessProbeHandler,
+  livenessProbeHandler
+} = require('./middleware/monitoring.middleware');
 const websocketServer = require('./ws/websocket.server');
 const eventPoller = require('./services/eventPoller');
 const heliusWebhookProcessor = require('./services/heliusWebhook.processor');
-const { shutdownManager } = require('./services/resilience.service');
 const sniperRoutes = require('./routes/sniperRoutes');
 const tradingRoutes = require('./routes/tradingRoutes');
 const smartMoneyRoutes = require('./routes/smartMoneyRoutes');
@@ -27,6 +39,9 @@ const diContainer = require('./services/di-container');
 
 diContainer.register('executionAnalyticsService', executionAnalyticsService);
 diContainer.register('emailScheduler', emailScheduler);
+diContainer.register('monitoringService', monitoringService);
+diContainer.register('circuitBreakerService', circuitBreakerService);
+diContainer.register('failedTradeRecoveryService', failedTradeRecoveryService);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -81,6 +96,11 @@ const corsOptions = {
 app.set('trust proxy', 1); // Trust first proxy for rate limiting
 app.use(cors(corsOptions));
 app.use(cookieParser());
+
+// Add request ID and logging middleware early
+app.use(requestIdMiddleware);
+app.use(requestLoggingMiddleware);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -164,15 +184,19 @@ app.get('/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: Date.now() });
-});
+// Health check endpoint (comprehensive)
+app.get('/health', healthCheckHandler);
+
+// Kubernetes liveness probe
+app.get('/healthz/live', livenessProbeHandler);
+
+// Kubernetes readiness probe  
+app.get('/healthz/ready', readinessProbeHandler);
 
 // Metrics endpoint for Prometheus
 app.get('/metrics', async (req, res) => {
   try {
-    const metrics = await metricsService.getMetricsString();
+    const metrics = monitoringService.getMetrics();
     res.set('Content-Type', 'text/plain; charset=utf-8');
     res.send(metrics);
   } catch (error) {
@@ -180,6 +204,52 @@ app.get('/metrics', async (req, res) => {
     res.status(500).send('Error generating metrics');
   }
 });
+
+// Circuit breaker status
+app.get('/api/system/circuit-breakers', authenticate, (req, res) => {
+  try {
+    const status = circuitBreakerService.getAllStatus();
+    res.json({
+      success: true,
+      circuit_breakers: status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Circuit breaker status error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Recovery queue status
+app.get('/api/system/recovery-queue', authenticate, async (req, res) => {
+  try {
+    const stats = await failedTradeRecoveryService.getQueueStats();
+    res.json({
+      success: true,
+      recovery_queue: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Recovery queue status error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Error stats
+app.get('/api/system/errors', authenticate, async (req, res) => {
+  try {
+    const stats = await errorHandlingService.getErrorStats();
+    res.json({
+      success: true,
+      error_stats: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 
 // Authentication routes
 app.post('/auth/login', strictLimiter, async (req, res) => {
@@ -359,41 +429,84 @@ if (missingEnv.length > 0) {
   }
 })();
 
+// Error handling middleware (must be last before listen)
+app.use(errorHandlingMiddleware);
+
 // Start servers
-app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   logger.info(`🚀 HTTP API server running on port ${PORT}`);
   logger.info('📋 Available endpoints:');
-  logger.info('  /api/sniper/*');
-  logger.info('  /api/trading/*');
-  logger.info('  /api/smart-money/*');
-  logger.info('  /api/arbitrage/*');
-  backupService.startScheduledBackups().catch(error => {
-    logger.error('Failed to start backup scheduler:', error);
-  });
+  logger.info('  /health          - Health check');
+  logger.info('  /api/sniper/*    - Sniper trading');
+  logger.info('  /api/trading/*   - Trading routes');
+  logger.info('  /api/smart-money/* - Smart money tracking');
+  logger.info('  /api/arbitrage/* - Arbitrage detection');
+  logger.info('  /metrics         - Prometheus metrics');
+
+  // Initialize services
+  try {
+    await monitoringService.initialize();
+    logger.info('✓ Monitoring service initialized');
+
+    await errorHandlingService.initialize();
+    logger.info('✓ Error handling service initialized');
+
+    await failedTradeRecoveryService.initialize();
+    logger.info('✓ Failed trade recovery service initialized');
+
+    // Initialize circuit breakers for external services
+    circuitBreakerService.initializeBreaker('solana-rpc', { failureThreshold: 5 });
+    circuitBreakerService.initializeBreaker('jupiter-api', { failureThreshold: 5 });
+    circuitBreakerService.initializeBreaker('helius-api', { failureThreshold: 3 });
+    logger.info('✓ Circuit breakers initialized');
+
+    backupService.startScheduledBackups().catch(error => {
+      logger.error('Failed to start backup scheduler:', error);
+    });
+
+  } catch (error) {
+    logger.error('Failed to initialize services:', error);
+  }
 });
 
 const websocketPort = parseInt(process.env.WS_PORT, 10) || 3002;
 websocketServer.start(websocketPort);
 eventPoller.start();
 
-// Register shutdown handlers
-shutdownManager.registerHandler(async () => {
+// Register graceful shutdown handlers
+gracefulShutdownManager.registerListener('WebSocket server', async () => {
   logger.info('Closing WebSocket server...');
   websocketServer.stop();
 });
 
-shutdownManager.registerHandler(async () => {
+gracefulShutdownManager.registerListener('Event poller', async () => {
   logger.info('Stopping event poller...');
   eventPoller.stop();
 });
 
-shutdownManager.registerHandler(async () => {
+gracefulShutdownManager.registerListener('Backup service', async () => {
+  logger.info('Stopping backup scheduler...');
+  if (backupService.stop) {
+    backupService.stop();
+  }
+});
+
+gracefulShutdownManager.registerListener('Database connections', async () => {
   logger.info('Closing database connections...');
   const { pool } = require('./db/connection');
   await pool.end();
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => shutdownManager.shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdownManager.shutdown('SIGINT'));
+gracefulShutdownManager.registerListener('HTTP server', async () => {
+  logger.info('Closing HTTP server...');
+  return new Promise((resolve) => {
+    server.close(resolve);
+  });
+});
+
+// Initialize signal handlers
+gracefulShutdownManager.initializeSignalHandlers();
+
+logger.info('System fully initialized and ready to handle requests');
+
 

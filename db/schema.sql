@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS wallets_3 PARTITION OF wallets FOR VALUES WITH (MODUL
 
 CREATE INDEX IF NOT EXISTS idx_wallet_address ON wallets(wallet_address);
 CREATE INDEX IF NOT EXISTS idx_active_wallets ON wallets(is_active);
+CREATE INDEX IF NOT EXISTS idx_wallet_created_at ON wallets(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS wallet_balances (
     balance_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -115,6 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_strategy_type ON trades(strategy_type);
 CREATE INDEX IF NOT EXISTS idx_status ON trades(status);
 CREATE INDEX IF NOT EXISTS idx_executed_at ON trades(executed_at);
 CREATE INDEX IF NOT EXISTS idx_created_at ON trades(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_strategy_created_at ON trades(strategy_type, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS trade_details (
     detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -175,6 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_wallet_violations ON risk_violations(wallet_id, c
 CREATE INDEX IF NOT EXISTS idx_violation_type ON risk_violations(violation_type);
 CREATE INDEX IF NOT EXISTS idx_severity ON risk_violations(severity);
 CREATE INDEX IF NOT EXISTS idx_resolved ON risk_violations(resolved_at);
+CREATE INDEX IF NOT EXISTS idx_violation_created_at ON risk_violations(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS risk_rules (
     rule_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

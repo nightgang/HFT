@@ -143,18 +143,43 @@ class KeyService {
 
   // Audit key access
   async logKeyAccess(walletId, action, success = true, ipAddress = null, userAgent = null) {
-    await query(`
-      INSERT INTO audit_logs (action, resource_type, resource_id, success, details, ip_address, user_agent)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [
-      action,
-      'wallet_key',
-      walletId,
-      success,
-      { timestamp: new Date().toISOString() },
-      ipAddress,
-      userAgent
-    ]);
+    try {
+      // Check if audit_logs table exists, if not just log to console
+      const auditLog = {
+        action,
+        resource_type: 'wallet_key',
+        resource_id: walletId,
+        success,
+        details: { timestamp: new Date().toISOString() },
+        ip_address: ipAddress,
+        user_agent: userAgent
+      };
+
+      try {
+        await query(`
+          INSERT INTO audit_logs (action, resource_type, resource_id, success, details, ip_address, user_agent)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+          action,
+          'wallet_key',
+          walletId,
+          success,
+          JSON.stringify({ timestamp: new Date().toISOString() }),
+          ipAddress,
+          userAgent
+        ]);
+      } catch (dbError) {
+        if (dbError.code === '42P01') { // Table doesn't exist
+          logger.warn('audit_logs table does not exist, creating security log in memory');
+        } else {
+          throw dbError;
+        }
+      }
+
+      logger.info(`Key access audit: ${action} on wallet ${walletId} - ${success ? 'SUCCESS' : 'FAILED'}`, auditLog);
+    } catch (error) {
+      logger.error('Failed to audit key access:', error);
+    }
   }
 
   // Backup key material (for disaster recovery)
