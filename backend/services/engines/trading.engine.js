@@ -8,6 +8,10 @@ const heliusService = require('../../integrations/helius.service');
 const smartMoneyEngine = require('./smartmoney.engine');
 const websocketServer = require('../../ws/websocket.server');
 const { encrypt, decrypt } = require('../../middleware/auth');
+const mevService = require('../mev/mev.service');
+const riskService = require('../risk/risk.service');
+const TradeModel = require('../../models/trade.model');
+const WalletModel = require('../../models/wallet.model');
 
 class TradingEngine {
   constructor() {
@@ -257,11 +261,34 @@ class TradingEngine {
         throw new Error('Cannot execute trades with external wallets - use manual signing');
       }
 
+      // Get wallet from database
+      const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
+      if (!walletRecord) {
+        throw new Error('Wallet not found in database');
+      }
+
+      // Risk check before execution
+      const riskCheck = await riskService.canExecuteTrade(walletRecord.wallet_id, {
+        amountIn: buyAmount,
+        tokenIn: { mint: 'So11111111111111111111111111111111111111112' }, // WSOL
+        tokenOut: { mint: validated.tokenMint }
+      });
+
+      if (!riskCheck.allowed) {
+        logger.warn('Trade blocked by risk engine:', riskCheck.violations);
+        return {
+          success: false,
+          error: `Risk violation: ${riskCheck.violations[0].message}`,
+          violations: riskCheck.violations
+        };
+      }
+
       logger.info(`Executing buy: ${buyAmount} SOL for ${validated.tokenMint}`);
 
       const wsolMint = 'So11111111111111111111111111111111111111112';
       const amountLamports = Math.floor(buyAmount * 1e9); // Convert SOL to lamports
 
+      // Get quote from Jupiter
       const quote = await jupiterService.getQuote(
         wsolMint,
         validated.tokenMint,
@@ -269,6 +296,35 @@ class TradingEngine {
         validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
       );
 
+      // MEV protection: Simulate slippage
+      const slippageSim = await mevService.simulateSlippage(
+        wsolMint,
+        validated.tokenMint,
+        amountLamports,
+        quote.route || {}
+      );
+
+      if (!slippageSim.slippageProtection) {
+        logger.warn('Trade aborted due to high slippage risk');
+        return {
+          success: false,
+          error: 'High slippage risk detected',
+          slippage: slippageSim
+        };
+      }
+
+      // MEV protection: Check for sandwich attacks
+      const sandwichCheck = await mevService.detectSandwichAttack(validated.tokenMint);
+      if (sandwichCheck.detected) {
+        logger.warn('Trade aborted due to sandwich attack detection');
+        return {
+          success: false,
+          error: 'Sandwich attack detected',
+          sandwich: sandwichCheck
+        };
+      }
+
+      // Execute trade with MEV protection
       const result = await jupiterService.executeSwap(
         quote,
         this.activeWallet.publicKey,
@@ -280,21 +336,58 @@ class TradingEngine {
 
       logger.info(`Buy executed successfully: ${result.signature}`);
 
-      // Record trade
-      const tradeRecord = this.recordTrade({
-        type: 'buy',
-        walletPublicKey: this.activeWallet.publicKey.toString(),
-        tokenMint: validated.tokenMint,
-        amount: buyAmount,
-        signature: result.signature,
-        status: 'success',
+      // Record trade in database
+      const tradeData = {
+        wallet_id: walletRecord.wallet_id,
+        strategy_type: 'trading',
+        direction: 'buy',
+        input_token_mint: wsolMint,
+        input_token_symbol: 'SOL',
+        input_amount: buyAmount,
+        output_token_mint: validated.tokenMint,
+        expected_output_amount: quote.outAmount,
+        actual_output_amount: result.outputAmount || quote.outAmount,
+        expected_price: quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
+        actual_price: result.price || quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
+        slippage_percent: quote.priceImpactPct || 0,
+        transaction_fee: result.fee || 0,
+        priority_fee: result.priorityFee || 0,
+        total_cost_usd: buyAmount * 100, // Approximate USD value
+        executed_at: new Date(),
+        tx_signature: result.signature,
+        tx_confirmation_status: 'confirmed',
+        pnl_usd: 0, // Will be calculated later
+        pnl_percent: 0,
+        status: 'completed'
+      };
+
+      const tradeRecord = await TradeModel.create(tradeData);
+
+      // Update wallet performance
+      await WalletModel.updatePerformance(walletRecord.wallet_id, {
+        total_trades: 1,
+        successful_trades: 1,
+        failed_trades: 0,
+        total_pnl: 0,
+        roi_percent: 0,
+        win_rate_percent: 100,
+        last_trade_at: new Date()
       });
 
       // Broadcast trade update
       websocketServer.broadcast({
         type: 'TRADE_EXECUTED',
         data: {
-          trade: tradeRecord,
+          trade: {
+            id: tradeRecord.trade_id,
+            type: 'buy',
+            tokenMint: validated.tokenMint,
+            amount: buyAmount,
+            signature: result.signature,
+            status: 'success',
+            slippage: slippageSim,
+            sandwich: sandwichCheck
+          },
           wallet: {
             name: this.activeWallet.name,
             publicKey: this.activeWallet.publicKey.toString(),
@@ -307,10 +400,43 @@ class TradingEngine {
         signature: result.signature,
         amount: buyAmount,
         tokenMint: validated.tokenMint,
-        tradeId: tradeRecord.id,
+        tradeId: tradeRecord.trade_id,
+        slippage: slippageSim,
+        sandwich: sandwichCheck
       };
     } catch (error) {
       logger.error('Buy execution error:', error);
+
+      // Record failed trade
+      if (this.activeWallet) {
+        try {
+          const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
+          if (walletRecord) {
+            await TradeModel.create({
+              wallet_id: walletRecord.wallet_id,
+              strategy_type: 'trading',
+              direction: 'buy',
+              input_token_mint: 'So11111111111111111111111111111111111111112',
+              input_token_symbol: 'SOL',
+              input_amount: tradeRequest.amount || parseFloat(process.env.DEFAULT_BUY_AMOUNT_SOL || '0.1'),
+              output_token_mint: tradeRequest.tokenMint,
+              status: 'failed',
+              error_message: error.message
+            });
+
+            // Update wallet performance
+            await WalletModel.updatePerformance(walletRecord.wallet_id, {
+              total_trades: 1,
+              successful_trades: 0,
+              failed_trades: 1,
+              last_trade_at: new Date()
+            });
+          }
+        } catch (recordError) {
+          logger.error('Failed to record failed trade:', recordError);
+        }
+      }
+
       return {
         success: false,
         error: error.message,
@@ -330,12 +456,35 @@ class TradingEngine {
         throw new Error('Cannot execute trades with external wallets - use manual signing');
       }
 
+      // Get wallet from database
+      const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
+      if (!walletRecord) {
+        throw new Error('Wallet not found in database');
+      }
+
+      // Risk check before execution
+      const riskCheck = await riskService.canExecuteTrade(walletRecord.wallet_id, {
+        amountIn: validated.amount,
+        tokenIn: { mint: validated.tokenMint },
+        tokenOut: { mint: 'So11111111111111111111111111111111111111112' } // WSOL
+      });
+
+      if (!riskCheck.allowed) {
+        logger.warn('Trade blocked by risk engine:', riskCheck.violations);
+        return {
+          success: false,
+          error: `Risk violation: ${riskCheck.violations[0].message}`,
+          violations: riskCheck.violations
+        };
+      }
+
       logger.info(`Executing sell: ${validated.amount} tokens of ${validated.tokenMint}`);
 
       const wsolMint = 'So11111111111111111111111111111111111111112';
       // Note: amount here is in token units, need to handle decimals properly
       const amountTokens = Math.floor(validated.amount * Math.pow(10, 6)); // Assume 6 decimals
 
+      // Get quote from Jupiter
       const quote = await jupiterService.getQuote(
         validated.tokenMint,
         wsolMint,
@@ -343,6 +492,35 @@ class TradingEngine {
         validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
       );
 
+      // MEV protection: Simulate slippage
+      const slippageSim = await mevService.simulateSlippage(
+        validated.tokenMint,
+        wsolMint,
+        amountTokens,
+        quote.route || {}
+      );
+
+      if (!slippageSim.slippageProtection) {
+        logger.warn('Trade aborted due to high slippage risk');
+        return {
+          success: false,
+          error: 'High slippage risk detected',
+          slippage: slippageSim
+        };
+      }
+
+      // MEV protection: Check for sandwich attacks
+      const sandwichCheck = await mevService.detectSandwichAttack(validated.tokenMint);
+      if (sandwichCheck.detected) {
+        logger.warn('Trade aborted due to sandwich attack detection');
+        return {
+          success: false,
+          error: 'Sandwich attack detected',
+          sandwich: sandwichCheck
+        };
+      }
+
+      // Execute trade
       const result = await jupiterService.executeSwap(
         quote,
         this.activeWallet.publicKey,
@@ -353,20 +531,59 @@ class TradingEngine {
       );
 
       logger.info(`Sell executed successfully: ${result.signature}`);
-      const tradeRecord = this.recordTrade({
-        type: 'sell',
-        walletPublicKey: this.activeWallet.publicKey.toString(),
-        tokenMint: validated.tokenMint,
-        amount: validated.amount,
-        signature: result.signature,
-        status: 'success',
+
+      // Record trade in database
+      const tradeData = {
+        wallet_id: walletRecord.wallet_id,
+        strategy_type: 'trading',
+        direction: 'sell',
+        input_token_mint: validated.tokenMint,
+        input_amount: validated.amount,
+        output_token_mint: wsolMint,
+        output_token_symbol: 'SOL',
+        expected_output_amount: quote.outAmount,
+        actual_output_amount: result.outputAmount || quote.outAmount,
+        expected_price: quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
+        actual_price: result.price || quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
+        slippage_percent: quote.priceImpactPct || 0,
+        transaction_fee: result.fee || 0,
+        priority_fee: result.priorityFee || 0,
+        total_cost_usd: validated.amount * 0.00001, // Approximate USD value
+        executed_at: new Date(),
+        tx_signature: result.signature,
+        tx_confirmation_status: 'confirmed',
+        pnl_usd: 0, // Will be calculated later
+        pnl_percent: 0,
+        status: 'completed'
+      };
+
+      const tradeRecord = await TradeModel.create(tradeData);
+
+      // Update wallet performance
+      await WalletModel.updatePerformance(walletRecord.wallet_id, {
+        total_trades: 1,
+        successful_trades: 1,
+        failed_trades: 0,
+        total_pnl: 0,
+        roi_percent: 0,
+        win_rate_percent: 100,
+        last_trade_at: new Date()
       });
 
       // Broadcast trade update
       websocketServer.broadcast({
         type: 'TRADE_EXECUTED',
         data: {
-          trade: tradeRecord,
+          trade: {
+            id: tradeRecord.trade_id,
+            type: 'sell',
+            tokenMint: validated.tokenMint,
+            amount: validated.amount,
+            signature: result.signature,
+            status: 'success',
+            slippage: slippageSim,
+            sandwich: sandwichCheck
+          },
           wallet: {
             name: this.activeWallet.name,
             publicKey: this.activeWallet.publicKey.toString(),
@@ -379,10 +596,43 @@ class TradingEngine {
         signature: result.signature,
         amount: validated.amount,
         tokenMint: validated.tokenMint,
-        tradeId: tradeRecord.id,
+        tradeId: tradeRecord.trade_id,
+        slippage: slippageSim,
+        sandwich: sandwichCheck
       };
     } catch (error) {
       logger.error('Sell execution error:', error);
+
+      // Record failed trade
+      if (this.activeWallet) {
+        try {
+          const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
+          if (walletRecord) {
+            await TradeModel.create({
+              wallet_id: walletRecord.wallet_id,
+              strategy_type: 'trading',
+              direction: 'sell',
+              input_token_mint: tradeRequest.tokenMint,
+              input_amount: tradeRequest.amount,
+              output_token_mint: 'So11111111111111111111111111111111111111112',
+              output_token_symbol: 'SOL',
+              status: 'failed',
+              error_message: error.message
+            });
+
+            // Update wallet performance
+            await WalletModel.updatePerformance(walletRecord.wallet_id, {
+              total_trades: 1,
+              successful_trades: 0,
+              failed_trades: 1,
+              last_trade_at: new Date()
+            });
+          }
+        } catch (recordError) {
+          logger.error('Failed to record failed trade:', recordError);
+        }
+      }
+
       return {
         success: false,
         error: error.message,

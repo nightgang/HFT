@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { Connection, PublicKey, Transaction } = require('@solana/web3.js');
 const logger = require('../utils/logger');
+const cacheService = require('../services/cache.service');
+const metricsService = require('../services/monitoring/metrics.service');
 
 class JupiterService {
   constructor() {
@@ -10,15 +12,87 @@ class JupiterService {
     this.maxRetries = 2;
     this.timeout = 30000; // 30 seconds
     this.mockMode = process.env.JUPITER_MOCK_ENABLED === 'true';
+    this.quoteCacheTTL = 30; // 30 seconds cache for quotes
+    this.priceCacheTTL = 60; // 60 seconds cache for prices
   }
 
-  async getQuote(inputMint, outputMint, amount, slippageBps = 1500) {
-    if (this.mockMode) {
-      logger.warn('Jupiter mock mode enabled, returning mock quote');
-      return this.createMockQuote(inputMint, outputMint, amount, slippageBps);
-    }
+  async getTokenPrice(tokenMint, vsToken = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') { // Default to USDC
+    const cacheKey = cacheService.constructor.marketDataKey(tokenMint, `price_${vsToken}`);
+    const startTime = Date.now();
 
     try {
+      // Try cache first
+      const cachedPrice = await cacheService.get(cacheKey);
+      if (cachedPrice) {
+        logger.debug(`Price cache hit for ${tokenMint}`);
+        return cachedPrice;
+      }
+
+      if (this.mockMode) {
+        const mockPrice = this.createMockPrice(tokenMint, vsToken);
+        await cacheService.set(cacheKey, mockPrice, this.priceCacheTTL);
+        return mockPrice;
+      }
+
+      // Get price from Jupiter price API
+      const response = await axios.get(`${this.apiUrl}/price`, {
+        params: {
+          ids: tokenMint,
+          vsToken: vsToken
+        },
+        timeout: this.timeout,
+      });
+
+      if (response.data && response.data.data && response.data.data[tokenMint]) {
+        const priceData = response.data.data[tokenMint];
+        const price = {
+          price: parseFloat(priceData.price),
+          vsToken: vsToken,
+          lastUpdated: Date.now()
+        };
+
+        // Cache the price
+        await cacheService.set(cacheKey, price, this.priceCacheTTL);
+
+        metricsService.recordRpcLatency('jupiter_price', 'api_call', Date.now() - startTime);
+        return price;
+      }
+
+      throw new Error(`Price not available for token ${tokenMint}`);
+    } catch (error) {
+      logger.error(`Token price error for ${tokenMint}:`, error.message);
+
+      // Try to return cached price even if expired on error
+      const cachedPrice = await cacheService.get(cacheKey);
+      if (cachedPrice) {
+        logger.warn('Returning stale cached price due to API error');
+        return cachedPrice;
+      }
+
+      // Return mock price as fallback
+      const mockPrice = this.createMockPrice(tokenMint, vsToken);
+      return mockPrice;
+    }
+  }
+    const cacheKey = cacheService.constructor.quoteKey(inputMint, outputMint, amount, slippageBps);
+    const startTime = Date.now();
+
+    try {
+      // Try cache first
+      const cachedQuote = await cacheService.get(cacheKey);
+      if (cachedQuote) {
+        logger.debug(`Quote cache hit for ${inputMint} -> ${outputMint}`);
+        metricsService.recordRpcLatency('jupiter_quote', 'cache_hit', Date.now() - startTime);
+        return cachedQuote;
+      }
+
+      if (this.mockMode) {
+        logger.warn('Jupiter mock mode enabled, returning mock quote');
+        const mockQuote = this.createMockQuote(inputMint, outputMint, amount, slippageBps);
+        await cacheService.set(cacheKey, mockQuote, this.quoteCacheTTL);
+        return mockQuote;
+      }
+
       const response = await axios.get(`${this.apiUrl}/quote`, {
         params: {
           inputMint,
@@ -30,13 +104,31 @@ class JupiterService {
       });
 
       if (response.data && response.data.data && response.data.data.length > 0) {
-        return response.data.data[0]; // Best quote
+        const quote = response.data.data[0]; // Best quote
+
+        // Cache the quote
+        await cacheService.set(cacheKey, quote, this.quoteCacheTTL);
+
+        metricsService.recordRpcLatency('jupiter_quote', 'api_call', Date.now() - startTime);
+        logger.debug(`Quote cached for ${inputMint} -> ${outputMint}`);
+        return quote;
       }
+
       throw new Error('No quote available');
     } catch (error) {
       logger.error('Jupiter quote error:', error.message);
+
+      // Try to return cached quote even if expired on error
+      const cachedQuote = await cacheService.get(cacheKey);
+      if (cachedQuote) {
+        logger.warn('Returning stale cached quote due to API error');
+        metricsService.recordRpcLatency('jupiter_quote', 'stale_cache', Date.now() - startTime);
+        return cachedQuote;
+      }
+
       logger.warn('Returning mock quote for testing');
-      return this.createMockQuote(inputMint, outputMint, amount, slippageBps);
+      const mockQuote = this.createMockQuote(inputMint, outputMint, amount, slippageBps);
+      return mockQuote;
     }
   }
 
@@ -206,6 +298,24 @@ class JupiterService {
         }
       }],
       otherAmountThreshold: (amount * 0.98).toString(),
+    };
+  }
+
+  createMockPrice(tokenMint, vsToken) {
+    // Generate semi-realistic mock prices
+    const basePrices = {
+      'So11111111111111111111111111111111111111112': 100, // SOL
+      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 1, // USDC
+    };
+
+    const basePrice = basePrices[tokenMint] || Math.random() * 10;
+    const volatility = 0.1; // 10% volatility
+    const randomFactor = 1 + (Math.random() - 0.5) * volatility;
+
+    return {
+      price: basePrice * randomFactor,
+      vsToken: vsToken,
+      lastUpdated: Date.now()
     };
   }
 }
