@@ -6,9 +6,14 @@ const metricsService = require('../services/monitoring/metrics.service');
 
 class JupiterService {
   constructor() {
-    this.apiUrl = process.env.JUPITER_API_URL;
-    this.rpcUrl = process.env.RPC_URL;
-    this.connection = new Connection(this.rpcUrl);
+    this.apiUrl = process.env.JUPITER_API_URL || 'https://quote-api.jup.ag';
+    this.rpcUrl = process.env.RPC_URL || 'https://api.mainnet-beta.solana.com';
+    try {
+      this.connection = new Connection(this.rpcUrl);
+    } catch (error) {
+      logger.warn('Invalid RPC URL, falling back to default connection. Error:', error.message);
+      this.connection = null;
+    }
     this.maxRetries = 2;
     this.timeout = 30000; // 30 seconds
     this.mockMode = process.env.JUPITER_MOCK_ENABLED === 'true';
@@ -74,6 +79,8 @@ class JupiterService {
       return mockPrice;
     }
   }
+
+  async getQuote(inputMint, outputMint, amount, slippageBps) {
     const cacheKey = cacheService.constructor.quoteKey(inputMint, outputMint, amount, slippageBps);
     const startTime = Date.now();
 

@@ -130,6 +130,61 @@ class TradingEngine {
     return wallet;
   }
 
+  async createMultisigWallet(name, signers = [], threshold = 2, multisigAddress = null, notes = null) {
+    if (!Array.isArray(signers) || signers.length < 2) {
+      throw new Error('Multisig wallet requires at least 2 signers');
+    }
+    if (!threshold || threshold > signers.length) {
+      throw new Error('Multisig threshold must be a positive number and less than or equal to signer count');
+    }
+
+    const walletAddress = multisigAddress || `multisig-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const walletRecord = await WalletModel.createMultisigWallet({
+      wallet_address: walletAddress,
+      wallet_name: name,
+      multisig_signers: signers,
+      multisig_threshold: threshold,
+      multisig_address: multisigAddress,
+      notes,
+      metadata: { createdBy: 'trading-engine' }
+    });
+
+    const wallet = {
+      ...walletRecord,
+      name: walletRecord.wallet_name,
+      publicKey: {
+        toString: () => walletRecord.wallet_address
+      },
+      multisig: true,
+      signers,
+      threshold,
+      multisigAddress: walletRecord.multisig_address || multisigAddress,
+      created: walletRecord.created_at
+    };
+
+    this.wallets.set(walletAddress, wallet);
+    this.saveWalletStore();
+
+    logger.info(`Created multisig wallet: ${walletAddress}`);
+    return wallet;
+  }
+
+  async getMultisigWallets() {
+    const wallets = await WalletModel.getMultisigWallets();
+    return wallets.map(wallet => ({
+      walletId: wallet.wallet_id,
+      walletName: wallet.wallet_name,
+      walletAddress: wallet.wallet_address,
+      multisigSigners: wallet.multisig_signers,
+      multisigThreshold: wallet.multisig_threshold,
+      multisigAddress: wallet.multisig_address,
+      createdAt: wallet.created_at,
+      updatedAt: wallet.updated_at,
+      isActive: wallet.is_active,
+      notes: wallet.notes,
+    }));
+  }
+
   setActiveWallet(publicKey) {
     const wallet = this.wallets.get(publicKey);
     if (!wallet) {

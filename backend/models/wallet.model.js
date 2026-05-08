@@ -8,6 +8,11 @@ class WalletModel {
     const {
       wallet_address,
       wallet_name,
+      wallet_type = 'standard',
+      multisig_signers = null,
+      multisig_threshold = null,
+      multisig_address = null,
+      metadata = null,
       private_key, // Plain private key
       key_derivation_path,
       notes
@@ -21,17 +26,27 @@ class WalletModel {
 
     const sql = `
       INSERT INTO wallets (
-        wallet_address, wallet_name, encrypted_private_key,
-        key_derivation_path, notes
+        wallet_address, wallet_name, wallet_type,
+        multisig_signers, multisig_threshold,
+        multisig_address, metadata,
+        encrypted_private_key, key_derivation_path, notes
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
 
     try {
       const result = await query(sql, [
-        wallet_address, wallet_name, encrypted_private_key,
-        key_derivation_path, notes
+        wallet_address,
+        wallet_name,
+        wallet_type,
+        multisig_signers,
+        multisig_threshold,
+        multisig_address,
+        metadata,
+        encrypted_private_key,
+        key_derivation_path,
+        notes
       ]);
       logger.info(`Wallet created: ${wallet_address}`);
       return result.rows[0];
@@ -75,6 +90,10 @@ class WalletModel {
     }
   }
 
+  static async createMultisigWallet(walletData) {
+    return this.create({ ...walletData, wallet_type: 'multisig' });
+  }
+
   // Get all active wallets
   static async getAllActive() {
     const sql = 'SELECT * FROM wallets WHERE is_active = true ORDER BY created_at DESC';
@@ -83,6 +102,17 @@ class WalletModel {
       return result.rows;
     } catch (error) {
       logger.error('Error getting all active wallets:', error);
+      throw error;
+    }
+  }
+
+  static async getMultisigWallets() {
+    const sql = 'SELECT * FROM wallets WHERE wallet_type = $1 AND is_active = true ORDER BY created_at DESC';
+    try {
+      const result = await query(sql, ['multisig']);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting multisig wallets:', error);
       throw error;
     }
   }

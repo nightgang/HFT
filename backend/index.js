@@ -75,6 +75,65 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Swagger API Documentation
+const swaggerJSDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+
+const swaggerDefinition = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Solana HFT Trading API',
+    version: '1.0.0',
+    description: 'Institutional-grade Solana trading system API',
+    contact: {
+      name: 'API Support',
+      email: 'support@example.com'
+    },
+  },
+  servers: [
+    {
+      url: `http://localhost:${PORT}`,
+      description: 'Development server',
+    },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      apiKeyAuth: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-API-Key',
+      },
+    },
+  },
+  security: [
+    {
+      bearerAuth: [],
+    },
+    {
+      apiKeyAuth: [],
+    },
+  ],
+};
+
+const options = {
+  swaggerDefinition,
+  apis: ['./routes/*.js', './index.js'], // Paths to files containing OpenAPI definitions
+};
+
+const swaggerSpec = swaggerJSDoc(options);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// API documentation endpoint
+app.get('/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
@@ -139,6 +198,10 @@ app.use(['/api/sniper', '/sniper'], sniperRoutes);
 app.use(['/api/smart-money', '/smart-money'], smartMoneyRoutes);
 app.use(['/api/arbitrage', '/arbitrage'], arbitrageRoutes);
 
+// Serve export files from the shared exports directory
+const exportsDir = path.join(__dirname, '../exports');
+app.use('/api/trading/exports', express.static(exportsDir));
+
 // Legacy routes: preserve older frontend/CLI paths
 app.get('/sniper/status', (req, res) => res.redirect('/api/sniper/status'));
 app.post('/webhook/helius', authenticateApiKey, async (req, res) => {
@@ -199,6 +262,20 @@ app.use((err, req, res, next) => {
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
+
+// Initialize email service if SMTP is configured
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  const emailService = require('./services/email.service');
+  emailService.initialize().catch(error => {
+    logger.error('Failed to initialize email service:', error);
+  });
+
+  // Start email scheduler
+  const emailScheduler = require('./services/email-scheduler.service');
+  emailScheduler.start().catch(error => {
+    logger.error('Failed to start email scheduler:', error);
+  });
+}
 
 // Global error handlers for debugging runtime crashes
 process.on('uncaughtException', (error) => {
