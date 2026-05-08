@@ -95,6 +95,77 @@ services:
       - postgres
     restart: unless-stopped
 
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hft-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://hft_user:hft_secure_password_change_in_production@postgres:5432/hft_trading
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_ENABLED: 'true'
+      JWT_SECRET: change_this_in_production
+      ENCRYPTION_KEY: change_this_in_production
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: your-email@gmail.com
+      SMTP_PASS: your-app-password
+    ports:
+      - "3000:3000"
+    networks:
+      - hft-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # AI Service
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: hft-ai-service
+    environment:
+      PYTHONPATH: /app
+    ports:
+      - "8000:8000"
+    networks:
+      - hft-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hft-frontend
+    ports:
+      - "8080:80"
+    networks:
+      - hft-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local

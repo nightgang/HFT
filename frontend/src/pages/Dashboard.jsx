@@ -2,16 +2,21 @@ import { useState, useEffect } from 'react';
 import LiveFeed from '../components/LiveFeed';
 
 function Dashboard() {
+  const walletId = process.env.REACT_APP_DEFAULT_WALLET_ID || 'demo-wallet-1';
+
   const [metrics, setMetrics] = useState({
     totalPnL: 0,
     hourlyReturn: 0,
     successRate: 0,
+    roiPercent: 0,
     avgTradeTime: 0,
     activePositions: 0,
     winCount: 0,
     lossCount: 0,
     totalTrades: 0,
   });
+
+  const [tradeHeatmap, setTradeHeatmap] = useState(null);
 
   const [systemHealth, setSystemHealth] = useState({
     cpuUsage: 0,
@@ -29,53 +34,85 @@ function Dashboard() {
   useEffect(() => {
     // Fetch initial metrics
     fetchMetrics();
+    fetchHeatmap();
     fetchSystemHealth();
 
     // Set up polling intervals
     const metricsInterval = setInterval(fetchMetrics, 5000);
+    const heatmapInterval = setInterval(fetchHeatmap, 15000);
     const healthInterval = setInterval(fetchSystemHealth, 3000);
 
     return () => {
       clearInterval(metricsInterval);
+      clearInterval(heatmapInterval);
       clearInterval(healthInterval);
     };
   }, []);
 
   const fetchMetrics = async () => {
     try {
-      const res = await fetch('http://localhost:3001/dashboard/metrics');
+      const res = await fetch(`http://localhost:3001/api/trading/dashboard/${walletId}/metrics`);
       if (res.ok) {
         const data = await res.json();
-        setMetrics(data);
+        const payload = data.metrics || data;
+        setMetrics(prev => ({
+          ...prev,
+          totalPnL: payload.pnl || prev.totalPnL,
+          hourlyReturn: payload.hourlyReturn || prev.hourlyReturn,
+          successRate: payload.winRate || payload.successRate || prev.successRate,
+          roiPercent: payload.roiPercent || prev.roiPercent,
+          avgTradeTime: payload.averageExecutionTime || prev.avgTradeTime,
+          activePositions: payload.activePositions || prev.activePositions,
+          totalTrades: payload.totalTrades || prev.totalTrades,
+          winCount: Math.round((payload.winRate || payload.successRate || 0) / 100 * (payload.totalTrades || 0)),
+          lossCount: Math.round((payload.totalTrades || 0) - ((payload.winRate || payload.successRate || 0) / 100 * (payload.totalTrades || 0))),
+        }));
       }
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
-      // Use simulated data for demo
       setMetrics(prev => ({
         ...prev,
         totalPnL: (Math.random() - 0.5) * 100,
         hourlyReturn: (Math.random() - 0.3) * 10,
         successRate: 45 + Math.random() * 35,
+        roiPercent: 8 + Math.random() * 6,
         activePositions: Math.floor(Math.random() * 8),
       }));
     }
   };
 
-  const fetchSystemHealth = async () => {
+  const fetchHeatmap = async () => {
     try {
-      const res = await fetch('http://localhost:3001/system/health');
+      const res = await fetch(`http://localhost:3001/api/trading/dashboard/${walletId}/heatmap`);
       if (res.ok) {
         const data = await res.json();
-        setSystemHealth(data);
+        setTradeHeatmap(data.heatmap || null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch heatmap:', error);
+      setTradeHeatmap(null);
+    }
+  };
+
+  const fetchSystemHealth = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/health');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemHealth(prev => ({
+          ...prev,
+          latency: data.latency || prev.latency,
+          connectionStatus: 'connected'
+        }));
       }
     } catch (error) {
       console.error('Failed to fetch system health:', error);
-      // Use simulated data for demo
       setSystemHealth(prev => ({
         ...prev,
         cpuUsage: 20 + Math.random() * 40,
         memoryUsage: 40 + Math.random() * 30,
         latency: 10 + Math.random() * 20,
+        connectionStatus: 'disconnected'
       }));
     }
   };
@@ -118,7 +155,7 @@ function Dashboard() {
       {/* Main Grid */}
       <div className="px-6 pb-6 space-y-6">
         {/* Key Metrics Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Total PnL */}
           <div className="border border-cyan-500/30 bg-cyan-500/5 backdrop-blur-sm p-4 rounded-lg hover:border-cyan-400/50 transition-colors">
             <div className="text-xs text-cyan-400/70 uppercase tracking-wider mb-2">Total P&L</div>
@@ -148,6 +185,15 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* ROI */}
+          <div className="border border-blue-500/30 bg-blue-500/5 backdrop-blur-sm p-4 rounded-lg hover:border-blue-400/50 transition-colors">
+            <div className="text-xs text-blue-400/70 uppercase tracking-wider mb-2">ROI</div>
+            <div className={`text-3xl font-bold ${metrics.roiPercent >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+              {metrics.roiPercent.toFixed(2)}%
+            </div>
+            <div className="text-xs text-gray-400 mt-2">Calculated over period</div>
+          </div>
+
           {/* Active Positions */}
           <div className="border border-orange-500/30 bg-orange-500/5 backdrop-blur-sm p-4 rounded-lg hover:border-orange-400/50 transition-colors">
             <div className="text-xs text-orange-400/70 uppercase tracking-wider mb-2">Active</div>
@@ -156,6 +202,52 @@ function Dashboard() {
             </div>
             <div className="text-xs text-gray-400 mt-2">Open Positions</div>
           </div>
+        </div>
+
+        {/* Heatmap Activity */}
+        <div className="border border-violet-500/30 bg-violet-500/5 backdrop-blur-sm p-4 rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm text-violet-400 uppercase tracking-wider font-bold">Trading Heatmap</div>
+              <p className="text-xs text-gray-400">Activity by weekday and hour</p>
+            </div>
+            <div className="text-xs text-gray-400">Last updated: {new Date().toLocaleTimeString()}</div>
+          </div>
+
+          {tradeHeatmap ? (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-[10px] uppercase text-gray-400 mb-2">
+                <span>Day</span>
+                <span className="flex gap-1 items-center">
+                  <span className="w-3 h-3 bg-slate-700 rounded-sm" />
+                  <span>Low</span>
+                  <span className="w-3 h-3 bg-violet-500 rounded-sm" />
+                  <span>High</span>
+                </span>
+              </div>
+              {tradeHeatmap.rows.map(row => (
+                <div key={row.day} className="flex items-center gap-2">
+                  <span className="w-12 text-xs text-gray-300">{row.day}</span>
+                  <div className="flex gap-0.5 overflow-hidden">
+                    {row.hours.map((count, hour) => {
+                      const intensity = tradeHeatmap.maxCount > 0 ? count / tradeHeatmap.maxCount : 0;
+                      const opacity = Math.min(1, Math.max(0.1, intensity * 1.2));
+                      return (
+                        <div
+                          key={`${row.day}-${hour}`}
+                          className="w-2 h-6 rounded-sm"
+                          style={{ backgroundColor: `rgba(139, 92, 246, ${opacity})` }}
+                          title={`${hour}:00 — ${count} trades`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-gray-400">Loading heatmap activity...</div>
+          )}
         </div>
 
         {/* System Health & Live Feed */}

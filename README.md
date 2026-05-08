@@ -177,7 +177,86 @@ AI_SERVICE_ENABLED=true
 cd cli
 node terminal.js
 ```
+## 🐳 Docker Deployment
 
+The system includes complete Docker containerization for production deployment.
+
+### Prerequisites
+- Docker 20.10+
+- Docker Compose 2.0+
+
+### Quick Start with Docker
+
+1. **Clone and configure environment:**
+```bash
+git clone <repository-url>
+cd HFT
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+2. **Start all services:**
+```bash
+docker-compose up -d
+```
+
+3. **Check service health:**
+```bash
+docker-compose ps
+```
+
+### Services Available
+
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:3000
+- **AI Service**: http://localhost:8000
+- **PostgreSQL**: localhost:5432
+- **Redis**: localhost:6379
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **pgAdmin**: http://localhost:5050 (admin@example.com/admin)
+
+### Development with Docker
+
+For development with hot reload:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up
+```
+
+### Production Deployment
+
+1. **Update environment variables in `.env`:**
+   - Change all default passwords
+   - Set production database credentials
+   - Configure proper JWT secrets
+   - Set up monitoring webhooks
+
+2. **Build and deploy:**
+```bash
+docker-compose up -d --build
+```
+
+3. **Scale services if needed:**
+```bash
+docker-compose up -d --scale backend=3
+```
+
+### Docker Commands
+
+```bash
+# View logs
+docker-compose logs -f backend
+
+# Restart service
+docker-compose restart backend
+
+# Update service
+docker-compose up -d --build backend
+
+# Clean up
+docker-compose down -v
+```
 ### 4. CLI Usage
 
 ```bash

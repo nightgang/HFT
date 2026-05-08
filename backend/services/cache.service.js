@@ -311,6 +311,74 @@ class CacheService {
   static riskKey(walletId, checkType) {
     return this.generateKey('risk', walletId, checkType);
   }
+
+  // Message Queue methods using Redis Streams
+
+  // Publish message to stream
+  async publishMessage(stream, message) {
+    try {
+      if (!this.isConnected) {
+        throw new Error('Redis not connected');
+      }
+
+      const id = await this.client.xAdd(stream, '*', { data: JSON.stringify(message) });
+      logger.debug(`Message published to stream ${stream}: ${id}`);
+      return id;
+    } catch (error) {
+      logger.error(`Error publishing message to stream ${stream}:`, error);
+      throw error;
+    }
+  }
+
+  // Consume messages from stream
+  async consumeMessages(stream, consumerGroup, consumerName, count = 10) {
+    try {
+      if (!this.isConnected) {
+        return [];
+      }
+
+      // Ensure consumer group exists
+      try {
+        await this.client.xGroupCreate(stream, consumerGroup, '0', { MKSTREAM: true });
+      } catch (groupError) {
+        if (!groupError.message.includes('BUSYGROUP')) {
+          throw groupError;
+        }
+      }
+
+      const messages = await this.client.xReadGroup(consumerGroup, consumerName, [{ key: stream, id: '>' }], { COUNT: count, BLOCK: 1000 });
+
+      if (!messages || messages.length === 0) {
+        return [];
+      }
+
+      const parsedMessages = messages[0].messages.map(msg => ({
+        id: msg.id,
+        data: JSON.parse(msg.message.data)
+      }));
+
+      return parsedMessages;
+    } catch (error) {
+      logger.error(`Error consuming messages from stream ${stream}:`, error);
+      return [];
+    }
+  }
+
+  // Acknowledge message
+  async acknowledgeMessage(stream, consumerGroup, messageId) {
+    try {
+      if (!this.isConnected) {
+        return false;
+      }
+
+      await this.client.xAck(stream, consumerGroup, messageId);
+      logger.debug(`Message acknowledged: ${stream}:${consumerGroup}:${messageId}`);
+      return true;
+    } catch (error) {
+      logger.error(`Error acknowledging message ${messageId}:`, error);
+      return false;
+    }
+  }
 }
 
 module.exports = new CacheService();

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hft-backend
+  namespace: solana-hft
+  labels:
+    app: hft-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hft-backend
+  template:
+    metadata:
+      labels:
+        app: hft-backend
+    spec:
+      containers:
+      - name: backend
+        image: your-registry/solana-hft-backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: hft-secrets
+              key: DATABASE_URL
+        - name: REDIS_HOST
+          value: "hft-redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hft-secrets
+              key: REDIS_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: hft-secrets
+              key: JWT_SECRET
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: hft-secrets
+              key: ENCRYPTION_KEY
+        - name: AI_SERVICE_URL
+          value: "http://hft-ai-service:8000"
+        envFrom:
+        - configMapRef:
+            name: hft-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
