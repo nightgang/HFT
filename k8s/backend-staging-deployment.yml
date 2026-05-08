@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hft-backend-staging
+  namespace: solana-hft-staging
+  labels:
+    app: hft-backend-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hft-backend-staging
+  template:
+    metadata:
+      labels:
+        app: hft-backend-staging
+    spec:
+      containers:
+      - name: backend
+        image: your-registry/solana-hft-backend:staging
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: hft-staging-secrets
+              key: DATABASE_URL
+        - name: REDIS_HOST
+          value: "hft-redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hft-staging-secrets
+              key: REDIS_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: hft-staging-secrets
+              key: JWT_SECRET
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: hft-staging-secrets
+              key: ENCRYPTION_KEY
+        - name: WEBHOOK_SIGNATURE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: hft-staging-secrets
+              key: WEBHOOK_SIGNATURE_SECRET
+        envFrom:
+        - configMapRef:
+            name: hft-staging-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5

@@ -1,0 +1,44 @@
+name: Node.js CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install backend dependencies
+        run: npm install --workspace backend
+
+      - name: Install frontend dependencies
+        run: npm install --workspace frontend
+
+      - name: Run backend lint
+        run: npm --workspace backend run lint
+
+      - name: Run backend tests
+        run: npm --workspace backend test
+
+      - name: Run audit
+        run: npm --workspace backend run audit
