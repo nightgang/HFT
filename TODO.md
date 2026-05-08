@@ -141,7 +141,6 @@ Polish dan optimization
 - [ ] Security best practices guide
 - [ ] Troubleshooting runbook
 - [x] Architecture diagrams (C4 model)
-- [ ] Video tutorials
 
 ### 16. **DevOps & Infrastructure**
 - [x] Docker containerization
