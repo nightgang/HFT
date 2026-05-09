@@ -151,7 +151,7 @@ class TradingEngine {
 
     const wallet = {
       ...walletRecord,
-      name: walletRecord.wallet_name,
+      walletName: walletRecord.wallet_name,
       publicKey: {
         toString: () => walletRecord.wallet_address
       },

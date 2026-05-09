@@ -1,5 +1,5 @@
 // Graceful Shutdown Manager
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 class GracefulShutdownManager {
   constructor() {

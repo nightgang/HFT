@@ -6,9 +6,9 @@ services:
     image: postgres:15-alpine
     container_name: hft-postgres
     environment:
-      POSTGRES_USER: hft_user
-      POSTGRES_PASSWORD: hft_secure_password_change_in_production
-      POSTGRES_DB: hft_trading
+      POSTGRES_USER: ${DB_USER:-hft_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      POSTGRES_DB: ${DB_NAME:-hft_trading}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     ports:
       - "5432:5432"

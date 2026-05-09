@@ -6,6 +6,7 @@ const auditLogger = require('../utils/audit');
 const WalletModel = require('../models/wallet.model');
 const walletRepository = require('../repositories/wallet.repository');
 const correlationService = require('../services/correlation.service');
+const portfolioTrackerService = require('../services/portfolio-tracker.service');
 const rebalancingService = require('../services/portfolio-rebalancing.service');
 const twapService = require('../services/twap.service');
 const executionAnalyticsService = require('../services/execution-analytics.service');
@@ -549,6 +550,17 @@ router.get('/correlation/:tokenMint/related', async (req, res) => {
     res.json({ tokenMint, correlatedPairs: result.slice(0, limit) });
   } catch (error) {
     logger.error('Related tokens correlation error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/portfolio/:walletId/correlation-analysis', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const result = await portfolioTrackerService.getCorrelationAnalysis(walletId);
+    res.json(result);
+  } catch (error) {
+    logger.error('Portfolio correlation analysis error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -18,11 +18,12 @@ class BackupService {
       const fileName = `hft-db-backup-${timestamp}.dump`;
       const filePath = path.join(this.backupDir, fileName);
 
-      if (!process.env.DATABASE_URL) {
+      const databaseUrl = process.env.DATABASE_URL || this.buildDatabaseUrl();
+      if (!databaseUrl) {
         throw new Error('DATABASE_URL is required to create database backups');
       }
 
-      const command = `pg_dump --format=c --no-owner --no-privileges "${process.env.DATABASE_URL}" -f "${filePath}"`;
+      const command = `pg_dump --format=c --no-owner --no-privileges "${databaseUrl}" -f "${filePath}"`;
       logger.info(`Running backup command: ${command}`);
 
       await new Promise((resolve, reject) => {
@@ -62,8 +63,40 @@ class BackupService {
     }
   }
 
+  buildDatabaseUrl() {
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || '5432';
+    const database = process.env.DB_NAME || 'hft_trading';
+    const user = process.env.DB_USER || 'hft_user';
+    const password = process.env.DB_PASSWORD || 'hft_secure_password_change_in_production';
+
+    if (!host || !port || !database || !user || !password) {
+      return null;
+    }
+
+    const encodedUser = encodeURIComponent(user);
+    const encodedPassword = encodeURIComponent(password);
+
+    const url = `postgresql://${encodedUser}:${encodedPassword}@${host}:${port}/${database}`;
+    logger.info('Derived DATABASE_URL from DB_* environment variables');
+    return url;
+  }
+
+  async hasPgDump() {
+    return new Promise((resolve) => {
+      exec('command -v pg_dump', (error) => {
+        resolve(!error);
+      });
+    });
+  }
+
   async startScheduledBackups() {
     if (this.backupJob) {
+      return;
+    }
+
+    if (!(await this.hasPgDump())) {
+      logger.warn('pg_dump is not installed; database backups are disabled until pg_dump is available.');
       return;
     }
 

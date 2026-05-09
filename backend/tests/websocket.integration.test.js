@@ -82,7 +82,7 @@ describe('WebSocketServer Integration Tests', () => {
         role: 'trader'
       };
 
-      const token = jwt.sign(userData, process.env.JWT_SECRET || 'test-secret');
+      const token = jwt.sign(userData, process.env.JWT_SECRET);
 
       const client = new WebSocket(`ws://localhost:${port}?token=${token}`);
 
@@ -105,8 +105,8 @@ describe('WebSocketServer Integration Tests', () => {
       const user1 = { userId: 'user1', username: 'user1' };
       const user2 = { userId: 'user2', username: 'user2' };
 
-      const token1 = jwt.sign(user1, process.env.JWT_SECRET || 'test-secret');
-      const token2 = jwt.sign(user2, process.env.JWT_SECRET || 'test-secret');
+      const token1 = jwt.sign(user1, process.env.JWT_SECRET);
+      const token2 = jwt.sign(user2, process.env.JWT_SECRET);
 
       const client1 = new WebSocket(`ws://localhost:${port}?token=${token1}`);
       const client2 = new WebSocket(`ws://localhost:${port}?token=${token2}`);
@@ -151,7 +151,7 @@ describe('WebSocketServer Integration Tests', () => {
       server.start(port);
 
       const userData = { userId: 'user123', username: 'testuser' };
-      token = jwt.sign(userData, process.env.JWT_SECRET || 'test-secret');
+      token = jwt.sign(userData, process.env.JWT_SECRET);
 
       client = new WebSocket(`ws://localhost:${port}?token=${token}`);
 
@@ -222,8 +222,8 @@ describe('WebSocketServer Integration Tests', () => {
       const user1 = { userId: 'user1', username: 'user1' };
       const user2 = { userId: 'user2', username: 'user2' };
 
-      token1 = jwt.sign(user1, process.env.JWT_SECRET || 'test-secret');
-      token2 = jwt.sign(user2, process.env.JWT_SECRET || 'test-secret');
+      token1 = jwt.sign(user1, process.env.JWT_SECRET);
+      token2 = jwt.sign(user2, process.env.JWT_SECRET);
 
       client1 = new WebSocket(`ws://localhost:${port}?token=${token1}`);
       client2 = new WebSocket(`ws://localhost:${port}?token=${token2}`);
@@ -334,7 +334,7 @@ describe('WebSocketServer Integration Tests', () => {
 
     it('should handle client errors gracefully', (done) => {
       const userData = { userId: 'user123', username: 'testuser' };
-      const token = jwt.sign(userData, process.env.JWT_SECRET || 'test-secret');
+      const token = jwt.sign(userData, process.env.JWT_SECRET);
 
       const client = new WebSocket(`ws://localhost:${port}?token=${token}`);
 
@@ -356,7 +356,7 @@ describe('WebSocketServer Integration Tests', () => {
 
     it('should clean up clients on connection errors', (done) => {
       const userData = { userId: 'user123', username: 'testuser' };
-      const token = jwt.sign(userData, process.env.JWT_SECRET || 'test-secret');
+      const token = jwt.sign(userData, process.env.JWT_SECRET);
 
       const client = new WebSocket(`ws://localhost:${port}?token=${token}`);
 
@@ -394,7 +394,7 @@ describe('WebSocketServer Integration Tests', () => {
 
       for (let i = 0; i < clientCount; i++) {
         const userData = { userId: `user${i}`, username: `user${i}` };
-        const token = jwt.sign(userData, process.env.JWT_SECRET || 'test-secret');
+        const token = jwt.sign(userData, process.env.JWT_SECRET);
 
         const client = new WebSocket(`ws://localhost:${port}?token=${token}`);
         clients.push(client);
@@ -431,7 +431,7 @@ describe('WebSocketServer Integration Tests', () => {
       // Create multiple clients
       for (let i = 0; i < clientCount; i++) {
         const userData = { userId: `user${i}`, username: `user${i}` };
-        const token = jwt.sign(userData, process.env.JWT_SECRET || 'test-secret');
+        const token = jwt.sign(userData, process.env.JWT_SECRET);
 
         const client = new WebSocket(`ws://localhost:${port}?token=${token}`);
         clients.push(client);

@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard';
 import Sniper from './pages/Sniper';
 import Portfolio from './pages/Portfolio';
 import Logs from './pages/Logs';
+import Status from './pages/Status';
 import ThemeToggle from './components/ThemeToggle';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
     { id: 'dashboard', name: '▶ Dashboard', component: Dashboard },
     { id: 'sniper', name: '🎯 Sniper', component: Sniper },
     { id: 'portfolio', name: '💼 Portfolio', component: Portfolio },
+    { id: 'status', name: '📡 Status', component: Status },
     { id: 'logs', name: '📋 Logs', component: Logs },
   ];
 

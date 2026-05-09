@@ -1,6 +1,7 @@
 // Risk Engine Tests
-const riskLimitsService = require('../../services/risk/risk-limits.service');
-const { query } = require('../../db/connection');
+const path = require('path');
+const riskLimitsService = require(path.resolve(__dirname, '../services/risk/risk-limits.service'));
+const { query } = require(path.resolve(__dirname, '../db/connection'));
 
 describe('Risk Limits Service', () => {
   beforeAll(async () => {

@@ -7,7 +7,7 @@ const dbConfig = {
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'hft_trading',
   user: process.env.DB_USER || 'hft_user',
-  password: process.env.DB_PASSWORD || 'hft_secure_password_change_in_production',
+  password: process.env.DB_PASSWORD,
   max: process.env.DB_MAX_CONNECTIONS || 20, // Connection pool size
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

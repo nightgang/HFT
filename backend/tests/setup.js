@@ -2,7 +2,9 @@
 const envPath = require('path').resolve(__dirname, '../.env');
 require('dotenv').config({ path: envPath });
 
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required for tests');
+}
 
 // Mock external dependencies
 jest.mock('../utils/logger', () => ({

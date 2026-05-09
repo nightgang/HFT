@@ -6,7 +6,7 @@ yarn-error.log*
 .pnp
 .pnp.js
 .env*
-.env.local
+!.env.example
 .env.development.local
 .env.production.local
 

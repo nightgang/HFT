@@ -3,6 +3,7 @@
 
 const logger = require('../utils/logger');
 const { query } = require('../db/connection');
+const correlationService = require('./correlation.service');
 
 class PortfolioTrackerService {
   constructor() {
@@ -238,19 +239,91 @@ class PortfolioTrackerService {
     }
   }
 
+  async savePortfolioCorrelationResults(walletId, results) {
+    try {
+      if (!results.length) {
+        return;
+      }
+
+      await query('DELETE FROM portfolio_correlations WHERE wallet_id = $1', [walletId]);
+
+      for (const result of results) {
+        await query(
+          `INSERT INTO portfolio_correlations (wallet_id, token_1, token_2, correlation)
+           VALUES ($1, $2, $3, $4)`,
+          [walletId, result.tokenA, result.tokenB, result.correlation]
+        );
+      }
+    } catch (error) {
+      logger.error('Error saving portfolio correlation results', error);
+      // Do not fail the entire analysis if persistence fails
+    }
+  }
+
   /**
    * Get correlation analysis between portfolio holdings
    */
-  async getCorrelationAnalysis(walletId) {
+  async getCorrelationAnalysis(walletId, { maxPositions = 8 } = {}) {
     try {
       const portfolio = await this.getPortfolioSummary(walletId);
+      const tokens = portfolio.positions
+        .filter(p => p.tokenMint)
+        .slice(0, maxPositions)
+        .map(p => p.tokenMint);
 
-      // TODO: Implement correlation calculation
-      // For now, return placeholder
+      if (tokens.length < 2) {
+        return {
+          walletId,
+          walletValueUsd: portfolio.totalValueUsd,
+          analyzedPairs: 0,
+          correlations: [],
+          note: 'Not enough portfolio holdings for correlation analysis'
+        };
+      }
+
+      const correlations = [];
+
+      for (let i = 0; i < tokens.length; i++) {
+        for (let j = i + 1; j < tokens.length; j++) {
+          const tokenA = tokens[i];
+          const tokenB = tokens[j];
+          const analysis = await correlationService.analyzeTokenCorrelation(tokenA, tokenB);
+
+          correlations.push({
+            tokenA,
+            tokenB,
+            correlation: analysis.correlation,
+            confidence: analysis.confidence,
+            dataPoints: analysis.dataPoints,
+            timeWindow: analysis.timeWindow,
+            interpretation: analysis.analysis,
+            timestamp: analysis.timestamp,
+            error: analysis.error
+          });
+        }
+      }
+
+      const numericCorrelations = correlations.filter(c => typeof c.correlation === 'number');
+      const topPositive = numericCorrelations
+        .slice()
+        .sort((a, b) => b.correlation - a.correlation)
+        .slice(0, 5);
+      const topNegative = numericCorrelations
+        .slice()
+        .sort((a, b) => a.correlation - b.correlation)
+        .slice(0, 5);
+
+      await this.savePortfolioCorrelationResults(walletId, correlations);
+
       return {
-        analyzed: portfolio.positions.length,
-        correlations: [],
-        note: 'Correlation analysis to be implemented'
+        walletId,
+        walletValueUsd: portfolio.totalValueUsd,
+        positionCount: tokens.length,
+        analyzedPairs: correlations.length,
+        correlations,
+        topPositive,
+        topNegative,
+        note: 'Correlation analysis computed across portfolio holdings using available token data.'
       };
     } catch (error) {
       logger.error('Error getting correlation analysis', error);
