@@ -1,4 +1,157 @@
-# HFT - Solana Trading System
+# HFT ⚔️ KATANA MODE
+
+Ultra-fast Solana trading system with AI-powered signals and cyberpunk interface.
+
+## 🚀 Quick Start (Docker - Recommended)
+
+### 1. Clone & Setup
+```bash
+git clone https://github.com/nightgang/HFT.git
+cd HFT
+cp .env.example .env
+```
+
+### 2. Configure Environment
+Edit `.env` with your settings:
+```env
+# Database
+DB_USER=hft_user
+DB_PASSWORD=your_secure_password
+DB_NAME=hft_trading
+
+# Solana
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+
+# JWT
+JWT_SECRET=your_jwt_secret_key
+```
+
+### 3. Launch System
+```bash
+docker-compose up -d
+```
+
+### 4. Access Dashboard
+- **Web Dashboard**: http://localhost:5173
+- **Katana Mode**: http://localhost:5173/katana
+- **API**: http://localhost:3000
+
+## 🛠️ Manual Setup (Alternative)
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 15+
+- Redis 7+
+- Python 3.9+
+
+### Installation
+```bash
+# Install dependencies
+npm install
+cd backend && npm install
+cd ../frontend && npm install
+cd ../ai-service && pip install -r requirements.txt
+
+# Setup database
+createdb hft_trading
+psql hft_trading < db/schema.sql
+
+# Start services
+npm run dev  # Runs backend + frontend
+```
+
+## 🎯 Usage Guide
+
+### First Time Setup
+1. **Create Account**: Register at http://localhost:5173
+2. **Add Wallet**: Go to Settings → Add Wallet → Enter private key
+3. **Fund Wallet**: Send SOL to your wallet for trading
+
+### Trading Methods
+
+#### Web Dashboard
+- **Regular Trading**: View charts, place manual orders
+- **Katana Mode**: Ultra-fast automated trading for meme coins
+
+#### CLI Terminal
+```bash
+npm run cli
+# Commands: login, wallet add, trade buy/sell, portfolio view
+```
+
+#### Katana Terminal
+```bash
+npm run katana
+# Commands: start, buy <amount>, sell <amount>, positions
+```
+
+## ⚙️ Key Features
+
+- **⚡ Ultra-Fast Execution**: Optimized for Solana speed
+- **🤖 AI Signals**: ML-powered trade predictions
+- **🛡️ Risk Protection**: Honeypot detection, liquidity checks
+- **📊 Real-Time Charts**: TradingView-style interface
+- **🔄 Multi-Wallet**: Trade across multiple wallets
+- **🎯 Sniper Tools**: Detect new token launches
+- **📱 WebSocket Updates**: Live price feeds and notifications
+
+## 🔧 Configuration
+
+### Katana Mode Settings (.env)
+```env
+KATANA_ENABLED=true
+KATANA_MAX_CONCURRENT_TRADES=5
+KATANA_MIN_LIQUIDITY_SOL=5
+KATANA_AUTO_BUY_ENABLED=true
+KATANA_TP1_PROFIT=200  # Take profit levels
+```
+
+### Risk Management
+- Automatic honeypot detection
+- Liquidity monitoring
+- Developer wallet analysis
+- Slippage protection
+
+## 📊 Monitoring
+
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3001
+- **Health Checks**: All services include health monitoring
+
+## 🐛 Troubleshooting
+
+**Services not starting?**
+```bash
+docker-compose logs
+```
+
+**Database connection issues?**
+```bash
+docker-compose exec postgres pg_isready
+```
+
+**Frontend not loading?**
+```bash
+cd frontend && npm run dev
+```
+
+## 📚 API Reference
+
+### Trading
+```
+POST /api/trades/execute    # Execute trade
+GET  /api/portfolio/balance # View balance
+```
+
+### Katana Mode
+```
+POST /api/katana/start     # Start automated trading
+GET  /api/katana/status    # Check status
+```
+
+---
+
+**⚠️ Disclaimer**: This is experimental software. Use at your own risk. Always test with small amounts first.# HFT - Solana Trading System
 
 Sistem trading otomatis untuk Solana blockchain dengan AI-powered signal scoring.
 
