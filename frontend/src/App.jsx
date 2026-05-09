@@ -4,6 +4,7 @@ import Sniper from './pages/Sniper';
 import Portfolio from './pages/Portfolio';
 import Logs from './pages/Logs';
 import Status from './pages/Status';
+import KatanaDashboard from './pages/KatanaDashboard';
 import ThemeToggle from './components/ThemeToggle';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
 
   const tabs = [
     { id: 'dashboard', name: '▶ Dashboard', component: Dashboard },
+    { id: 'katana', name: '⚔️ Katana', component: KatanaDashboard },
     { id: 'sniper', name: '🎯 Sniper', component: Sniper },
     { id: 'portfolio', name: '💼 Portfolio', component: Portfolio },
     { id: 'status', name: '📡 Status', component: Status },

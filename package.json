@@ -12,7 +12,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "start-backend": "cd backend && npm start",
     "start-frontend": "cd frontend && npm run dev",
-    "cli": "node cli/terminal.js"
+    "cli": "node cli/terminal.js",
+    "katana": "node cli/katana-terminal.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

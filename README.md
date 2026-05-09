@@ -42,6 +42,14 @@ npm run dev:frontend # Frontend di port 5173
 npm run cli
 ```
 
+**Katana Mode (Ultra-fast Trading):**
+```bash
+# Terminal mode
+npm run katana
+
+# Or access via web dashboard at /katana
+```
+
 **Production:**
 ```bash
 npm run start-backend
@@ -100,6 +108,97 @@ GET    /api/market/chart/:token    # Get chart data
 ### AI Predictions
 ```
 POST   /api/ai/predict/:token     # Get trade signal
+```
+
+## ⚔️ Katana Mode (Ultra-fast Trading)
+
+Katana Mode adalah sistem trading ultra-cepat untuk meme coin Solana dengan fitur-fitur canggih:
+
+### 🚀 Fitur Utama
+
+- **Ultra Fast Execution**: Optimasi kecepatan eksekusi dengan priority fees
+- **Sniper Features**: Deteksi peluncuran token baru secara real-time
+- **Risk Protection**: Deteksi honeypot, freeze authority, dan risiko lainnya
+- **TP System**: Take Profit otomatis (TP1: 200%, TP2: 400%, TP3: 600%)
+- **Multi-wallet**: Eksekusi trading di multiple wallet secara bersamaan
+
+### 🎯 Cara Menggunakan Katana Mode
+
+#### Web Dashboard
+1. Buka http://localhost:5173
+2. Pilih tab "⚔️ Katana"
+3. Klik "Start Katana" untuk mengaktifkan
+4. Pilih token dari live feed
+5. Klik "Buy Token" untuk trading otomatis
+
+#### Terminal Mode
+```bash
+npm run katana
+
+# Commands:
+start          # Start Katana Mode
+stop           # Stop Katana Mode
+status         # Show current status
+buy <amount>   # Buy selected token
+sell <amount>  # Sell selected token
+select <mint>  # Select token for trading
+positions      # Show active positions
+help           # Show help
+exit           # Exit terminal
+```
+
+### 🛡️ Risk Management
+
+Katana Mode secara otomatis mendeteksi:
+- **Honeypot tokens** (freeze/mint authority tidak revoked)
+- **Liquidity removal** (penarikan liquidity yang mencurigakan)
+- **Suspicious dev wallets** (wallet developer memiliki terlalu banyak supply)
+- **Rug pull indicators** (sinyal-sinyal manipulasi harga)
+
+### ⚙️ Konfigurasi Katana
+
+Tambahkan ke `.env`:
+
+```env
+# Katana Mode
+KATANA_ENABLED=true
+KATANA_TERMINAL_MODE=false
+KATANA_WS_PORT=3003
+
+# Trading Config
+KATANA_MAX_CONCURRENT_TRADES=5
+KATANA_MIN_LIQUIDITY_SOL=5
+KATANA_MAX_SLIPPAGE=0.3
+KATANA_AUTO_BUY_ENABLED=true
+
+# Strategy
+KATANA_TP1_PROFIT=200
+KATANA_TP1_SELL=30
+KATANA_TP2_PROFIT=400
+KATANA_TP2_SELL=30
+KATANA_TP3_PROFIT=600
+KATANA_TP3_SELL=100
+
+# Risk Protection
+KATANA_RISK_HONEYPOT_CHECK=true
+KATANA_RISK_LIQUIDITY_CHECK=true
+KATANA_RISK_DEV_CHECK=true
+
+# Execution
+KATANA_EXECUTOR_MAX_RETRIES=3
+KATANA_JITO_ENABLED=false
+KATANA_JITO_TIP=10000
+```
+
+### 📊 API Endpoints Katana
+
+```
+GET    /api/katana/status         # Status Katana
+POST   /api/katana/start          # Start Katana
+POST   /api/katana/stop           # Stop Katana
+POST   /api/katana/trade          # Execute trade
+GET    /api/katana/positions      # Active positions
+GET    /api/katana/stats          # Statistics
 ```
 
 ## Deployment
