@@ -32,6 +32,7 @@ const sniperRoutes = require('./routes/sniperRoutes');
 const tradingRoutes = require('./routes/tradingRoutes');
 const smartMoneyRoutes = require('./routes/smartMoneyRoutes');
 const arbitrageRoutes = require('./routes/arbitrageRoutes');
+const katanaRoutes = require('./routes/katanaRoutes');
 const backupService = require('./services/backup.service');
 const executionAnalyticsService = require('./services/execution-analytics.service');
 const emailScheduler = require('./services/email-scheduler.service');
@@ -42,6 +43,10 @@ diContainer.register('emailScheduler', emailScheduler);
 diContainer.register('monitoringService', monitoringService);
 diContainer.register('circuitBreakerService', circuitBreakerService);
 diContainer.register('failedTradeRecoveryService', failedTradeRecoveryService);
+
+// Initialize Katana Engine
+const katanaEngine = require('./services/engines/katana.engine');
+diContainer.register('katanaEngine', katanaEngine);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -322,6 +327,7 @@ app.use(['/api/trading', '/trading'], tradingRoutes);
 app.use(['/api/sniper', '/sniper'], sniperRoutes);
 app.use(['/api/smart-money', '/smart-money'], smartMoneyRoutes);
 app.use(['/api/arbitrage', '/arbitrage'], arbitrageRoutes);
+app.use(['/api/katana', '/katana'], katanaRoutes);
 
 // Serve export files from the shared exports directory
 const exportsDir = path.join(__dirname, '../exports');
@@ -489,6 +495,16 @@ const server = app.listen(PORT, async () => {
       logger.error('Failed to start backup scheduler:', error);
     });
 
+    // Initialize Katana Engine if enabled
+    if (process.env.KATANA_ENABLED !== 'false') {
+      try {
+        await katanaEngine.start();
+        logger.info('✓ Katana Mode engine initialized');
+      } catch (error) {
+        logger.error('Failed to initialize Katana engine:', error);
+      }
+    }
+
   } catch (error) {
     logger.error('Failed to initialize services:', error);
   }
@@ -509,10 +525,10 @@ gracefulShutdownManager.registerListener('Event poller', async () => {
   eventPoller.stop();
 });
 
-gracefulShutdownManager.registerListener('Backup service', async () => {
-  logger.info('Stopping backup scheduler...');
-  if (backupService.stop) {
-    backupService.stop();
+gracefulShutdownManager.registerListener('Katana Engine', async () => {
+  logger.info('Stopping Katana engine...');
+  if (katanaEngine && katanaEngine.isActive) {
+    await katanaEngine.stop();
   }
 });
 
