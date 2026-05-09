@@ -233,22 +233,53 @@ class SmartMoneyEngine {
       return this.analyzeWallet(randomWallet);
     }
 
-    const score = Math.floor(Math.random() * 60) + 20;
+    // Generate more realistic signal with pattern-based scoring
+    const patterns = [
+      { signal: 'WHALE_ACCUMULATION', weight: 0.25, minScore: 70 },
+      { signal: 'EARLY_STAGE_ADOPTION', weight: 0.25, minScore: 60 },
+      { signal: 'PROFIT_TAKING', weight: 0.20, minScore: 50 },
+      { signal: 'PORTFOLIO_DIVERSIFICATION', weight: 0.20, minScore: 45 },
+      { signal: 'RISK_HEDGING', weight: 0.10, minScore: 35 }
+    ];
+
+    // Select dominant pattern
+    const dominantPattern = patterns[Math.floor(Math.random() * patterns.length)];
+    const baseScore = dominantPattern.minScore + Math.floor(Math.random() * 20);
+    const score = Math.min(100, Math.max(20, baseScore));
+
+    // Generate realistic breakdown
+    const breakdown = {
+      whaleDetection: score >= 60 ? Math.floor(Math.random() * 10) + 10 : Math.floor(Math.random() * 5) + 2,
+      historicalROI: score >= 40 ? Math.floor(Math.random() * 15) + 5 : Math.floor(Math.random() * 5),
+      accumulationPatterns: score >= 50 ? Math.floor(Math.random() * 15) + 8 : Math.floor(Math.random() * 10) + 2,
+      copyTradeSignal: score >= 70 ? Math.floor(Math.random() * 15) + 5 : Math.floor(Math.random() * 5),
+      marketTiming: score >= 55 ? Math.floor(Math.random() * 10) + 5 : Math.floor(Math.random() * 5),
+    };
+
+    // Determine signals based on patterns
+    const signals = [];
+    if (score >= 75) signals.push('WHALE_ACTIVITY', 'STRONG_BUY_SIGNAL');
+    if (score >= 70) signals.push('ACCUMULATION_PHASE');
+    if (score >= 60) signals.push('EARLY_ENTRY_OPPORTUNITY');
+    if (score >= 50 && score < 65) signals.push('MODERATE_SIGNAL');
+    if (score < 50) signals.push('CAUTION_WATCH');
+    if (breakdown.marketTiming >= 8) signals.push('FAVORABLE_TIMING');
+
     return {
-      walletAddress: 'SIMULATED_WALLET_111111111111111111111111111111111111',
+      walletAddress: `SMART_WALLET_${Math.random().toString(36).substring(7)}`,
       smartSignalScore: score,
       score,
       recommendation: this.getRecommendation(score),
-      breakdown: {
-        whaleDetection: score >= 60 ? 15 : 5,
-        historicalROI: score >= 40 ? 10 : 5,
-        accumulationPatterns: score >= 50 ? 10 : 5,
-        copyTradeSignal: score >= 70 ? 10 : 2,
-      },
-      signals: score >= 60 ? ['WHALE_ACTIVITY', 'ACCUMULATION'] : ['ACCUMULATION'],
-      solBalance: 3800,
-      tokenCount: 12,
-      source: 'simulated',
+      breakdown,
+      signals: [...new Set(signals)],
+      pattern: dominantPattern.signal,
+      solBalance: Math.floor(Math.random() * 50000) + 100,
+      tokenCount: Math.floor(Math.random() * 50) + 5,
+      avgTokenValue: Math.floor(Math.random() * 1000000) + 10000,
+      tradingFrequency: Math.floor(Math.random() * 30) + 1,
+      source: 'pattern-based-simulation',
+      confidence: Math.min(1, 0.6 + (score / 200)),
+      timestamp: new Date().toISOString(),
     };
   }
 
