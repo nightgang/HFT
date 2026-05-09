@@ -33,32 +33,7 @@ docker-compose up -d
 
 ### 4. Access Dashboard
 - **Web Dashboard**: http://localhost:5173
-- **Katana Mode**: http://localhost:5173/katana
-- **API**: http://localhost:3000
-
-## 🛠️ Manual Setup (Alternative)
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
-- Python 3.9+
-
-### Installation
-```bash
-# Install dependencies
-npm install
-cd backend && npm install
-cd ../frontend && npm install
-cd ../ai-service && pip install -r requirements.txt
-
-# Setup database
-createdb hft_trading
-psql hft_trading < db/schema.sql
-
-# Start services
-npm run dev  # Runs backend + frontend
-```
+- **Katana Terminal**: `npm run katana`
 
 ## 🎯 Usage Guide
 
@@ -70,19 +45,14 @@ npm run dev  # Runs backend + frontend
 ### Trading Methods
 
 #### Web Dashboard
-- **Regular Trading**: View charts, place manual orders
 - **Katana Mode**: Ultra-fast automated trading for meme coins
-
-#### CLI Terminal
-```bash
-npm run cli
-# Commands: login, wallet add, trade buy/sell, portfolio view
-```
+- **Manual Trading**: View charts, place manual orders
+- **Real-time Charts**: TradingView-style interface with live data
 
 #### Katana Terminal
 ```bash
 npm run katana
-# Commands: start, buy <amount>, sell <amount>, positions
+# Commands: start, buy <amount>, sell <amount>, positions, status
 ```
 
 ## ⚙️ Key Features
@@ -90,10 +60,11 @@ npm run katana
 - **⚡ Ultra-Fast Execution**: Optimized for Solana speed
 - **🤖 AI Signals**: ML-powered trade predictions
 - **🛡️ Risk Protection**: Honeypot detection, liquidity checks
-- **📊 Real-Time Charts**: TradingView-style interface
+- **📊 Real-Time Charts**: Professional trading interface
 - **🔄 Multi-Wallet**: Trade across multiple wallets
 - **🎯 Sniper Tools**: Detect new token launches
 - **📱 WebSocket Updates**: Live price feeds and notifications
+- **⌨️ Terminal Interface**: Command-line trading controls
 
 ## 🔧 Configuration
 
@@ -147,6 +118,7 @@ GET  /api/portfolio/balance # View balance
 ```
 POST /api/katana/start     # Start automated trading
 GET  /api/katana/status    # Check status
+GET  /api/katana/positions # View active positions
 ```
 
 ---

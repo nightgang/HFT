@@ -250,6 +250,16 @@ async def ab_test(request: PredictionRequest):
     logger.info(f"A/B test: assigned version {version} for {request.tokenMint}")
     return {"version": version, "model": f"ml-signal-model-{version.lower()}"}
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "Solana Trading AI Service",
+        "version": "1.0.0",
+        "model_loaded": model is not None
+    }
+
 @app.get("/")
 async def root():
     """Root endpoint"""
