@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Menu, X, Zap, TrendingUp, Volume2, Activity, Wallet, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import KatanaHeader from './KatanaHeader';
 import KatanaSidebar from './KatanaSidebar';
 import KatanaChart from './KatanaChart';
@@ -66,39 +67,90 @@ function KatanaLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden"
+    >
       {/* Animated background */}
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,200,0.3),rgba(10,10,40,0))]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))]" />
+        <motion.div 
+          className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,200,0.3),rgba(10,10,40,0))]"
+          animate={{ 
+            background: [
+              "radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,200,0.3),rgba(10,10,40,0))",
+              "radial-gradient(ellipse_80%_80%_at_60%_-10%,rgba(120,40,200,0.4),rgba(10,10,40,0))",
+              "radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,200,0.3),rgba(10,10,40,0))"
+            ]
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))]"
+          animate={{ 
+            background: [
+              "radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))",
+              "radial-gradient(ellipse_80%_80%_at_70%_90%,rgba(0,200,150,0.3),rgba(10,10,40,0))",
+              "radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))"
+            ]
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
       </div>
 
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden`}>
-          <KatanaSidebar 
-            menuItems={menuItems} 
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-        </div>
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div 
+              initial={{ x: -320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -320, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="w-64 transition-all duration-300 ease-in-out overflow-hidden"
+            >
+              <KatanaSidebar 
+                menuItems={menuItems} 
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <KatanaHeader 
-            onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-            sidebarOpen={sidebarOpen}
-            stats={stats}
-          />
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <KatanaHeader 
+              onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+              sidebarOpen={sidebarOpen}
+              stats={stats}
+            />
+          </motion.div>
 
           {/* Content Area */}
           <div className={`flex-1 flex overflow-hidden ${terminalOpen ? 'flex-col' : ''}`}>
             {/* Dashboard Section */}
-            <div className="flex-1 overflow-auto">
+            <motion.div 
+              className="flex-1 overflow-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+            >
               <div className="p-4 space-y-4">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                <motion.div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6, duration: 0.5 }}
+                >
                   <StatCard 
                     label="Total PNL" 
                     value={`$${stats.totalPnL.toFixed(2)}`}
@@ -141,10 +193,15 @@ function KatanaLayout() {
                     icon={<Settings className="w-5 h-5" />}
                     trending="neutral"
                   />
-                </div>
+                </motion.div>
 
                 {/* Main Trading View */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <motion.div 
+                  className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.8, duration: 0.6 }}
+                >
                   {/* Chart */}
                   <div className="lg:col-span-2">
                     <KatanaChart />
@@ -155,49 +212,68 @@ function KatanaLayout() {
                     <KatanaTradePanel />
                     <KatanaWalletTracker />
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Bottom Panels */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <motion.div 
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.0, duration: 0.6 }}
+                >
                   <KatanaActiveTrades />
                   <KatanaLiveFeed />
-                </div>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Terminal Section */}
-            {terminalOpen && (
-              <div className="h-1/3 border-t border-purple-500/20 overflow-hidden">
-                <div className="h-full flex flex-col">
-                  <div className="px-4 py-2 bg-black/40 border-b border-purple-500/20 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-purple-400">⌨️ KATANA TERMINAL - ULTRA FAST EXECUTION</h3>
-                    <button
-                      onClick={() => setTerminalOpen(false)}
-                      className="p-1 hover:bg-red-500/20 rounded text-red-400 transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+            <AnimatePresence>
+              {terminalOpen && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "33vh", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="border-t border-purple-500/20 overflow-hidden"
+                >
+                  <div className="h-full flex flex-col">
+                    <div className="px-4 py-2 bg-black/40 border-b border-purple-500/20 flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-purple-400">⌨️ KATANA TERMINAL - ULTRA FAST EXECUTION</h3>
+                      <button
+                        onClick={() => setTerminalOpen(false)}
+                        className="p-1 hover:bg-red-500/20 rounded text-red-400 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <KatanaTerminal />
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-hidden">
-                    <KatanaTerminal />
-                  </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Terminal Toggle Button */}
-            {!terminalOpen && (
-              <button
-                onClick={() => setTerminalOpen(true)}
-                className="fixed bottom-4 right-4 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/40 border border-purple-400/50 rounded-lg text-purple-300 text-sm font-medium transition"
-              >
-                Show Terminal
-              </button>
-            )}
+            <AnimatePresence>
+              {!terminalOpen && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  onClick={() => setTerminalOpen(true)}
+                  className="fixed bottom-4 right-4 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/40 border border-purple-400/50 rounded-lg text-purple-300 text-sm font-medium transition backdrop-blur-sm"
+                >
+                  Show Terminal
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -205,22 +281,44 @@ function StatCard({ label, value, change, icon, trending }) {
   const trendColor = trending === 'up' ? 'text-green-400' : trending === 'down' ? 'text-red-400' : 'text-blue-400';
   
   return (
-    <div className="group relative p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/5 border border-purple-500/30 rounded-lg hover:border-purple-400/60 transition-all duration-300 overflow-hidden">
+    <motion.div 
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      className="group relative p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/5 border border-purple-500/30 rounded-lg hover:border-purple-400/60 transition-all duration-300 overflow-hidden backdrop-blur-sm"
+    >
       {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-20 blur-xl transition-all duration-300" />
+      <motion.div 
+        className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-20 blur-xl transition-all duration-300"
+        animate={{ opacity: [0, 0.1, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      />
       
       <div className="relative">
         <div className="flex items-start justify-between mb-2">
           <span className="text-xs text-gray-400 font-medium">{label}</span>
-          <span className={trendColor}>{icon}</span>
+          <motion.span 
+            className={trendColor}
+            animate={{ rotate: trending === 'up' ? [0, 5, 0] : 0 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {icon}
+          </motion.span>
         </div>
         <div className="text-xl font-bold text-white mb-1">{value}</div>
         <div className={`text-xs font-medium ${trendColor}`}>{change}</div>
       </div>
 
       {/* Animated border glow */}
-      <div className="absolute inset-0 border border-purple-400/0 group-hover:border-purple-400/50 rounded-lg transition-all duration-300 animate-pulse" />
-    </div>
+      <motion.div 
+        className="absolute inset-0 border border-purple-400/0 group-hover:border-purple-400/50 rounded-lg transition-all duration-300"
+        animate={{ boxShadow: [
+          "0 0 0 rgba(168, 85, 247, 0)",
+          "0 0 20px rgba(168, 85, 247, 0.3)",
+          "0 0 0 rgba(168, 85, 247, 0)"
+        ] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </motion.div>
   );
 }
 

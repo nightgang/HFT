@@ -40,13 +40,43 @@ function KatanaTerminal() {
     }
   };
 
-  const LiveFeed = () => (
-    <div className="space-y-1">
-      <div className="text-purple-400 text-xs mb-2">≣ NEW TOKENS</div>
-      <div className="space-y-1 text-xs font-mono">
-        <div className="text-gray-500">14:35:22 | 🆕 PUMP | Liq: 12.5 SOL | MC: $580K | Risk: LOW</div>
-        <div className="text-gray-500">14:35:18 | 🆕 DOMO | Liq: 8.2 SOL | MC: $320K | Risk: MEDIUM</div>
-        <div className="text-gray-500">14:35:10 | 🆕 MEME | Liq: 3.5 SOL | MC: $120K | Risk: HIGH</div>
+  const ActiveTrades = () => (
+    <div className="space-y-2 text-xs">
+      <div className="text-purple-400 text-xs mb-2">≣ ACTIVE TRADES</div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="border-b border-purple-500/20">
+            <tr>
+              <th className="px-2 py-1 text-left text-gray-500">TOKEN</th>
+              <th className="px-2 py-1 text-right text-gray-500">AMOUNT</th>
+              <th className="px-2 py-1 text-right text-gray-500">ENTRY</th>
+              <th className="px-2 py-1 text-right text-gray-500">CURRENT</th>
+              <th className="px-2 py-1 text-right text-gray-500">PNL %</th>
+              <th className="px-2 py-1 text-center text-gray-500">TP/SL</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-purple-500/10">
+            {[
+              { token: 'RAY', amount: 150, entry: 5.24, current: 6.89, pnl: 31.5, tp: 'TP1:45%', sl: 'SL:4.19' },
+              { token: 'PSAI', amount: 280, entry: 0.145, current: 0.182, pnl: 25.5, tp: 'TP1:0%', sl: 'SL:0.116' },
+              { token: 'WIF', amount: 420, entry: 0.0842, current: 0.0651, pnl: -22.7, tp: 'TP1:0%', sl: 'SL:0.0673' },
+            ].map((trade, idx) => (
+              <tr key={idx} className="hover:bg-purple-500/5">
+                <td className="px-2 py-1 font-bold text-white">{trade.token}</td>
+                <td className="px-2 py-1 text-right text-white font-mono">{trade.amount}</td>
+                <td className="px-2 py-1 text-right text-gray-400 font-mono">${trade.entry.toFixed(4)}</td>
+                <td className="px-2 py-1 text-right text-purple-400 font-mono font-bold">${trade.current.toFixed(4)}</td>
+                <td className={`px-2 py-1 text-right font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {trade.pnl >= 0 ? '+' : ''}{trade.pnl}%
+                </td>
+                <td className="px-2 py-1 text-center text-xs">
+                  <div className="text-green-400">{trade.tp}</div>
+                  <div className="text-red-400">{trade.sl}</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -88,12 +118,20 @@ function KatanaTerminal() {
 
   const StatusBar = () => (
     <div className="text-xs text-gray-600 font-mono space-y-1">
-      <div className="flex justify-between">
-        <span>⚡ Latency: 42ms | TPS: 1500 | Block: 287452185</span>
-        <span>Network: Mainnet | Mode: KATANA</span>
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-4">
+          <span className="text-green-400">⚡ Latency: 42ms</span>
+          <span className="text-blue-400">TPS: 1,500</span>
+          <span className="text-purple-400">Block: 287,452,185</span>
+        </div>
+        <div className="flex space-x-4">
+          <span className="text-cyan-400">Network: Mainnet</span>
+          <span className="text-pink-400">Mode: KATANA</span>
+        </div>
       </div>
       <div className="flex justify-between text-purple-400">
-        <span>Shortcuts: [B] Buy | [S] Sell | [P] Positions | [H] History | [?] Help</span>
+        <span>Shortcuts: [B] Buy | [S] Sell | [P] Positions | [H] History | [?] Help | [T] Terminal</span>
+        <span className="text-green-400">✓ All Systems Operational</span>
       </div>
     </div>
   );
@@ -102,19 +140,22 @@ function KatanaTerminal() {
     <div className="h-full flex flex-col bg-black/80 border-t border-purple-500/20 font-mono text-white">
       {/* Tab Bar */}
       <div className="flex border-b border-purple-500/20 bg-black/40">
-        {['live-feed', 'system-logs', 'wallet'].map(tab => (
+        {[
+          { id: 'live-feed', label: '📡 LIVE FEED' },
+          { id: 'active-trades', label: '📊 ACTIVE TRADES' },
+          { id: 'system-logs', label: '📋 SYSTEM LOGS' },
+          { id: 'wallet', label: '💰 WALLET' },
+        ].map(tab => (
           <button
-            key={tab}
-            onClick={() => setActivePanel(tab)}
-            className={`px-4 py-2 text-xs font-bold transition ${
-              activePanel === tab
+            key={tab.id}
+            onClick={() => setActivePanel(tab.id)}
+            className={`px-3 py-2 text-xs font-bold transition flex-1 ${
+              activePanel === tab.id
                 ? 'bg-purple-500/30 text-purple-300 border-b-2 border-purple-400'
                 : 'bg-transparent text-gray-500 hover:text-gray-300'
             }`}
           >
-            {tab === 'live-feed' && '📡 LIVE FEED'}
-            {tab === 'system-logs' && '📋 SYSTEM LOGS'}
-            {tab === 'wallet' && '💰 WALLET'}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -122,6 +163,7 @@ function KatanaTerminal() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-track-black scrollbar-thumb-purple-500/20">
         {activePanel === 'live-feed' && <LiveFeed />}
+        {activePanel === 'active-trades' && <ActiveTrades />}
         {activePanel === 'system-logs' && <SystemLogs />}
         {activePanel === 'wallet' && <WalletSummary />}
       </div>
