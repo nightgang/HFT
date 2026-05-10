@@ -1,35 +1,44 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 function KatanaLiveFeed() {
   const [feed, setFeed] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Generate initial feed
-    const initialFeed = [
-      { id: 1, mint: 'RAYxxx...', symbol: 'RAY', liquidity: 45.2, mcap: '2.3M', time: '2:34 PM', status: 'new' },
-      { id: 2, mint: 'PSAIxx...', symbol: 'PSAI', liquidity: 12.8, mcap: '850K', time: '2:32 PM', status: 'medium' },
-      { id: 3, mint: 'WIFxxx...', symbol: 'WIF', liquidity: 8.5, mcap: '420K', time: '2:30 PM', status: 'low' },
-    ];
-    setFeed(initialFeed);
+    let mounted = true;
+    let intervalId = null;
 
-    // Simulate live updates
-    const interval = setInterval(() => {
-      setFeed(prev => {
-        const newToken = {
-          id: prev.length + 1,
-          mint: `TKN${Math.random().toString(36).substr(2, 5).toUpperCase()}...`,
-          symbol: `TKN${Math.floor(Math.random() * 9999)}`,
-          liquidity: Math.random() * 50,
-          mcap: Math.random() > 0.5 ? `${(Math.random() * 5).toFixed(1)}M` : `${(Math.random() * 900).toFixed(0)}K`,
-          time: new Date().toLocaleTimeString().slice(0, -3),
-          status: ['new', 'medium', 'low', 'risk'][Math.floor(Math.random() * 4)],
-        };
-        return [newToken, ...prev.slice(0, 5)];
-      });
-    }, 3000);
+    const fetchFeed = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/katana/detections');
+        const data = await response.json();
 
-    return () => clearInterval(interval);
+        if (!mounted) return;
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch token detections');
+        }
+
+        setFeed(data.data?.detections || []);
+        setError(null);
+      } catch (err) {
+        if (!mounted) return;
+        setError(err.message || 'Feed error');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchFeed();
+    intervalId = setInterval(fetchFeed, 5000);
+
+    return () => {
+      mounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   const statusColors = {
@@ -50,39 +59,52 @@ function KatanaLiveFeed() {
 
       {/* Content */}
       <div className="overflow-y-auto max-h-64 space-y-2 p-3">
-        {feed.map(token => (
-          <div key={token.id} className="p-3 bg-black/40 border border-purple-500/20 hover:border-purple-400/50 rounded-lg transition cursor-pointer group">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <div className="font-mono font-bold text-white text-sm">{token.symbol}</div>
-                <div className="text-xs text-gray-500">{token.mint}</div>
+        {loading && (
+          <div className="p-3 text-sm text-gray-400">Loading token detections…</div>
+        )}
+        {error && (
+          <div className="p-3 text-sm text-red-400">Unable to load detections: {error}</div>
+        )}
+        {!loading && !error && feed.length === 0 && (
+          <div className="p-3 text-sm text-gray-400">No recent token detections available.</div>
+        )}
+        {!loading && !error && feed.map((token) => {
+          const status = token.riskLevel?.toLowerCase() || 'new';
+          const timeAgo = token.detectedAt ? `${Math.max(0, Math.floor((Date.now() - token.detectedAt) / 1000))}s ago` : 'now';
+          return (
+            <div key={token.mint} className="p-3 bg-black/40 border border-purple-500/20 hover:border-purple-400/50 rounded-lg transition cursor-pointer group">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <div className="font-mono font-bold text-white text-sm">{token.symbol || token.mint.slice(0, 8)}</div>
+                  <div className="text-xs text-gray-500">{token.mint}</div>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded border ${statusColors[status]}`}>
+                  {status === 'new' && '🆕'}
+                  {status === 'medium' && '📊'}
+                  {status === 'low' && '⚠️'}
+                  {status === 'risk' && '🚨'} {status.toUpperCase()}
+                </span>
               </div>
-              <span className={`text-xs font-bold px-2 py-1 rounded border ${statusColors[token.status]}`}>
-                {token.status === 'new' && '🆕'}
-                {token.status === 'medium' && '📊'}
-                {token.status === 'low' && '⚠️'}
-                {token.status === 'risk' && '🚨'} {token.status.toUpperCase()}
-              </span>
+              <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                <div>
+                  <span className="text-gray-500">Liquidity</span>
+                  <div className="text-green-400 font-bold">{token.liquidity?.toFixed(1) ?? '0.0'} SOL</div>
+                </div>
+                <div>
+                  <span className="text-gray-500">Market Cap</span>
+                  <div className="text-purple-400 font-bold">${token.marketCap ?? '0'}</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-500">Detected</span>
+                  <div className="text-blue-400 font-mono text-xs font-bold">{timeAgo}</div>
+                </div>
+              </div>
+              <button className="w-full py-2 bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 text-xs font-bold rounded transition border border-purple-500/30">
+                → SNIPE
+              </button>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-xs mb-2">
-              <div>
-                <span className="text-gray-500">Liquidity</span>
-                <div className="text-green-400 font-bold">{token.liquidity.toFixed(1)} SOL</div>
-              </div>
-              <div>
-                <span className="text-gray-500">Market Cap</span>
-                <div className="text-purple-400 font-bold">${token.mcap}</div>
-              </div>
-              <div className="text-right">
-                <span className="text-gray-500">Time</span>
-                <div className="text-blue-400 font-mono text-xs font-bold">{token.time}</div>
-              </div>
-            </div>
-            <button className="w-full py-2 bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 text-xs font-bold rounded transition border border-purple-500/30">
-              → SNIPE
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

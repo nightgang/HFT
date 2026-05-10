@@ -22,6 +22,7 @@ class KatanaTerminal {
     this.pnlData = { totalPnL: 0, pnlPercentage: 0, activeTrades: 0 };
     this.autoTradeEnabled = true; // Initialize auto-trade as enabled
     this.selectedToken = null;
+    this.selectedWallet = null;
   }
 
   async start() {
@@ -177,6 +178,9 @@ class KatanaTerminal {
     console.log('  buy <amount>   - Buy selected token');
     console.log('  sell <amount>  - Sell selected token');
     console.log('  select <mint>  - Select token for trading');
+    console.log('  wallets        - List configured wallets');
+    console.log('  usewallet <pk> - Select wallet for trades');
+    console.log('  predict <mint> - Request AI signal for token');
     console.log('  positions      - Show active positions');
     console.log('  tokens         - Show recent token detections');
     console.log('  help           - Show this help');
@@ -218,6 +222,15 @@ class KatanaTerminal {
           break;
         case 'select':
           this.selectToken(args[0]);
+          break;
+        case 'wallets':
+          await this.showWallets();
+          break;
+        case 'usewallet':
+          this.selectWallet(args[0]);
+          break;
+        case 'predict':
+          await this.requestPrediction(args[0]);
           break;
         case 'positions':
           await this.showPositions();
@@ -301,6 +314,7 @@ class KatanaTerminal {
         tokenMint: this.selectedToken,
         amount: parseFloat(amount),
         slippage: 0.3,
+        walletId: this.selectedWallet,
         useJito: false
       });
 
@@ -309,6 +323,56 @@ class KatanaTerminal {
       }
     } catch (error) {
       console.log(`❌ Trade failed:`, error.response?.data?.error || error.message);
+    }
+  }
+
+  async showWallets() {
+    try {
+      const response = await axios.get(`${API_BASE}/api/trading/wallets`);
+      const wallets = response.data.wallets || [];
+
+      console.log('\n🔐 Configured Wallets:');
+      if (!wallets.length) {
+        console.log('   No wallets found.');
+        return;
+      }
+
+      wallets.forEach((wallet, index) => {
+        const selected = wallet.publicKey === this.selectedWallet ? ' [ACTIVE]' : '';
+        console.log(`   ${index + 1}. ${wallet.name} - ${wallet.publicKey}${selected}`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch wallets:', error.response?.data?.error || error.message);
+    }
+  }
+
+  selectWallet(publicKey) {
+    if (!publicKey) {
+      console.log('❌ Usage: usewallet <publicKey>');
+      return;
+    }
+    this.selectedWallet = publicKey;
+    console.log(`✅ Selected wallet: ${publicKey}`);
+  }
+
+  async requestPrediction(tokenMint) {
+    if (!tokenMint) {
+      console.log('❌ Usage: predict <tokenMint>');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE}/api/ai/predict`, { tokenMint });
+      const payload = response.data.data || response.data;
+
+      console.log(`\n🤖 Prediction for ${tokenMint}:`);
+      console.log(`   Score        : ${payload.score}`);
+      console.log(`   Recommendation: ${payload.recommendation}`);
+      console.log(`   Confidence   : ${payload.confidence}`);
+      if (payload.riskLevel) console.log(`   Risk Level   : ${payload.riskLevel}`);
+      if (payload.model) console.log(`   Model        : ${payload.model}`);
+    } catch (error) {
+      console.log('❌ Prediction failed:', error.response?.data?.error || error.message);
     }
   }
 
@@ -341,10 +405,23 @@ class KatanaTerminal {
   }
 
   async showTokens() {
-    // This would show recent token detections
-    // For now, just show a placeholder
-    console.log('\n🎯 Recent Token Detections:');
-    console.log('   (Token feed updates will appear in real-time)');
+    try {
+      const response = await axios.get(`${API_BASE}/api/katana/detections`);
+      const detections = response.data.data.detections || [];
+
+      console.log('\n🎯 Recent Token Detections:');
+      if (!detections.length) {
+        console.log('   No recent detections available.');
+        return;
+      }
+
+      detections.slice(0, 10).forEach((token, index) => {
+        const timeAgo = Math.max(0, Math.floor((Date.now() - token.detectedAt) / 1000));
+        console.log(`   ${index + 1}. ${token.symbol || token.mint} (${token.mint.slice(0, 8)}...) - ${token.riskLevel} - Liquidity: ${token.liquidity} - ${timeAgo}s ago`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch recent tokens:', error.response?.data?.error || error.message);
+    }
   }
 
   /**

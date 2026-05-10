@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { ArrowDown, ArrowUp, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -8,6 +9,9 @@ function KatanaTradePanel() {
   const [strategy, setStrategy] = useState('market');
   const [slippage, setSlippage] = useState('0.5');
   const [priority, setPriority] = useState('medium');
+  const [tokenMint, setTokenMint] = useState('');
+  const [prediction, setPrediction] = useState(null);
+  const [isPredicting, setIsPredicting] = useState(false);
 
   const strategies = [
     { id: 'market', name: 'Market Order', icon: '⚡' },
@@ -81,6 +85,63 @@ function KatanaTradePanel() {
             className="w-full px-3 py-3 bg-black/40 border border-purple-500/30 hover:border-purple-400/60 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400 transition placeholder-gray-600"
             whileFocus={{ scale: 1.02, boxShadow: "0 0 20px rgba(168, 85, 247, 0.3)" }}
           />
+        </motion.div>
+
+        {/* Token Mint for Prediction */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <label className="text-xs font-semibold text-gray-400 block mb-2">TOKEN MINT</label>
+          <motion.div className="grid grid-cols-[1fr_auto] gap-2">
+            <motion.input
+              type="text"
+              value={tokenMint}
+              onChange={(e) => setTokenMint(e.target.value)}
+              placeholder="Paste token mint"
+              className="w-full px-3 py-3 bg-black/40 border border-purple-500/30 hover:border-purple-400/60 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400 transition placeholder-gray-600"
+              whileFocus={{ scale: 1.02 }}
+            />
+            <motion.button
+              type="button"
+              onClick={async () => {
+                if (!tokenMint) return;
+                setIsPredicting(true);
+                try {
+                  const response = await axios.post('/api/ai/predict', { tokenMint });
+                  const data = response.data.data || response.data;
+                  setPrediction(data);
+                } catch (error) {
+                  console.error('Prediction failed:', error);
+                  setPrediction({ score: 'Error', recommendation: 'N/A', confidence: 'N/A' });
+                } finally {
+                  setIsPredicting(false);
+                }
+              }}
+              className="bg-purple-500/20 text-purple-200 px-4 rounded-lg hover:bg-purple-500/40 transition"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {isPredicting ? 'Predicting…' : 'Predict'}
+            </motion.button>
+          </motion.div>
+          {prediction && (
+            <div className="mt-3 p-3 rounded-lg bg-white/5 border border-purple-500/20 text-xs text-gray-200">
+              <div className="flex justify-between mb-1">
+                <span className="font-semibold text-white">Signal Score</span>
+                <span className="text-purple-300">{prediction.score}</span>
+              </div>
+              <div className="flex justify-between mb-1">
+                <span>Recommendation</span>
+                <span className="text-green-300">{prediction.recommendation}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Confidence</span>
+                <span className="text-blue-300">{prediction.confidence}</span>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Slippage */}

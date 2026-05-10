@@ -243,6 +243,26 @@ router.post('/detect-token', async (req, res) => {
   }
 });
 
+router.get('/detections', authenticate, (req, res) => {
+  try {
+    const detections = getKatanaEngine().getRecentDetections();
+    res.json({
+      success: true,
+      data: {
+        detections,
+        count: detections.length
+      },
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    logger.error('Katana detections error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get recent detections'
+    });
+  }
+});
+
 /**
  * @swagger
  * /api/katana/config:

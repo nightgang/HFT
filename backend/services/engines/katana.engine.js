@@ -48,6 +48,7 @@ class KatanaEngine extends EventEmitter {
     this.activeTrades = new Map();
     this.watchedTokens = new Set();
     this.walletBalances = new Map();
+    this.recentDetections = [];
 
     this.bindEvents();
   }
@@ -156,8 +157,9 @@ class KatanaEngine extends EventEmitter {
         return;
       }
 
-      // Add to watchlist
+      // Add to watchlist and recent detections
       this.watchedTokens.add(tokenData.mint);
+      this.addRecentDetection(tokenData, riskLevel);
 
       // Auto-buy if enabled
       if (this.config.autoBuyEnabled && this.shouldAutoBuy(tokenData)) {
@@ -170,6 +172,26 @@ class KatanaEngine extends EventEmitter {
     } catch (error) {
       logger.error('Error detecting new token:', error);
     }
+  }
+
+  addRecentDetection(tokenData, riskLevel) {
+    const detection = {
+      mint: tokenData.mint,
+      symbol: tokenData.symbol || 'unknown',
+      liquidity: tokenData.liquidity || 0,
+      marketCap: tokenData.marketCap || 0,
+      riskLevel,
+      detectedAt: Date.now()
+    };
+
+    this.recentDetections.unshift(detection);
+    if (this.recentDetections.length > 50) {
+      this.recentDetections = this.recentDetections.slice(0, 50);
+    }
+  }
+
+  getRecentDetections() {
+    return this.recentDetections.slice();
   }
 
   async executeTrade(tradeParams) {

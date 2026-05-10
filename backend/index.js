@@ -34,6 +34,7 @@ const smartMoneyRoutes = require('./routes/smartMoneyRoutes');
 const arbitrageRoutes = require('./routes/arbitrageRoutes');
 const katanaRoutes = require('./routes/katanaRoutes');
 const systemRoutes = require('./routes/systemRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 const backupService = require('./services/backup.service');
 const executionAnalyticsService = require('./services/execution-analytics.service');
 const emailScheduler = require('./services/email-scheduler.service');
@@ -341,6 +342,7 @@ app.use(['/api/smart-money', '/smart-money'], smartMoneyRoutes);
 app.use(['/api/arbitrage', '/arbitrage'], arbitrageRoutes);
 app.use(['/api/katana', '/katana'], katanaRoutes);
 app.use(['/api/system', '/system'], systemRoutes);
+app.use(['/api/ai', '/ai'], aiRoutes);
 
 // Serve export files from the shared exports directory
 const exportsDir = path.join(__dirname, '../exports');
