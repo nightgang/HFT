@@ -8,6 +8,7 @@ class WebSocketServer {
     this.wss = null;
     this.clients = new Set();
     this.authenticatedClients = new Map(); // ws -> user data
+    this.autoTradeUnsubscribe = null;
   }
 
   start(port = this.port) {
@@ -37,6 +38,14 @@ class WebSocketServer {
         this.authenticatedClients.set(ws, decoded);
         this.clients.add(ws);
         logger.info(`WebSocket client authenticated: ${decoded.username}`);
+
+        // Send initial auto trade status
+        const autoTradeService = require('../services/auto-trade.service');
+        const autoTradeStatus = autoTradeService.getStatus();
+        ws.send(JSON.stringify({
+          type: 'autotrade-status',
+          ...autoTradeStatus
+        }));
 
         ws.send(JSON.stringify({
           type: 'AUTH_SUCCESS',
@@ -88,6 +97,28 @@ class WebSocketServer {
     }));
   }
 
+  /**
+   * Initialize auto-trade status broadcast
+   * Subscribe to auto-trade service changes and broadcast to all clients
+   */
+  initializeAutoTradeBroadcast() {
+    try {
+      const autoTradeService = require('../services/auto-trade.service');
+      
+      // Subscribe to auto-trade changes
+      this.autoTradeUnsubscribe = autoTradeService.subscribe((status) => {
+        this.broadcast({
+          type: 'autotrade-status',
+          ...status
+        });
+      });
+
+      logger.info('Auto-trade broadcast initialized');
+    } catch (error) {
+      logger.error('Failed to initialize auto-trade broadcast:', error);
+    }
+  }
+
   broadcast(data) {
     const message = JSON.stringify({
       ...data,
@@ -116,6 +147,12 @@ class WebSocketServer {
   }
 
   stop() {
+    // Unsubscribe from auto-trade service
+    if (this.autoTradeUnsubscribe) {
+      this.autoTradeUnsubscribe();
+      this.autoTradeUnsubscribe = null;
+    }
+
     if (this.wss) {
       this.wss.close();
       logger.info('WebSocket server stopped');

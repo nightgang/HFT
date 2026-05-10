@@ -1,5 +1,6 @@
 import { Menu, LogOut, Zap, Wifi } from 'lucide-react';
 import { motion } from 'framer-motion';
+import AutoTradeToggle from './AutoTradeToggle';
 
 function KatanaHeader({ onMenuClick, sidebarOpen, stats }) {
   return (
@@ -69,6 +70,7 @@ function KatanaHeader({ onMenuClick, sidebarOpen, stats }) {
             <div className="text-xs text-gray-500">Latency</div>
             <div className="text-sm font-bold text-green-400">42ms</div>
           </div>
+          <AutoTradeToggle ws={null} onStatusChange={(status) => {}} />
           <motion.button 
             className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/40 border border-purple-400/50 rounded-lg text-purple-300 text-sm font-medium transition relative overflow-hidden"
             whileHover={{ scale: 1.05 }}

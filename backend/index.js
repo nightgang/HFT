@@ -33,6 +33,7 @@ const tradingRoutes = require('./routes/tradingRoutes');
 const smartMoneyRoutes = require('./routes/smartMoneyRoutes');
 const arbitrageRoutes = require('./routes/arbitrageRoutes');
 const katanaRoutes = require('./routes/katanaRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 const backupService = require('./services/backup.service');
 const executionAnalyticsService = require('./services/execution-analytics.service');
 const emailScheduler = require('./services/email-scheduler.service');
@@ -43,6 +44,8 @@ diContainer.register('emailScheduler', emailScheduler);
 diContainer.register('monitoringService', monitoringService);
 diContainer.register('circuitBreakerService', circuitBreakerService);
 diContainer.register('failedTradeRecoveryService', failedTradeRecoveryService);
+const autoTradeService = require('./services/auto-trade.service');
+diContainer.register('autoTradeService', autoTradeService);
 
 // Initialize Katana Engine
 const KatanaEngine = require('./services/engines/katana.engine');
@@ -337,6 +340,7 @@ app.use(['/api/sniper', '/sniper'], sniperRoutes);
 app.use(['/api/smart-money', '/smart-money'], smartMoneyRoutes);
 app.use(['/api/arbitrage', '/arbitrage'], arbitrageRoutes);
 app.use(['/api/katana', '/katana'], katanaRoutes);
+app.use(['/api/system', '/system'], systemRoutes);
 
 // Serve export files from the shared exports directory
 const exportsDir = path.join(__dirname, '../exports');
@@ -521,6 +525,7 @@ const server = app.listen(PORT, async () => {
 
 const websocketPort = parseInt(process.env.WS_PORT, 10) || 3002;
 websocketServer.start(websocketPort);
+websocketServer.initializeAutoTradeBroadcast();
 eventPoller.start();
 
 // Register graceful shutdown handlers

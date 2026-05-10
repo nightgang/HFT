@@ -19,6 +19,7 @@ const { Connection, PublicKey, Transaction, ComputeBudgetProgram, sendAndConfirm
 const logger = require('../../utils/logger');
 const jupiterService = require('../../integrations/jupiter.service');
 const KatanaJitoService = require('./katana.jito'); // Jito bundle service
+const autoTradeService = require('../auto-trade.service'); // Auto-trade state service
 
 class KatanaExecutor extends EventEmitter {
   constructor() {
@@ -79,6 +80,20 @@ class KatanaExecutor extends EventEmitter {
   }
 
   async executeTrade(tradeParams) {
+    // Check if auto-trade is enabled
+    if (!autoTradeService.canExecuteTrade()) {
+      logger.warn(`🛑 AUTO TRADE OFF - Trade skipped: ${tradeParams.side} ${tradeParams.amount} ${tradeParams.tokenMint}`);
+      
+      return {
+        id: null,
+        status: 'skipped',
+        reason: 'AUTO_TRADE_DISABLED',
+        message: 'AUTO TRADE OFF - Trade skipped',
+        params: tradeParams,
+        timestamp: Date.now()
+      };
+    }
+
     const executionId = this.generateExecutionId();
 
     const execution = {

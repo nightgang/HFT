@@ -10,6 +10,7 @@ const websocketServer = require('../../ws/websocket.server');
 const { encrypt, decrypt } = require('../../middleware/auth');
 const mevService = require('../mev/mev.service');
 const riskService = require('../risk/risk.service');
+const autoTradeService = require('../auto-trade.service');
 const TradeModel = require('../../models/trade.model');
 const WalletModel = require('../../models/wallet.model');
 
@@ -305,6 +306,17 @@ class TradingEngine {
 
   async executeBuy(tradeRequest) {
     try {
+      // Check if auto-trade is enabled
+      if (!autoTradeService.canExecuteTrade()) {
+        logger.warn(`🛑 AUTO TRADE OFF - Buy trade skipped: ${tradeRequest.tokenMint}`);
+        return {
+          success: false,
+          error: 'AUTO TRADE OFF - Trade skipped',
+          status: 'skipped',
+          reason: 'AUTO_TRADE_DISABLED'
+        };
+      }
+
       const validated = tradeBuyRequestSchema.parse(tradeRequest);
       const buyAmount = validated.amount || parseFloat(process.env.DEFAULT_BUY_AMOUNT_SOL || '0.1');
 
@@ -512,6 +524,17 @@ class TradingEngine {
 
   async executeSell(tradeRequest) {
     try {
+      // Check if auto-trade is enabled
+      if (!autoTradeService.canExecuteTrade()) {
+        logger.warn(`🛑 AUTO TRADE OFF - Sell trade skipped: ${tradeRequest.tokenMint}`);
+        return {
+          success: false,
+          error: 'AUTO TRADE OFF - Trade skipped',
+          status: 'skipped',
+          reason: 'AUTO_TRADE_DISABLED'
+        };
+      }
+
       const validated = tradeSellRequestSchema.parse(tradeRequest);
 
       if (!this.activeWallet) {

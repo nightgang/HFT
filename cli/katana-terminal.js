@@ -20,6 +20,8 @@ class KatanaTerminal {
     this.katanaActive = false;
     this.currentPositions = [];
     this.pnlData = { totalPnL: 0, pnlPercentage: 0, activeTrades: 0 };
+    this.autoTradeEnabled = true; // Initialize auto-trade as enabled
+    this.selectedToken = null;
   }
 
   async start() {
@@ -77,7 +79,7 @@ class KatanaTerminal {
         // Subscribe to channels
         this.ws.send(JSON.stringify({
           type: 'SUBSCRIBE',
-          channels: ['tokens', 'trades', 'pnl', 'risk']
+          channels: ['tokens', 'trades', 'pnl', 'risk', 'autotrade-status']
         }));
       });
 
@@ -99,6 +101,9 @@ class KatanaTerminal {
         console.error('WebSocket error:', error.message);
       });
 
+      // Fetch initial auto-trade status
+      await this.fetchAutoTradeStatus();
+
     } catch (error) {
       console.error('Failed to connect to Katana WebSocket:', error);
     }
@@ -118,6 +123,9 @@ class KatanaTerminal {
         break;
       case 'RISK_ALERT':
         this.displayRiskAlert(message.data);
+        break;
+      case 'autotrade-status':
+        this.handleAutoTradeStatusUpdate(message);
         break;
       case 'PRICE_UPDATE':
         // Update displayed prices if needed
@@ -156,7 +164,13 @@ class KatanaTerminal {
   }
 
   showWelcome() {
-    console.log('\nAvailable commands:');
+    console.log('\n================================');
+    console.log('      HFT SYSTEM - KATANA MODE');
+    console.log('================================\n');
+    console.log(`${this.getAutoTradeDisplay()}`);
+    console.log(`   MODE       : KATANA`);
+    console.log(`   STATUS     : ${this.katanaActive ? '🟢 RUNNING' : '🔴 STOPPED'}\n`);
+    console.log('Available commands:');
     console.log('  start          - Start Katana Mode');
     console.log('  stop           - Stop Katana Mode');
     console.log('  status         - Show current status');
@@ -166,8 +180,11 @@ class KatanaTerminal {
     console.log('  positions      - Show active positions');
     console.log('  tokens         - Show recent token detections');
     console.log('  help           - Show this help');
-    console.log('  exit           - Exit terminal');
-    console.log('');
+    console.log('  exit           - Exit terminal\n');
+    console.log('Keyboard shortcuts:');
+    console.log('  [T]            - Toggle AUTO TRADE ON/OFF');
+    console.log('  [H]            - Show help');
+    console.log('  [Q]            - Quick exit\n');
   }
 
   async handleCommand(line) {
@@ -177,6 +194,13 @@ class KatanaTerminal {
 
     try {
       switch (command) {
+        case 't':
+        case 'toggle':
+          await this.toggleAutoTrade();
+          break;
+        case 'autotrade':
+          await this.setAutoTrade(args[0] === 'on');
+          break;
         case 'start':
           await this.startKatana();
           break;
@@ -201,9 +225,11 @@ class KatanaTerminal {
         case 'tokens':
           await this.showTokens();
           break;
+        case 'h':
         case 'help':
           this.showWelcome();
           break;
+        case 'q':
         case 'exit':
           this.handleExit();
           return;
@@ -319,6 +345,84 @@ class KatanaTerminal {
     // For now, just show a placeholder
     console.log('\n🎯 Recent Token Detections:');
     console.log('   (Token feed updates will appear in real-time)');
+  }
+
+  /**
+   * Get formatted auto-trade status for terminal display
+   */
+  getAutoTradeDisplay() {
+    const emoji = this.autoTradeEnabled ? '🟢' : '🔴';
+    const status = this.autoTradeEnabled ? 'ON' : 'OFF';
+    const color = this.autoTradeEnabled ? '\x1b[32m' : '\x1b[31m'; // Green or Red
+    const reset = '\x1b[0m';
+    return `${emoji} AUTO TRADE : ${color}${status}${reset}`;
+  }
+
+  /**
+   * Handle auto-trade status updates from WebSocket
+   */
+  handleAutoTradeStatusUpdate(message) {
+    this.autoTradeEnabled = message.AUTO_TRADE;
+    console.log(`\n${this.getAutoTradeDisplay()}`);
+    console.log(`   Updated: ${message.timestamp}`);
+    this.rl.prompt();
+  }
+
+  /**
+   * Toggle auto-trade ON/OFF
+   */
+  async toggleAutoTrade() {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/system/autotrade/toggle`,
+        {},
+        { headers: { Authorization: `Bearer ${this.authToken}` } }
+      );
+
+      if (response.data.success) {
+        this.autoTradeEnabled = response.data.AUTO_TRADE;
+        console.log(`\n✅ Auto Trade ${response.data.status}`);
+        console.log(`${this.getAutoTradeDisplay()}`);
+      }
+    } catch (error) {
+      console.log('❌ Failed to toggle auto-trade:', error.response?.data?.error || error.message);
+    }
+  }
+
+  /**
+   * Set auto-trade to ON or OFF
+   */
+  async setAutoTrade(enabled) {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/system/autotrade`,
+        { enabled, action: 'set' },
+        { headers: { Authorization: `Bearer ${this.authToken}` } }
+      );
+
+      if (response.data.success) {
+        this.autoTradeEnabled = response.data.AUTO_TRADE;
+        console.log(`\n✅ ${response.data.message}`);
+        console.log(`${this.getAutoTradeDisplay()}`);
+      }
+    } catch (error) {
+      console.log('❌ Failed to set auto-trade:', error.response?.data?.error || error.message);
+    }
+  }
+
+  /**
+   * Fetch auto-trade status from backend
+   */
+  async fetchAutoTradeStatus() {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/system/autotrade`,
+        { headers: { Authorization: `Bearer ${this.authToken}` } }
+      );
+      this.autoTradeEnabled = response.data.AUTO_TRADE;
+    } catch (error) {
+      console.error('Failed to fetch auto-trade status:', error.message);
+    }
   }
 
   question(prompt) {
