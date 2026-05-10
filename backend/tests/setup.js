@@ -3,7 +3,9 @@ const envPath = require('path').resolve(__dirname, '../.env');
 require('dotenv').config({ path: envPath });
 
 if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required for tests');
+  // Allow tests to run with a deterministic default value.
+  // This repository expects JWT_SECRET only for integration/runtime.
+  process.env.JWT_SECRET = 'test-jwt-secret';
 }
 
 // Mock external dependencies
