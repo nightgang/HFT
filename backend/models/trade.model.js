@@ -117,33 +117,21 @@ class TradeModel {
     }
   }
 
-  // Update trade status
-  static async updateStatus(tradeId, status, additionalData = {}) {
-    const fields = ['status = $2'];
-    const values = [tradeId, status];
-    let paramIndex = 3;
-
-    Object.keys(additionalData).forEach(key => {
-      if (additionalData[key] !== undefined) {
-        fields.push(`${key} = $${paramIndex}`);
-        values.push(additionalData[key]);
-        paramIndex++;
-      }
-    });
-
+  // Get trades by wallet and date range
+  static async getByWalletAndDateRange(walletId, startDate, endDate, limit = 1000) {
     const sql = `
-      UPDATE trades
-      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-      WHERE trade_id = $1
-      RETURNING *
+      SELECT * FROM trades
+      WHERE wallet_id = $1
+      AND executed_at >= $2
+      AND executed_at <= $3
+      ORDER BY executed_at DESC
+      LIMIT $4
     `;
-
     try {
-      const result = await query(sql, values);
-      logger.info(`Trade ${tradeId} status updated to ${status}`);
-      return result.rows[0];
+      const result = await query(sql, [walletId, startDate, endDate, limit]);
+      return result.rows;
     } catch (error) {
-      logger.error('Error updating trade status:', error);
+      logger.error('Error getting trades by wallet and date range:', error);
       throw error;
     }
   }

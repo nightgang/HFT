@@ -109,70 +109,68 @@ class PnLModel {
   }
 }
 
-class StrategyPerformanceModel {
-  // Record strategy performance
-  static async recordPerformance(performanceData) {
+  // Record strategy performance attribution
+  static async recordPerformanceAttribution(attributionData) {
     const {
       wallet_id,
-      strategy_name,
-      total_trades,
-      winning_trades,
-      losing_trades,
-      strategy_pnl_usd,
-      strategy_pnl_percent,
-      avg_win_usd,
-      avg_loss_usd,
-      profit_factor,
       period_start,
-      period_end
-    } = performanceData;
+      period_end,
+      total_return_percent,
+      benchmark_return_percent,
+      excess_return_percent,
+      strategy_contribution,
+      asset_contribution,
+      timing_contribution,
+      volatility_contribution,
+      max_drawdown_contribution,
+      metadata
+    } = attributionData;
 
     const sql = `
-      INSERT INTO strategy_performance (
-        wallet_id, strategy_name, total_trades, winning_trades, losing_trades,
-        strategy_pnl_usd, strategy_pnl_percent, win_rate_percent,
-        avg_win_usd, avg_loss_usd, profit_factor, period_start, period_end
+      INSERT INTO performance_attribution (
+        wallet_id, period_start, period_end, total_return_percent,
+        benchmark_return_percent, excess_return_percent, strategy_contribution,
+        asset_contribution, timing_contribution, volatility_contribution,
+        max_drawdown_contribution, metadata
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
 
-    const win_rate = total_trades > 0 ? (winning_trades / total_trades) * 100 : 0;
-
     const values = [
-      wallet_id, strategy_name, total_trades, winning_trades, losing_trades,
-      strategy_pnl_usd, strategy_pnl_percent, win_rate,
-      avg_win_usd, avg_loss_usd, profit_factor, period_start, period_end
+      wallet_id, period_start, period_end, total_return_percent,
+      benchmark_return_percent, excess_return_percent, JSON.stringify(strategy_contribution),
+      JSON.stringify(asset_contribution), JSON.stringify(timing_contribution),
+      volatility_contribution, max_drawdown_contribution, metadata
     ];
 
     try {
       const result = await query(sql, values);
-      logger.info(`Strategy performance recorded: ${strategy_name}`);
+      logger.info(`Performance attribution recorded for wallet: ${wallet_id}`);
       return result.rows[0];
     } catch (error) {
-      logger.error('Error recording strategy performance:', error);
+      logger.error('Error recording performance attribution:', error);
       throw error;
     }
   }
 
-  // Get strategy performance attribution
-  static async getStrategyAttribution(wallet_id, period_start, period_end) {
+  // Get performance attribution for wallet
+  static async getPerformanceAttribution(wallet_id, period_start, period_end) {
     const sql = `
-      SELECT * FROM strategy_performance
+      SELECT * FROM performance_attribution
       WHERE wallet_id = $1
       AND period_start >= $2
       AND period_end <= $3
-      ORDER BY strategy_pnl_usd DESC
+      ORDER BY created_at DESC
     `;
     try {
       const result = await query(sql, [wallet_id, period_start, period_end]);
       return result.rows;
     } catch (error) {
-      logger.error('Error fetching strategy attribution:', error);
+      logger.error('Error fetching performance attribution:', error);
       throw error;
     }
   }
-}
 
 class TokenAttributionModel {
   // Record token attribution

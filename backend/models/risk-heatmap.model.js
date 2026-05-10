@@ -2,52 +2,82 @@ const { query } = require('../db/connection');
 const logger = require('../utils/logger');
 
 class RiskHeatmapModel {
-  // Record position concentration
-  static async recordConcentration(concentrationData) {
+  // Record risk heatmap data
+  static async recordRiskData(riskData) {
     const {
       wallet_id,
       token_mint,
       token_symbol,
+      liquidity_risk,
+      volatility_risk,
+      impermanent_loss_risk,
+      smart_money_risk,
+      overall_risk_score,
+      risk_factors,
+      risk_trend,
       position_size_usd,
-      portfolio_weight_percent,
-      concentration_score,
-      risk_level
-    } = concentrationData;
-
-    const is_overconcentrated = concentration_score > 75;
+      position_age_days
+    } = riskData;
 
     const sql = `
-      INSERT INTO position_concentration (
-        wallet_id, token_mint, token_symbol, position_size_usd,
-        portfolio_weight_percent, concentration_score, is_overconcentrated, risk_level
+      INSERT INTO risk_heatmap (
+        wallet_id, token_mint, token_symbol, liquidity_risk, volatility_risk,
+        impermanent_loss_risk, smart_money_risk, overall_risk_score,
+        risk_factors, risk_trend, position_size_usd, position_age_days
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
 
     const values = [
-      wallet_id, token_mint, token_symbol, position_size_usd,
-      portfolio_weight_percent, concentration_score, is_overconcentrated, risk_level
+      wallet_id, token_mint, token_symbol, liquidity_risk, volatility_risk,
+      impermanent_loss_risk, smart_money_risk, overall_risk_score,
+      JSON.stringify(risk_factors), risk_trend, position_size_usd, position_age_days
     ];
 
     try {
       const result = await query(sql, values);
-      logger.info(`Position concentration recorded for ${token_symbol}`);
+      logger.info(`Risk heatmap data recorded for ${token_symbol}`);
       return result.rows[0];
     } catch (error) {
-      logger.error('Error recording position concentration:', error);
+      logger.error('Error recording risk heatmap data:', error);
       throw error;
     }
   }
 
-  // Get concentration heatmap for wallet
-  static async getConcentrationHeatmap(wallet_id) {
+  // Get risk heatmap for wallet
+  static async getRiskHeatmap(wallet_id) {
     const sql = `
-      SELECT * FROM position_concentration
+      SELECT * FROM risk_heatmap
       WHERE wallet_id = $1
-      AND recorded_at >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
-      ORDER BY recorded_at DESC
+      ORDER BY calculated_at DESC
+      LIMIT 50
     `;
+    try {
+      const result = await query(sql, [wallet_id]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error fetching risk heatmap:', error);
+      throw error;
+    }
+  }
+
+  // Get risk score for specific token
+  static async getTokenRisk(wallet_id, token_mint) {
+    const sql = `
+      SELECT * FROM risk_heatmap
+      WHERE wallet_id = $1 AND token_mint = $2
+      ORDER BY calculated_at DESC
+      LIMIT 1
+    `;
+    try {
+      const result = await query(sql, [wallet_id, token_mint]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error fetching token risk:', error);
+      throw error;
+    }
+  }
     try {
       const result = await query(sql, [wallet_id]);
       return result.rows;

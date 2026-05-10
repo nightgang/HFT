@@ -38,6 +38,11 @@ const aiRoutes = require('./routes/aiRoutes');
 const backupService = require('./services/backup.service');
 const executionAnalyticsService = require('./services/execution-analytics.service');
 const emailScheduler = require('./services/email-scheduler.service');
+const cacheService = require('./services/cache.service');
+const tradeHistoryAggregationService = require('./services/trade-history-aggregation.service');
+const { SentimentAnalysisService, SocialSignalService } = require('./services/sentiment-analysis.service');
+const crossChainBridgeService = require('./services/cross-chain-bridge.service');
+const { PredictiveAlertService, AnomalyDetectionService } = require('./services/predictive-alerts.service');
 const diContainer = require('./services/di-container');
 
 diContainer.register('executionAnalyticsService', executionAnalyticsService);
@@ -45,6 +50,13 @@ diContainer.register('emailScheduler', emailScheduler);
 diContainer.register('monitoringService', monitoringService);
 diContainer.register('circuitBreakerService', circuitBreakerService);
 diContainer.register('failedTradeRecoveryService', failedTradeRecoveryService);
+diContainer.register('cacheService', cacheService);
+diContainer.register('tradeHistoryAggregationService', tradeHistoryAggregationService);
+diContainer.register('sentimentAnalysisService', SentimentAnalysisService);
+diContainer.register('socialSignalService', SocialSignalService);
+diContainer.register('crossChainBridgeService', crossChainBridgeService);
+diContainer.register('predictiveAlertService', PredictiveAlertService);
+diContainer.register('anomalyDetectionService', AnomalyDetectionService);
 const autoTradeService = require('./services/auto-trade.service');
 diContainer.register('autoTradeService', autoTradeService);
 

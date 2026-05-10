@@ -15,6 +15,17 @@ const emailService = require('../services/email.service');
 const emailScheduler = require('../services/email-scheduler.service');
 const taxExportService = require('../services/tax-export.service');
 const walletRecoveryService = require('../services/wallet-recovery.service');
+const advancedOrderService = require('../services/advanced-orders.service');
+const jitoBundleService = require('../services/jito-bundle.service');
+const liquidityPoolService = require('../services/liquidity-pool.service');
+const limitOrderBookService = require('../services/limit-order-book.service');
+const pnlDashboardService = require('../services/pnl-dashboard.service');
+const performanceAttributionService = require('../services/performance-attribution.service');
+const riskHeatmapService = require('../services/risk-heatmap.service');
+const { PredictiveAlertService, AnomalyDetectionService } = require('../services/predictive-alerts.service');
+const { SentimentAnalysisService, SocialSignalService } = require('../services/sentiment-analysis.service');
+const crossChainBridgeService = require('../services/cross-chain-bridge.service');
+const tradeHistoryAggregationService = require('../services/trade-history-aggregation.service');
 const {
   createWalletSchema,
   connectWalletSchema,
@@ -494,6 +505,698 @@ router.post('/unsigned', authenticate, async (req, res) => {
     });
   } catch (error) {
     logger.error('Unsigned trade error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Advanced Orders
+router.post('/advanced-orders', authenticate, async (req, res) => {
+  try {
+    const { walletId, ...orderData } = req.body;
+    const order = await advancedOrderService.createAdvancedOrder(walletId, orderData);
+    res.json({ success: true, order });
+  } catch (error) {
+    logger.error('Create advanced order error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/advanced-orders/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const orders = await advancedOrderService.getActiveOrders(walletId);
+    res.json({ success: true, orders });
+  } catch (error) {
+    logger.error('Get advanced orders error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/advanced-orders/order/:orderId', authenticate, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { walletId } = req.query; // For authorization
+    const order = await advancedOrderService.getOrder(orderId, walletId);
+    res.json({ success: true, order });
+  } catch (error) {
+    logger.error('Get advanced order error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/advanced-orders/:orderId', authenticate, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { walletId } = req.body;
+    const result = await advancedOrderService.cancelOrder(orderId, walletId);
+    res.json({ success: true, message: 'Order cancelled', order: result });
+  } catch (error) {
+    logger.error('Cancel advanced order error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/advanced-orders/execute-pending', authenticate, async (req, res) => {
+  try {
+    const results = await advancedOrderService.executePendingOrders();
+    res.json({ success: true, executedOrders: results });
+  } catch (error) {
+    logger.error('Execute pending orders error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Jito Bundles
+router.post('/jito-bundles', authenticate, async (req, res) => {
+  try {
+    const { walletId, ...bundleData } = req.body;
+    const bundle = await jitoBundleService.createBundle(walletId, bundleData);
+    res.json({ success: true, bundle });
+  } catch (error) {
+    logger.error('Create Jito bundle error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/jito-bundles/:bundleId/submit', authenticate, async (req, res) => {
+  try {
+    const { bundleId } = req.params;
+    const bundle = await jitoBundleService.submitBundle(bundleId);
+    res.json({ success: true, bundle });
+  } catch (error) {
+    logger.error('Submit Jito bundle error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/jito-bundles/:bundleId/status', authenticate, async (req, res) => {
+  try {
+    const { bundleId } = req.params;
+    const { status, slotLanded, mevReward } = req.body;
+    const bundle = await jitoBundleService.updateBundleStatus(bundleId, status, slotLanded, mevReward);
+    res.json({ success: true, bundle });
+  } catch (error) {
+    logger.error('Update Jito bundle status error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/jito-bundles/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const bundles = await jitoBundleService.getBundlesByWallet(walletId);
+    res.json({ success: true, bundles });
+  } catch (error) {
+    logger.error('Get Jito bundles error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/jito-bundles/stats/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const stats = await jitoBundleService.getBundleStats(walletId);
+    res.json({ success: true, stats });
+  } catch (error) {
+    logger.error('Get Jito bundle stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/jito-bundles/:bundleId', authenticate, async (req, res) => {
+  try {
+    const { bundleId } = req.params;
+    const { walletId } = req.body;
+    const result = await jitoBundleService.cancelBundle(bundleId, walletId);
+    res.json({ success: true, message: 'Bundle cancelled', bundle: result });
+  } catch (error) {
+    logger.error('Cancel Jito bundle error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Liquidity Pools
+router.post('/liquidity-pools', authenticate, async (req, res) => {
+  try {
+    const { walletId, ...poolData } = req.body;
+    const pool = await liquidityPoolService.createPoolPosition(walletId, poolData);
+    res.json({ success: true, pool });
+  } catch (error) {
+    logger.error('Create liquidity pool error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/liquidity-pools/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const pools = await liquidityPoolService.getWalletPools(walletId);
+    res.json({ success: true, pools });
+  } catch (error) {
+    logger.error('Get liquidity pools error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/liquidity-pools/:poolId/metrics', authenticate, async (req, res) => {
+  try {
+    const { poolId } = req.params;
+    const metrics = req.body;
+    const pool = await liquidityPoolService.updatePoolMetrics(poolId, metrics);
+    res.json({ success: true, pool });
+  } catch (error) {
+    logger.error('Update pool metrics error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/liquidity-pools/:poolId', authenticate, async (req, res) => {
+  try {
+    const { poolId } = req.params;
+    const { walletId } = req.body;
+    const result = await liquidityPoolService.removeLiquidity(poolId, walletId);
+    res.json({ success: true, message: 'Liquidity removed', pool: result });
+  } catch (error) {
+    logger.error('Remove liquidity error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Limit Orders
+router.post('/limit-orders', authenticate, async (req, res) => {
+  try {
+    const { walletId, ...orderData } = req.body;
+    const order = await limitOrderBookService.createLimitOrder(walletId, orderData);
+    res.json({ success: true, order });
+  } catch (error) {
+    logger.error('Create limit order error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/limit-orders/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const orders = await limitOrderBookService.getOpenOrders(walletId);
+    res.json({ success: true, orders });
+  } catch (error) {
+    logger.error('Get limit orders error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/order-book/:inputMint/:outputMint', async (req, res) => {
+  try {
+    const { inputMint, outputMint } = req.params;
+    const { depth = 20 } = req.query;
+    const orderBook = await limitOrderBookService.getOrderBook(inputMint, outputMint, parseInt(depth));
+    res.json({ success: true, orderBook });
+  } catch (error) {
+    logger.error('Get order book error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/limit-orders/:orderId', authenticate, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { walletId } = req.body;
+    const result = await limitOrderBookService.cancelOrder(orderId, walletId);
+    res.json({ success: true, message: 'Order cancelled', order: result });
+  } catch (error) {
+    logger.error('Cancel limit order error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/limit-orders/match/:inputMint/:outputMint', authenticate, async (req, res) => {
+  try {
+    const { inputMint, outputMint } = req.params;
+    const matches = await limitOrderBookService.executeMatching(inputMint, outputMint);
+    res.json({ success: true, matches });
+  } catch (error) {
+    logger.error('Execute matching error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// P&L Dashboard
+router.get('/pnl/dashboard/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const dashboard = await pnlDashboardService.getDashboard(walletId);
+    res.json({ success: true, dashboard });
+  } catch (error) {
+    logger.error('Get P&L dashboard error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/pnl/history/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { startDate, endDate } = req.query;
+    const history = await pnlDashboardService.getPnLHistory(walletId, new Date(startDate), new Date(endDate));
+    res.json({ success: true, history });
+  } catch (error) {
+    logger.error('Get P&L history error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/pnl/performance/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { period = '30d' } = req.query;
+    const metrics = await pnlDashboardService.calculatePerformanceMetrics(walletId, period);
+    res.json({ success: true, metrics });
+  } catch (error) {
+    logger.error('Get performance metrics error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/pnl/snapshot/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const snapshotData = req.body;
+    const snapshot = await pnlDashboardService.recordPnLSnapshot(walletId, snapshotData);
+    res.json({ success: true, snapshot });
+  } catch (error) {
+    logger.error('Record P&L snapshot error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Performance Attribution
+router.get('/attribution/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { startDate, endDate } = req.query;
+    const attribution = await performanceAttributionService.getAttribution(
+      walletId, 
+      new Date(startDate), 
+      new Date(endDate)
+    );
+    res.json({ success: true, attribution });
+  } catch (error) {
+    logger.error('Get performance attribution error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/attribution/calculate/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { startDate, endDate } = req.body;
+    const attribution = await performanceAttributionService.calculateAttribution(
+      walletId, 
+      new Date(startDate), 
+      new Date(endDate)
+    );
+    res.json({ success: true, attribution });
+  } catch (error) {
+    logger.error('Calculate performance attribution error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/attribution/record/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { startDate, endDate } = req.body;
+    const record = await performanceAttributionService.recordAttribution(
+      walletId, 
+      new Date(startDate), 
+      new Date(endDate)
+    );
+    res.json({ success: true, record });
+  } catch (error) {
+    logger.error('Record performance attribution error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Risk Heatmap
+router.post('/risk/calculate/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { positions } = req.body;
+    const heatmap = await riskHeatmapService.calculateRiskHeatmap(walletId, positions);
+    res.json({ success: true, heatmap });
+  } catch (error) {
+    logger.error('Calculate risk heatmap error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/risk/heatmap/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const heatmap = await riskHeatmapService.getRiskHeatmap(walletId);
+    res.json({ success: true, heatmap });
+  } catch (error) {
+    logger.error('Get risk heatmap error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/risk/token/:walletId/:tokenMint', authenticate, async (req, res) => {
+  try {
+    const { walletId, tokenMint } = req.params;
+    const risk = await riskHeatmapService.getTokenRisk(walletId, tokenMint);
+    res.json({ success: true, risk });
+  } catch (error) {
+    logger.error('Get token risk error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/risk/alerts/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { threshold = 70 } = req.query;
+    const alerts = await riskHeatmapService.getRiskAlerts(walletId, parseFloat(threshold));
+    res.json({ success: true, alerts });
+  } catch (error) {
+    logger.error('Get risk alerts error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Predictive Alerts
+router.post('/alerts/detect/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { metrics } = req.body;
+    const alerts = await PredictiveAlertService.detectAnomalies(walletId, metrics);
+    res.json({ success: true, alerts });
+  } catch (error) {
+    logger.error('Detect anomalies error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/alerts/active/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const alerts = await PredictiveAlertService.getActiveAlerts(walletId);
+    res.json({ success: true, alerts });
+  } catch (error) {
+    logger.error('Get active alerts error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/alerts/critical/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const alerts = await PredictiveAlertService.getCriticalAlerts(walletId);
+    res.json({ success: true, alerts });
+  } catch (error) {
+    logger.error('Get critical alerts error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/alerts/acknowledge/:alertId', authenticate, async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    const alert = await PredictiveAlertService.acknowledgeAlert(alertId);
+    res.json({ success: true, alert });
+  } catch (error) {
+    logger.error('Acknowledge alert error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/alerts/resolve/:alertId', authenticate, async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    const alert = await PredictiveAlertService.resolveAlert(alertId);
+    res.json({ success: true, alert });
+  } catch (error) {
+    logger.error('Resolve alert error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Anomaly Detection
+router.post('/anomalies/log/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const anomalyData = { ...req.body, wallet_id: walletId };
+    const log = await AnomalyDetectionService.logAnomaly(anomalyData);
+    res.json({ success: true, log });
+  } catch (error) {
+    logger.error('Log anomaly error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/anomalies/recent/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { hoursBack = 24 } = req.query;
+    const anomalies = await AnomalyDetectionService.getRecentAnomalies(walletId, parseInt(hoursBack));
+    res.json({ success: true, anomalies });
+  } catch (error) {
+    logger.error('Get recent anomalies error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/anomalies/statistical/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { currentMetrics, historicalMetrics } = req.body;
+    const anomalies = await AnomalyDetectionService.detectStatisticalAnomalies(walletId, currentMetrics, historicalMetrics);
+    res.json({ success: true, anomalies });
+  } catch (error) {
+    logger.error('Detect statistical anomalies error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Trade History Aggregation
+router.get('/trade-history/aggregate/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { timeframe = '1d', days = 30 } = req.query;
+    const result = await tradeHistoryAggregationService.aggregateTradesByTimeframe(walletId, timeframe, parseInt(days));
+    res.json({ success: true, result });
+  } catch (error) {
+    logger.error('Aggregate trade history error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/trade-history/stats/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { days = 30 } = req.query;
+    const stats = await tradeHistoryAggregationService.getTradeStatistics(walletId, parseInt(days));
+    res.json({ success: true, stats });
+  } catch (error) {
+    logger.error('Get trade stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/trade-history/patterns/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { days = 30 } = req.query;
+    const patterns = await tradeHistoryAggregationService.getTradePatterns(walletId, parseInt(days));
+    res.json({ success: true, patterns });
+  } catch (error) {
+    logger.error('Get trade patterns error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/trade-history/export/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { format = 'json', days = 30 } = req.query;
+    const exportData = await tradeHistoryAggregationService.exportAggregatedData(walletId, format, parseInt(days));
+    if (format === 'csv') {
+      res.header('Content-Type', 'text/csv');
+      res.send(exportData);
+    } else {
+      res.json({ success: true, exportData });
+    }
+  } catch (error) {
+    logger.error('Export trade history error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/trade-history/clear-cache/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const deleted = await tradeHistoryAggregationService.clearCache(walletId);
+    res.json({ success: true, deleted });
+  } catch (error) {
+    logger.error('Clear trade cache error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Sentiment and Social Signal Routes
+router.post('/sentiment/record', authenticate, async (req, res) => {
+  try {
+    const sentiment = await sentimentAnalysisService.recordSentiment(req.body);
+    res.json({ success: true, sentiment });
+  } catch (error) {
+    logger.error('Record sentiment error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/sentiment/latest/:tokenMint', authenticate, async (req, res) => {
+  try {
+    const { tokenMint } = req.params;
+    const sentiment = await sentimentAnalysisService.getLatestSentiment(tokenMint);
+    res.json({ success: true, sentiment });
+  } catch (error) {
+    logger.error('Get latest sentiment error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/sentiment/opportunities', authenticate, async (req, res) => {
+  try {
+    const { hoursBack = 24 } = req.query;
+    const opportunities = await sentimentAnalysisService.getBullishOpportunities(parseInt(hoursBack));
+    res.json({ success: true, opportunities });
+  } catch (error) {
+    logger.error('Get bullish opportunities error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/sentiment/trend/:tokenMint', authenticate, async (req, res) => {
+  try {
+    const { tokenMint } = req.params;
+    const { hoursBack = 168 } = req.query;
+    const trend = await sentimentAnalysisService.getSentimentTrend(tokenMint, parseInt(hoursBack));
+    res.json({ success: true, trend });
+  } catch (error) {
+    logger.error('Get sentiment trend error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/social-signals/record', authenticate, async (req, res) => {
+  try {
+    const signal = await SocialSignalService.recordSignal(req.body);
+    res.json({ success: true, signal });
+  } catch (error) {
+    logger.error('Record social signal error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/social-signals/high-quality', authenticate, async (req, res) => {
+  try {
+    const { hoursBack = 24 } = req.query;
+    const signals = await SocialSignalService.getHighQualitySignals(parseInt(hoursBack));
+    res.json({ success: true, signals });
+  } catch (error) {
+    logger.error('Get high-quality signals error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/social-signals/whales/:tokenMint?', authenticate, async (req, res) => {
+  try {
+    const { tokenMint } = req.params;
+    const { hoursBack = 24 } = req.query;
+    const signals = tokenMint
+      ? await SocialSignalService.getTokenSignals(tokenMint, parseInt(hoursBack))
+      : await SocialSignalService.getWhaleSignals(parseInt(hoursBack));
+    res.json({ success: true, signals });
+  } catch (error) {
+    logger.error('Get whale signals error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Cross-chain Bridge Routes
+router.post('/bridge/initiate/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const bridge = await crossChainBridgeService.initiateBridge(walletId, req.body);
+    res.json({ success: true, bridge });
+  } catch (error) {
+    logger.error('Initiate bridge error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/bridge/status/:bridgeTxId', authenticate, async (req, res) => {
+  try {
+    const { bridgeTxId } = req.params;
+    const { status, targetTxSignature } = req.body;
+    const bridge = await crossChainBridgeService.updateBridgeStatus(bridgeTxId, status, targetTxSignature);
+    res.json({ success: true, bridge });
+  } catch (error) {
+    logger.error('Update bridge status error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/bridge/pending', authenticate, async (req, res) => {
+  try {
+    const pending = await crossChainBridgeService.getPendingBridges();
+    res.json({ success: true, pending });
+  } catch (error) {
+    logger.error('Get pending bridges error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/bridge/history/:walletId', authenticate, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const history = await crossChainBridgeService.getWalletBridgeHistory(walletId);
+    res.json({ success: true, history });
+  } catch (error) {
+    logger.error('Get bridge history error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/bridge/retry/:bridgeTxId', authenticate, async (req, res) => {
+  try {
+    const { bridgeTxId } = req.params;
+    const bridge = await crossChainBridgeService.retryFailedBridge(bridgeTxId);
+    res.json({ success: true, bridge });
+  } catch (error) {
+    logger.error('Retry bridge error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/bridge/progress/:bridgeTxId', authenticate, async (req, res) => {
+  try {
+    const { bridgeTxId } = req.params;
+    const progress = await crossChainBridgeService.monitorBridgeProgress(bridgeTxId);
+    res.json({ success: true, progress });
+  } catch (error) {
+    logger.error('Get bridge progress error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/bridge/estimate-fee', authenticate, async (req, res) => {
+  try {
+    const { sourceChain, targetChain, amount } = req.query;
+    const feeEstimate = await crossChainBridgeService.estimateBridgeFee(sourceChain, targetChain, parseFloat(amount));
+    res.json({ success: true, feeEstimate });
+  } catch (error) {
+    logger.error('Estimate bridge fee error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

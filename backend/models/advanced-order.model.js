@@ -73,12 +73,11 @@ class AdvancedOrderModel {
     const sql = `
       SELECT * FROM advanced_orders
       WHERE status = 'active'
-      AND is_executed = false
       AND (
         execute_at <= CURRENT_TIMESTAMP OR
         (trigger_price IS NOT NULL AND (condition_type = 'price_above' OR condition_type = 'price_below'))
       )
-      AND expires_at > CURRENT_TIMESTAMP
+      AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
       ORDER BY created_at ASC
     `;
     try {
@@ -94,8 +93,8 @@ class AdvancedOrderModel {
   static async executeOrder(order_id, executed_price, tx_signature) {
     const sql = `
       UPDATE advanced_orders
-      SET is_executed = true, executed_at = CURRENT_TIMESTAMP, executed_price = $1,
-          execution_tx_signature = $2, status = 'completed', updated_at = CURRENT_TIMESTAMP
+      SET status = 'executed', executed_at = CURRENT_TIMESTAMP, executed_price = $1,
+          tx_signature = $2, updated_at = CURRENT_TIMESTAMP
       WHERE order_id = $3
       RETURNING *
     `;

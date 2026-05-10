@@ -1,4 +1,5 @@
 const { PnLModel, StrategyPerformanceModel, TokenAttributionModel } = require('../models/attribution.model');
+const jupiterService = require('../integrations/jupiter.service');
 const TradeModel = require('../models/trade.model');
 const logger = require('../utils/logger');
 
@@ -88,6 +89,23 @@ class PnLDashboardService {
     }
   }
 
+  // Get current price for a token
+  async getCurrentPrice(tokenMint) {
+    try {
+      const priceData = await jupiterService.getTokenPrice(tokenMint);
+      return priceData.price;
+    } catch (error) {
+      logger.error(`Error getting current price for ${tokenMint}:`, error);
+      return 0; // Return 0 as fallback
+    }
+  }
+      };
+    } catch (error) {
+      logger.error('Error fetching dashboard:', error);
+      throw error;
+    }
+  }
+
   // Get P&L dashboard data
   async getDashboard(walletId) {
     try {
@@ -116,36 +134,65 @@ class PnLDashboardService {
     }
   }
 
-  // Mock: Get current price
-  async getCurrentPrice(tokenMint) {
-    // Would integrate with actual price feed
-    return 150.5;
-  }
-}
-
-class PerformanceAttributionService {
-  // Record strategy performance
-  async recordStrategyPerformance(walletId, strategyName, performanceData) {
+  // Calculate performance metrics
+  async calculatePerformanceMetrics(walletId, period = '30d') {
     try {
-      const performance = await StrategyPerformanceModel.recordPerformance({
-        wallet_id: walletId,
-        strategy_name: strategyName,
-        ...performanceData
-      });
-      logger.info(`Strategy performance recorded: ${strategyName}`);
-      return performance;
+      const days = period === '7d' ? 7 : period === '30d' ? 30 : 1;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const history = await this.getPnLHistory(walletId, startDate, new Date());
+      
+      if (history.length === 0) {
+        return {
+          period,
+          total_return: 0,
+          daily_returns: [],
+          volatility: 0,
+          sharpe_ratio: 0,
+          max_drawdown: 0
+        };
+      }
+
+      const dailyReturns = history.map(snapshot => snapshot.daily_return_percent || 0);
+      const totalReturn = history[history.length - 1].total_pnl_percent - history[0].total_pnl_percent;
+      
+      // Calculate volatility (standard deviation of returns)
+      const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+      const variance = dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / dailyReturns.length;
+      const volatility = Math.sqrt(variance);
+
+      // Calculate Sharpe ratio (assuming 2% risk-free rate)
+      const riskFreeRate = 0.02;
+      const sharpeRatio = volatility > 0 ? (avgReturn - riskFreeRate) / volatility : 0;
+
+      // Calculate max drawdown
+      let maxDrawdown = 0;
+      let peak = history[0].total_pnl_usd;
+      for (const snapshot of history) {
+        if (snapshot.total_pnl_usd > peak) {
+          peak = snapshot.total_pnl_usd;
+        }
+        const drawdown = (peak - snapshot.total_pnl_usd) / peak;
+        maxDrawdown = Math.max(maxDrawdown, drawdown);
+      }
+
+      return {
+        period,
+        total_return: totalReturn,
+        daily_returns: dailyReturns,
+        volatility: volatility * 100, // Convert to percentage
+        sharpe_ratio: sharpeRatio,
+        max_drawdown: maxDrawdown * 100 // Convert to percentage
+      };
     } catch (error) {
-      logger.error('Error recording strategy performance:', error);
+      logger.error('Error calculating performance metrics:', error);
       throw error;
     }
   }
+}
 
-  // Get strategy attribution
-  async getStrategyAttribution(walletId, periodStart, periodEnd) {
-    try {
-      const attribution = await StrategyPerformanceModel.getStrategyAttribution(
-        walletId, periodStart, periodEnd
-      );
+module.exports = new PnLDashboardService();
       
       // Calculate total P&L and percentages
       const totalPnL = attribution.reduce((sum, s) => sum + (s.strategy_pnl_usd || 0), 0);
