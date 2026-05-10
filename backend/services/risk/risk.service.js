@@ -1,7 +1,7 @@
 const { query } = require('../../db/connection');
 const logger = require('../../utils/logger');
 const metricsService = require('../monitoring/metrics.service');
-const volatilityService = require('./volatility.service');
+const volatilityService = require('../volatility.service');
 
 class RiskManagementService {
   constructor() {
