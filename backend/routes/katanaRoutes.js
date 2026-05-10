@@ -8,7 +8,9 @@
 const express = require('express');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
-const katanaEngine = require('../services/engines/katana.engine');
+const diContainer = require('../services/di-container');
+
+const getKatanaEngine = () => diContainer.get('katanaEngine');
 
 const router = express.Router();
 
@@ -29,7 +31,7 @@ router.use(authenticate);
  */
 router.get('/status', (req, res) => {
   try {
-    const status = katanaEngine.getStatus();
+    const status = getKatanaEngine().getStatus();
     res.json({
       success: true,
       data: status,
@@ -58,7 +60,7 @@ router.get('/status', (req, res) => {
  */
 router.post('/start', async (req, res) => {
   try {
-    await katanaEngine.start();
+    await getKatanaEngine().start();
     res.json({
       success: true,
       message: 'Katana Mode started',
@@ -87,7 +89,7 @@ router.post('/start', async (req, res) => {
  */
 router.post('/stop', async (req, res) => {
   try {
-    await katanaEngine.stop();
+    await getKatanaEngine().stop();
     res.json({
       success: true,
       message: 'Katana Mode stopped',
@@ -164,7 +166,7 @@ router.post('/trade', async (req, res) => {
       useJito: useJito || false
     };
 
-    const result = await katanaEngine.executeTrade(tradeParams);
+    const result = await getKatanaEngine().executeTrade(tradeParams);
 
     res.json({
       success: true,
@@ -224,7 +226,7 @@ router.post('/detect-token', async (req, res) => {
       detectedAt: Date.now()
     };
 
-    await katanaEngine.detectNewToken(tokenData);
+    await getKatanaEngine().detectNewToken(tokenData);
 
     res.json({
       success: true,
@@ -256,10 +258,10 @@ router.post('/detect-token', async (req, res) => {
 router.get('/config', (req, res) => {
   try {
     const config = {
-      strategy: katanaEngine.strategy.config,
-      risk: katanaEngine.risk.config,
-      executor: katanaEngine.executor.config,
-      websocket: katanaEngine.ws.config
+      strategy: getKatanaEngine().strategy.config,
+      risk: getKatanaEngine().risk.config,
+      executor: getKatanaEngine().executor.config,
+      websocket: getKatanaEngine().ws.config
     };
 
     res.json({
@@ -290,8 +292,8 @@ router.get('/config', (req, res) => {
  */
 router.get('/positions', (req, res) => {
   try {
-    const positions = katanaEngine.strategy.getAllPositions();
-    const summary = katanaEngine.strategy.getPositionsSummary();
+    const positions = getKatanaEngine().strategy.getAllPositions();
+    const summary = getKatanaEngine().strategy.getPositionsSummary();
 
     res.json({
       success: true,
@@ -325,10 +327,10 @@ router.get('/positions', (req, res) => {
 router.get('/stats', (req, res) => {
   try {
     const stats = {
-      engine: katanaEngine.getStatus(),
-      executor: katanaEngine.executor.getExecutionStats(),
-      risk: katanaEngine.risk.getRiskStats(),
-      websocket: katanaEngine.ws.getStats()
+      engine: getKatanaEngine().getStatus(),
+      executor: getKatanaEngine().executor.getExecutionStats(),
+      risk: getKatanaEngine().risk.getRiskStats(),
+      websocket: getKatanaEngine().ws.getStats()
     };
 
     res.json({
@@ -509,6 +511,6 @@ async function getWalletById(walletId) {
     publicKey: new (require('@solana/web3.js').PublicKey)('11111111111111111111111111111112'), // Mock
     keypair: null // Would be decrypted from storage
   };
-});
+}
 
 module.exports = router;

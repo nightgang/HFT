@@ -2,9 +2,15 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 const logger = require('../../utils/logger');
 const heliusService = require('../../integrations/helius.service');
 
+const DEFAULT_RPC_URL = 'https://api.mainnet-beta.solana.com';
+
 class RiskEngine {
   constructor() {
-    this.connection = new Connection(process.env.RPC_URL);
+    const rpcUrl = process.env.RPC_URL || DEFAULT_RPC_URL;
+    if (!process.env.RPC_URL) {
+      logger.warn(`RPC_URL environment variable is not set. Falling back to default RPC endpoint: ${rpcUrl}`);
+    }
+    this.connection = new Connection(rpcUrl);
     this.minLiquidity = 1000; // Minimum SOL liquidity
     this.maxWalletConcentration = 0.5; // Max 50% in one wallet
     this.blacklist = new Set(); // Would be loaded from database

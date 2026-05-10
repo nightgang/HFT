@@ -14,9 +14,10 @@
  * - Dashboard state synchronization
  */
 
+const EventEmitter = require('events');
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 class KatanaWebSocket extends EventEmitter {
   constructor() {
@@ -442,5 +443,4 @@ class KatanaWebSocket extends EventEmitter {
   }
 }
 
-module.exports = KatanaWebSocket;</content>
-<parameter name="filePath">/workspaces/HFT/backend/services/engines/katana.websocket.js
+module.exports = KatanaWebSocket;

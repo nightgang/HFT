@@ -15,9 +15,9 @@
 
 const EventEmitter = require('events');
 const { Connection, PublicKey } = require('@solana/web3.js');
-const logger = require('../utils/logger');
-const heliusService = require('../integrations/helius.service');
-const jupiterService = require('../integrations/jupiter.service');
+const logger = require('../../utils/logger');
+const heliusService = require('../../integrations/helius.service');
+const jupiterService = require('../../integrations/jupiter.service');
 
 class KatanaRisk extends EventEmitter {
   constructor() {
@@ -380,5 +380,4 @@ class KatanaRisk extends EventEmitter {
   }
 }
 
-module.exports = KatanaRisk;</content>
-<parameter name="filePath">/workspaces/HFT/backend/services/engines/katana.risk.js
+module.exports = KatanaRisk;

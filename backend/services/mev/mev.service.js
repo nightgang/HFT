@@ -304,7 +304,8 @@ class MEVProtectionService {
       // const quote = await this.getJupiterQuote(tokenIn, tokenOut, amountIn);
 
       // Step 4: Calculate priority fee
-      const connection = new Connection(process.env.RPC_URL);
+      const rpcUrl = process.env.RPC_URL || 'https://api.mainnet-beta.solana.com';
+      const connection = new Connection(rpcUrl);
       const recentBlockhash = await connection.getRecentBlockhash();
       const priorityFee = await this.calculatePriorityFee(connection, recentBlockhash);
 

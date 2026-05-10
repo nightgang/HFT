@@ -12,16 +12,16 @@
  */
 
 const EventEmitter = require('events');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 const KatanaStrategy = require('./katana.strategy');
 const KatanaRisk = require('./katana.risk');
 const KatanaExecutor = require('./katana.executor');
 const KatanaWebSocket = require('./katana.websocket');
-const jupiterService = require('../integrations/jupiter.service');
-const heliusService = require('../integrations/helius.service');
-const websocketServer = require('../ws/websocket.server');
-const TradeModel = require('../models/trade.model');
-const WalletModel = require('../models/wallet.model');
+const jupiterService = require('../../integrations/jupiter.service');
+const heliusService = require('../../integrations/helius.service');
+const websocketServer = require('../../ws/websocket.server');
+const TradeModel = require('../../models/trade.model');
+const WalletModel = require('../../models/wallet.model');
 
 class KatanaEngine extends EventEmitter {
   constructor() {
@@ -229,6 +229,18 @@ class KatanaEngine extends EventEmitter {
     }
   }
 
+  async handleTrailingStop(data) {
+    const { tradeId, reason } = data;
+    logger.info(`🔄 Trailing stop triggered for trade ${tradeId}: ${reason || 'trailing_stop'}`);
+    await this.handleStopLoss({ tradeId, reason: reason || 'trailing_stop' });
+  }
+
+  async handleEmergencyExit(data) {
+    const { tradeId } = data;
+    logger.warn(`🚨 Emergency exit triggered for trade ${tradeId}`);
+    await this.handleStopLoss({ tradeId, reason: 'emergency_exit' });
+  }
+
   async handleStopLoss(data) {
     const { tradeId, reason } = data;
 
@@ -283,6 +295,11 @@ class KatanaEngine extends EventEmitter {
 
     // Broadcast failure
     this.ws.broadcastTradeFailure(data);
+  }
+
+  async handleRetryScheduled(data) {
+    logger.info(`🔁 Retry scheduled for trade: ${JSON.stringify(data)}`);
+    this.ws.broadcastRetryScheduled(data);
   }
 
   // Monitoring methods
@@ -452,5 +469,4 @@ class KatanaEngine extends EventEmitter {
   }
 }
 
-module.exports = KatanaEngine;</content>
-<parameter name="filePath">/workspaces/HFT/backend/services/engines/katana.engine.js
+module.exports = KatanaEngine;

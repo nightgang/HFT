@@ -924,9 +924,6 @@ class AdvancedBacktestingService {
       tokenResults: results
     };
   }
-}
-
-module.exports = new AdvancedBacktestingService();
 
   simulateStrategy(strategy, priceSeries, startCapital, parameters, feeBps) {
     switch (strategy) {
@@ -1256,4 +1253,4 @@ module.exports = new AdvancedBacktestingService();
   }
 }
 
-module.exports = new BacktestingService();
+module.exports = new AdvancedBacktestingService();

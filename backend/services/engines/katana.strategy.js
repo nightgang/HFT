@@ -13,8 +13,8 @@
  */
 
 const EventEmitter = require('events');
-const logger = require('../utils/logger');
-const jupiterService = require('../integrations/jupiter.service');
+const logger = require('../../utils/logger');
+const jupiterService = require('../../integrations/jupiter.service');
 const volatilityService = require('../volatility.service');
 
 class KatanaStrategy extends EventEmitter {

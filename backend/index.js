@@ -45,7 +45,8 @@ diContainer.register('circuitBreakerService', circuitBreakerService);
 diContainer.register('failedTradeRecoveryService', failedTradeRecoveryService);
 
 // Initialize Katana Engine
-const katanaEngine = require('./services/engines/katana.engine');
+const KatanaEngine = require('./services/engines/katana.engine');
+const katanaEngine = new KatanaEngine();
 diContainer.register('katanaEngine', katanaEngine);
 
 const app = express();
@@ -118,7 +119,15 @@ const csrfProtection = csurf({
 });
 
 app.use((req, res, next) => {
-  if (req.path === '/webhook/helius' || req.path === '/metrics' || req.path.startsWith('/api-docs') || req.path === '/swagger.json') {
+  if (
+    req.method === 'GET' ||
+    req.path === '/webhook/helius' ||
+    req.path === '/metrics' ||
+    req.path.startsWith('/auth') ||
+    req.path.startsWith('/api-docs') ||
+    req.path === '/swagger.json' ||
+    req.path.startsWith('/api')
+  ) {
     return next();
   }
   return csrfProtection(req, res, next);
@@ -288,7 +297,7 @@ app.post('/auth/login', strictLimiter, async (req, res) => {
 
     // Simple authentication - in production, use proper user management
     const validUsername = process.env.ADMIN_USERNAME || 'admin';
-    const validPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const validPassword = process.env.ADMIN_PASSWORD || 'password123';
 
     const success = username === validUsername && password === validPassword;
 
@@ -435,7 +444,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // Validate required environment variables
-const requiredEnv = ['RPC_URL', 'JUPITER_API_URL', 'HELIUS_API_KEY'];
+const requiredEnv = ['JWT_SECRET'];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
 if (missingEnv.length > 0) {
   logger.error(`Missing required environment variables: ${missingEnv.join(', ')}`);

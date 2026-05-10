@@ -16,8 +16,8 @@
 
 const EventEmitter = require('events');
 const { Connection, PublicKey, Transaction, ComputeBudgetProgram, sendAndConfirmTransaction } = require('@solana/web3.js');
-const logger = require('../utils/logger');
-const jupiterService = require('../integrations/jupiter.service');
+const logger = require('../../utils/logger');
+const jupiterService = require('../../integrations/jupiter.service');
 const KatanaJitoService = require('./katana.jito'); // Jito bundle service
 
 class KatanaExecutor extends EventEmitter {
@@ -117,6 +117,16 @@ class KatanaExecutor extends EventEmitter {
     }
 
     this.isProcessing = false;
+  }
+
+  startQueueProcessor() {
+    setInterval(() => {
+      if (!this.isProcessing) {
+        this.processQueue().catch(error => {
+          logger.error('Queue processor error:', error);
+        });
+      }
+    }, 500); // Check queue twice per second
   }
 
   async processExecution(execution) {
@@ -447,5 +457,4 @@ class KatanaExecutor extends EventEmitter {
   }
 }
 
-module.exports = KatanaExecutor;</content>
-<parameter name="filePath">/workspaces/HFT/backend/services/engines/katana.executor.js
+module.exports = KatanaExecutor;
