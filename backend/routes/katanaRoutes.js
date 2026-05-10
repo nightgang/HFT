@@ -345,6 +345,161 @@ router.get('/stats', (req, res) => {
   }
 });
 
+// Advanced Backtesting Routes
+const advancedBacktestingService = require('../services/backtesting.service');
+
+/**
+ * @swagger
+ * /api/katana/backtest:
+ *   post:
+ *     summary: Run advanced backtest for trading strategy
+ *     tags: [Katana]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tokenMint:
+ *                 type: string
+ *               strategy:
+ *                 type: string
+ *                 enum: [moving_average_crossover, rsi_divergence, bollinger_bands, macd_crossover, mean_reversion, momentum, buy_and_hold, dollar_cost_average, martingale, anti_martingale]
+ *               startCapital:
+ *                 type: number
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *               parameters:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Backtest results
+ */
+router.post('/backtest', async (req, res) => {
+  try {
+    const {
+      tokenMint,
+      strategy = 'moving_average_crossover',
+      startCapital = 10000,
+      startDate,
+      endDate,
+      parameters = {},
+      feeBps = 25,
+      slippageBps = 10,
+      positionSizePercent = 100,
+      enableRiskManagement = true,
+      stopLossPercent = 5,
+      takeProfitPercent = 20
+    } = req.body;
+
+    const result = await advancedBacktestingService.runBacktest({
+      tokenMint,
+      strategy,
+      startCapital,
+      startDate,
+      endDate,
+      parameters,
+      feeBps,
+      slippageBps,
+      positionSizePercent,
+      enableRiskManagement,
+      stopLossPercent,
+      takeProfitPercent
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    logger.error('Backtest error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/katana/backtest/portfolio:
+ *   post:
+ *     summary: Run portfolio backtest across multiple tokens
+ *     tags: [Katana]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tokens:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     mint:
+ *                       type: string
+ *                     symbol:
+ *                       type: string
+ *               strategy:
+ *                 type: string
+ *               startCapital:
+ *                 type: number
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Portfolio backtest results
+ */
+router.post('/backtest/portfolio', async (req, res) => {
+  try {
+    const {
+      tokens,
+      strategy = 'moving_average_crossover',
+      startCapital = 50000,
+      startDate,
+      endDate,
+      parameters = {}
+    } = req.body;
+
+    const result = await advancedBacktestingService.runPortfolioBacktest({
+      tokens,
+      strategy,
+      startCapital,
+      startDate,
+      endDate,
+      parameters
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    logger.error('Portfolio backtest error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Helper function to get wallet by ID
 async function getWalletById(walletId) {
   // This would integrate with the existing wallet service
@@ -354,7 +509,6 @@ async function getWalletById(walletId) {
     publicKey: new (require('@solana/web3.js').PublicKey)('11111111111111111111111111111112'), // Mock
     keypair: null // Would be decrypted from storage
   };
-}
+});
 
-module.exports = router;</content>
-<parameter name="filePath">/workspaces/HFT/backend/routes/katanaRoutes.js
+module.exports = router;

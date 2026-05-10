@@ -15,6 +15,7 @@
 const EventEmitter = require('events');
 const logger = require('../utils/logger');
 const jupiterService = require('../integrations/jupiter.service');
+const volatilityService = require('../volatility.service');
 
 class KatanaStrategy extends EventEmitter {
   constructor() {
@@ -60,7 +61,13 @@ class KatanaStrategy extends EventEmitter {
     this.stopPositionMonitoring();
   }
 
-  createPosition(tradeData) {
+  async createPosition(tradeData) {
+    // Get volatility-adjusted risk parameters
+    const riskParams = await volatilityService.getAdjustedRiskParams(tradeData.tokenMint, {
+      stopLossPercent: this.config.stopLoss.percent / 100, // Convert to decimal
+      takeProfitPercent: this.config.tp1.profitPercent / 100
+    });
+
     const position = {
       id: tradeData.id,
       tokenMint: tradeData.tokenMint,
@@ -75,14 +82,16 @@ class KatanaStrategy extends EventEmitter {
       tp3Triggered: false,
       trailingStopPrice: null,
       stopLossPrice: this.config.stopLoss.enabled ?
-        tradeData.price * (1 - this.config.stopLoss.percent / 100) : null,
+        tradeData.price * (1 - riskParams.stopLossPercent) : null,
       breakevenTriggered: false,
       pnl: 0,
-      pnlPercent: 0
+      pnlPercent: 0,
+      volatilityLevel: riskParams.volatilityLevel,
+      adjustedStopLossPercent: riskParams.stopLossPercent
     };
 
     this.positions.set(tradeData.id, position);
-    logger.info(`📊 Created position for trade ${tradeData.id}`);
+    logger.info(`📊 Created position for trade ${tradeData.id} with ${riskParams.volatilityLevel} volatility (stop loss: ${(riskParams.stopLossPercent * 100).toFixed(2)}%)`);
     return position;
   }
 
@@ -310,5 +319,4 @@ class KatanaStrategy extends EventEmitter {
   }
 }
 
-module.exports = KatanaStrategy;</content>
-<parameter name="filePath">/workspaces/HFT/backend/services/engines/katana.strategy.js
+module.exports = KatanaStrategy;

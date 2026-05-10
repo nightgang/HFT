@@ -1,86 +1,421 @@
-# Node.js
-node_modules/
+#=============================================================================
+# SECURITY CRITICAL: Environment & Secrets
+#=============================================================================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+.env.development.local
+.env.production.local
+.env.*.production
+.env.*.staging
+
+# API Keys, Credentials, and Secrets
+*.key
+*.pem
+*.pub
+*.ppk
+.ssh/
+.gnupg/
+private_keys.json
+wallet.json
+wallet.secret.json
+config.private.json
+secrets.json
+credentials.json
+api_keys.json
+access_tokens.json
+
+# AWS, Google Cloud, Azure credentials
+~/.aws/
+~/.gcloud/
+~/.azure/
+.credentials/
+credentials/
+
+# Cryptographic keys and certificates
+*.pfx
+*.p12
+*.crt
+*.cer
+*.pem
+*.key
+openssh_key
+rsa_key
+
+#=============================================================================
+# SECURITY CRITICAL: Database Backups & Dumps
+#=============================================================================
+# Database backups - NEVER commit production data
+backups/
+*.dump
+*.sql
+*.backup
+*.archive
+db_backups/
+*.tar.gz
+*.zip
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+data/db/
+
+#=============================================================================
+# SECURITY CRITICAL: Sensitive Application Data
+#=============================================================================
+# Wallet and trading data
+data/wallets/
+data/trades/
+data/positions/
+data/history/
+trades_history.json
+position_data.json
+portfolio.json
+
+# Logs that may contain sensitive info
+logs/
+log/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+debug.log
+combined.log
+error.log
+access.log
+
+# PM2 logs (production)
+logs/
+PM2/
+ecosystem.config.*.js
+
+# Private exports and data dumps
+exports/*.json
+exports/*.csv
+exports/*.xlsx
+reports/sensitive/
+data/exports/
+data/reports/
+
+#=============================================================================
+# Node.js
+#=============================================================================
+node_modules/
 .pnp
 .pnp.js
-.env*
-.env.local
-.env.example
-.env.development.local
-.env.production.local
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+npm-shrinkwrap.json
 
+#=============================================================================
+# Build & Distribution
+#=============================================================================
 # Vite / Frontend Build
 dist/
 build/
 .vite/
+.next/
+out/
+.nuxt/
+.cache
+.parcel-cache
+.parcel-cache/
 
-# Backend runtime data
-/backend/data/
+# Build artifacts
+*.tsbuildinfo
+*.tsbuilding
 
-# Python
+#=============================================================================
+# Python & Virtual Environments
+#=============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# Virtual environments
 venv/
+ENV/
 env/
+env.bak/
+venv.bak/
+.venv
+.venv/
+virtuEnv/
+
+# Python packaging
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django stuff
+*.pot
+.webassets-cache
+instance/
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# mypy
 .mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Coverage reports
 .coverage
+.coverage.*
+.cache
 .pytest_cache/
-tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+htmlcov/
+
+#=============================================================================
+# IDE & Editor
+#=============================================================================
+.vscode/
+.vscode-remote/
+.idea/
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
 .DS_Store
 
-# IDE / Editor
-.vscode/
-.idea/
+# Vim
 *.swp
 *.swo
 *~
+.vim/
+.vimrc
 
-# OS
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
 
-# Logs
-*.log
-logs/
-npm-debug.log*
+# Emacs
+*~
+\#*\#
+.\#*
 
-# Testing / Coverage
-coverage/
-.nyc_output/
-.coverage
+# VS Code
+.code-workspace
+.vscode/settings.json
+.vscode/launch.json
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Dependencies (lockfiles already present, but ignore extras)
-yarn.lock
-
-# macOS
-.AppleDouble
-.LSOverride
-
+#=============================================================================
+# OS Specific
+#=============================================================================
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
+*.cab
 
-# HFT / Potential custom (keys, temp data)
-private_keys.json
-wallet.json
-*.key
-config.private.json
+# macOS
+.AppleDouble
+.LSOverride
+._*
+.Metadata
+.apdisk
+
+# Linux
+.directory
+
+#=============================================================================
+# Docker & Orchestration
+#=============================================================================
+.docker/
+docker-compose.override.yml
+.dockerignore
+Dockerfile.local
+.dockercfg
+.docker/config.json
+
+# Kubernetes
+.kube/
+kubeconfig
+*.kubeconfig
+
+# Docker secrets (not the example file)
+secrets/
+!secrets/example/
+
+#=============================================================================
+# CI/CD
+#=============================================================================
+# GitHub Actions
+.github/workflows/local*
+.github/workflows/*.secret*
+
+# GitLab CI
+.gitlab-ci.local.yml
+.gitlab/ci/local/
+
+# Jenkins
+.jenkins/
+jenkins_home/
+
+# Travis CI
+.travis.local.yml
+
+# CircleCI
+.circleci/local/
+
+#=============================================================================
+# Testing
+#=============================================================================
+coverage/
+.nyc_output/
+.c8rc.json
+test-results/
+test-report.html
+
+#=============================================================================
+# Monitoring & Logging
+#=============================================================================
+monitoring/local/
+prometheus-data/
+grafana-storage/
+loki-data/
+
+#=============================================================================
+# Temporary Files
+#=============================================================================
+tmp/
+temp/
 data/temp/
-trades_history.json
+.tmp/
+*.tmp
+*.bak
+*.swp
+*~
+.lock
+*.lock
+
+#=============================================================================
+# Application Specific - HFT Trading System
+#=============================================================================
+# Backups - Database dumps should NEVER be committed
+backups/hft-db-backup*.dump
+backups/*.dump
+backups/*.sql
+backups/*.tar.gz
+
+# Real-time data that changes frequently
+data/
+!data/migrations/
+!data/init.sql
+!data/schema.sql
+data/cache/
+data/temp/
+data/state/
+
+# CLI history and temporary state
+.cli_history
+.terminal_state
+cli/data/
+
+# Trading execution logs - may contain sensitive wallet info
+services/logs/
+services/execution_logs/
+services/trade_logs/
+
+# Model files and ML data (except pre-trained models)
+ai-service/models/training_data/
+ai-service/temp/
+ai-service/*.pkl
+
+# Redis dumps
+dump.rdb
+
+# Cache files
+.cache/
+cache/
+*.cache
+
+#=============================================================================
+# Production VPS Safety
+#=============================================================================
+# Production configuration that should not be version controlled
+production.env
+staging.env
+.prod_config
+.staging_config
+
+# Production data exports - never commit production database exports
+production_export.sql
+production_dump.sql
+live_data_backup/
+production_backups/
+
+# System state files from running application
+*.pid
+*.sock
+.lock
+.state
+
+# Cluster state files
+.cluster_state
+node_state/
+cluster.lock
+
+# Exclude all hidden files by default
+.*
+
+# IMPORTANT: Whitelist specific files that SHOULD be committed
+!.gitignore
+!.gitattributes
+!.github/
+!.editorconfig
+!.eslintrc.cjs
+!.prettierrc.cjs
+!.env.example
+!.env.example.local
 

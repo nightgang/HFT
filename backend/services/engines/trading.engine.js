@@ -3,7 +3,7 @@ const path = require('path');
 const { Keypair, PublicKey } = require('@solana/web3.js');
 const logger = require('../../utils/logger');
 const { tradeBuyRequestSchema, tradeSellRequestSchema } = require('../../utils/validator');
-const jupiterService = require('../../integrations/jupiter.service');
+const multiExchangeService = require('../multi-exchange.service');
 const heliusService = require('../../integrations/helius.service');
 const smartMoneyEngine = require('./smartmoney.engine');
 const websocketServer = require('../../ws/websocket.server');
@@ -343,13 +343,25 @@ class TradingEngine {
       const wsolMint = 'So11111111111111111111111111111111111111112';
       const amountLamports = Math.floor(buyAmount * 1e9); // Convert SOL to lamports
 
-      // Get quote from Jupiter
-      const quote = await jupiterService.getQuote(
-        wsolMint,
-        validated.tokenMint,
-        amountLamports,
-        validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
-      );
+      // Get best quote across all exchanges
+      const quoteResult = await multiExchangeService.getBestQuote({
+        inputMint: wsolMint,
+        outputMint: validated.tokenMint,
+        amount: amountLamports,
+        slippageBps: validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
+      });
+
+      const quote = {
+        inAmount: quoteResult.inAmount,
+        outAmount: quoteResult.outAmount,
+        priceImpactPct: quoteResult.priceImpactPct,
+        route: quoteResult.route,
+        swapTransaction: quoteResult.swapTransaction,
+        exchange: quoteResult.exchange,
+        exchangeName: quoteResult.exchangeName
+      };
+
+      logger.info(`Best quote from ${quoteResult.exchangeName}: ${quoteResult.outAmount} tokens`);
 
       // MEV protection: Simulate slippage
       const slippageSim = await mevService.simulateSlippage(
@@ -379,17 +391,16 @@ class TradingEngine {
         };
       }
 
-      // Execute trade with MEV protection
-      const result = await jupiterService.executeSwap(
+      // Execute trade with best exchange
+      const result = await multiExchangeService.executeBestSwap(
         quote,
-        this.activeWallet.publicKey,
-        async (transaction) => {
-          transaction.sign(this.activeWallet.keypair);
-          return transaction;
+        {
+          publicKey: this.activeWallet.publicKey,
+          keypair: this.activeWallet.keypair
         }
       );
 
-      logger.info(`Buy executed successfully: ${result.signature}`);
+      logger.info(`Buy executed successfully on ${quote.exchangeName}: ${result.txId}`);
 
       // Record trade in database
       const tradeData = {

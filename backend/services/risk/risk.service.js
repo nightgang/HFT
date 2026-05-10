@@ -1,6 +1,7 @@
 const { query } = require('../../db/connection');
 const logger = require('../../utils/logger');
 const metricsService = require('../monitoring/metrics.service');
+const volatilityService = require('./volatility.service');
 
 class RiskManagementService {
   constructor() {
@@ -393,6 +394,35 @@ class RiskManagementService {
     if (score <= 50) return 'medium';
     if (score <= 80) return 'high';
     return 'critical';
+  }
+
+  /**
+   * Get volatility-adjusted risk parameters for trading
+   * @param {string} tokenMint - Token mint address
+   * @param {Object} baseParams - Base risk parameters
+   * @returns {Promise<Object>} Adjusted risk parameters
+   */
+  async getAdjustedRiskParams(tokenMint, baseParams = {}) {
+    try {
+      const adjustedParams = await volatilityService.getAdjustedRiskParams(tokenMint, {
+        stopLossPercent: baseParams.stopLossPercent || 0.05, // 5% default
+        takeProfitPercent: baseParams.takeProfitPercent || 0.20, // 20% default
+        ...baseParams
+      });
+
+      logger.info(`Adjusted risk params for ${tokenMint}: stopLoss=${(adjustedParams.stopLossPercent * 100).toFixed(2)}%, volatility=${adjustedParams.volatilityLevel}`);
+
+      return adjustedParams;
+    } catch (error) {
+      logger.error('Failed to get adjusted risk params:', error);
+      return {
+        stopLossPercent: 0.05,
+        takeProfitPercent: 0.20,
+        volatility: 0.05,
+        volatilityLevel: 'medium',
+        error: error.message
+      };
+    }
   }
 }
 
