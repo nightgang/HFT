@@ -418,4 +418,4 @@ cluster.lock
 !.prettierrc.cjs
 !.env.example
 !.env.example.local
-
+!.git-pre-commit-hook.sh
