@@ -387,6 +387,10 @@ app.use(['/api/jito-bundle', '/jito-bundle'], jitoBundleRoutes);
 const advancedFeaturesRoutes = require('./routes/advanced-features.routes');
 app.use('/api', advancedFeaturesRoutes);
 
+// Trading Strategies routes
+const tradingStrategiesRoutes = require('./routes/trading-strategies.routes');
+app.use(['/api/trading-strategies', '/trading-strategies'], tradingStrategiesRoutes);
+
 // Serve export files from the shared exports directory
 const exportsDir = path.join(__dirname, '../exports');
 app.use('/api/trading/exports', express.static(exportsDir));

@@ -28,6 +28,10 @@ const crossChainBridgeService = require('./cross-chain-bridge.service');
 const jitoBundleService = require('./jito-bundle.service');
 const advancedCacheService = require('./advanced-cache.service');
 const tradeHistoryAggregationService = require('./trade-history-aggregation.service');
+// New trading strategy services
+const { GridTradingService, DCAService, ScalpingBotService} = require('./trading-strategies.service');
+const { ArbitrageService, RebalancingService, SLTPService } = require('./advanced-trading.service');
+const { PositionCloningService, OptionsFuturesService } = require('./cloning-derivatives.service');
 
 // Register all services
 const container = new DIContainer();
@@ -48,5 +52,14 @@ container.register('crossChainBridgeService', crossChainBridgeService);
 container.register('jitoBundleService', jitoBundleService);
 container.register('advancedCacheService', advancedCacheService);
 container.register('tradeHistoryAggregationService', tradeHistoryAggregationService);
+// New trading strategy services
+container.register('gridTradingService', new GridTradingService());
+container.register('dcaService', new DCAService());
+container.register('scalpingBotService', new ScalpingBotService());
+container.register('arbitrageService', new ArbitrageService());
+container.register('rebalancingService', new RebalancingService());
+container.register('slTPService', new SLTPService());
+container.register('positionCloningService', new PositionCloningService());
+container.register('optionsFuturesService', new OptionsFuturesService());
 
 module.exports = container;
