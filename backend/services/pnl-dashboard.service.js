@@ -99,12 +99,6 @@ class PnLDashboardService {
       return 0; // Return 0 as fallback
     }
   }
-      };
-    } catch (error) {
-      logger.error('Error fetching dashboard:', error);
-      throw error;
-    }
-  }
 
   // Get P&L dashboard data
   async getDashboard(walletId) {
@@ -192,7 +186,13 @@ class PnLDashboardService {
   }
 }
 
-module.exports = new PnLDashboardService();
+class PerformanceAttributionService {
+  // Get strategy performance attribution
+  async getStrategyAttribution(walletId, periodStart, periodEnd) {
+    try {
+      const attribution = await StrategyPerformanceModel.getStrategyAttribution(
+        walletId, periodStart, periodEnd
+      );
       
       // Calculate total P&L and percentages
       const totalPnL = attribution.reduce((sum, s) => sum + (s.strategy_pnl_usd || 0), 0);
@@ -248,4 +248,8 @@ class TokenAttributionService {
   }
 }
 
-module.exports = { PnLDashboardService: new PnLDashboardService(), PerformanceAttributionService: new PerformanceAttributionService(), TokenAttributionService: new TokenAttributionService() };
+module.exports = { 
+  PnLDashboardService: new PnLDashboardService(), 
+  PerformanceAttributionService: new PerformanceAttributionService(), 
+  TokenAttributionService: new TokenAttributionService() 
+};

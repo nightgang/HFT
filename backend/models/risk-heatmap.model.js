@@ -78,6 +78,14 @@ class RiskHeatmapModel {
       throw error;
     }
   }
+
+  // Get concentration heatmap
+  static async getConcentrationHeatmap(wallet_id) {
+    const sql = `
+      SELECT * FROM position_concentration
+      WHERE wallet_id = $1
+      ORDER BY recorded_at DESC
+    `;
     try {
       const result = await query(sql, [wallet_id]);
       return result.rows;

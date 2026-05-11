@@ -1,4 +1,20 @@
-const DIContainer = require('./di-container');
+class DIContainer {
+  constructor() {
+    this.services = new Map();
+  }
+
+  register(name, service) {
+    this.services.set(name, service);
+  }
+
+  get(name) {
+    return this.services.get(name);
+  }
+
+  has(name) {
+    return this.services.has(name);
+  }
+}
 
 // Import all services
 const advancedOrdersService = require('./advanced-orders.service');

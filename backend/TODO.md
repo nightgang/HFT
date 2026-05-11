@@ -9,8 +9,8 @@
 
 ## Progress
 - [x] Step 1: Create migration 007 (advanced features schema)
-- [ ] Step 2: Align models to schema (incl. any SQL bugs)
-- [ ] Step 3: Verify/complete routes
-- [ ] Step 4: Verify DI wiring
-- [ ] Step 5: Add/extend Jest tests
+- [x] Step 2: Align models to schema (incl. any SQL bugs)
+- [x] Step 3: Verify/complete routes
+- [x] Step 4: Verify DI wiring
+- [x] Step 5: Add/extend Jest tests
 

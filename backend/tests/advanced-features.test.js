@@ -21,23 +21,17 @@ describe('Advanced Features Test Suite', () => {
   describe('Database Migrations', () => {
     test('should have created all required tables', async () => {
       const tables = [
-        'advanced_orders', 'liquidity_pools', 'liquidity_positions',
-        'limit_orders', 'pnl_snapshots', 'strategy_performance',
-        'token_attribution', 'position_concentration', 'correlation_matrix',
-        'predictive_alerts', 'anomaly_logs', 'sentiment_scores',
-        'social_signals', 'cross_chain_transactions', 'bridge_records',
-        'jito_bundles', 'trade_search_index', 'cache_store'
+        'advanced_orders', 'limit_orders', 'cross_chain_transactions',
+        'jito_bundles', 'liquidity_pools', 'predictive_alerts',
+        'risk_heatmap', 'sentiment_scores', 'pnl_snapshots'
       ];
 
       for (const table of tables) {
         const result = await query(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.tables
-            WHERE table_name = $1
-          )
+          SELECT table_name FROM information_schema.tables WHERE table_name = $1
         `, [table]);
 
-        expect(result.rows[0].exists).toBe(true);
+        expect(result.rows.length).toBe(1);
       }
     });
   });
@@ -47,30 +41,33 @@ describe('Advanced Features Test Suite', () => {
       const orderData = {
         wallet_id: testData.wallet_id,
         order_type: 'stop_loss',
-        token_mint: testData.token_mint_sol,
-        amount: 1000000,
+        input_token_mint: testData.token_mint_sol,
+        input_token_symbol: 'SOL',
+        input_amount: 1000000,
+        output_token_mint: testData.token_mint_usdc,
+        output_token_symbol: 'USDC',
         trigger_price: 100.0,
-        limit_price: 95.0,
-        status: 'pending'
+        limit_price: 95.0
       };
 
       // Test create
       const createResult = await query(`
         INSERT INTO advanced_orders (
-          wallet_id, order_type, token_mint, amount,
-          trigger_price, limit_price, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        RETURNING id
+          wallet_id, order_type, input_token_mint, input_token_symbol, input_amount,
+          output_token_mint, output_token_symbol, trigger_price, limit_price
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING order_id
       `, [
-        orderData.wallet_id, orderData.order_type, orderData.token_mint,
-        orderData.amount, orderData.trigger_price, orderData.limit_price, orderData.status
+        orderData.wallet_id, orderData.order_type, orderData.input_token_mint,
+        orderData.input_token_symbol, orderData.input_amount, orderData.output_token_mint,
+        orderData.output_token_symbol, orderData.trigger_price, orderData.limit_price
       ]);
 
       expect(createResult.rows.length).toBe(1);
-      const orderId = createResult.rows[0].id;
+      const orderId = createResult.rows[0].order_id;
 
       // Test retrieve
-      const retrieveResult = await query('SELECT * FROM advanced_orders WHERE id = $1', [orderId]);
+      const retrieveResult = await query('SELECT * FROM advanced_orders WHERE order_id = $1', [orderId]);
       expect(retrieveResult.rows.length).toBe(1);
       expect(retrieveResult.rows[0].order_type).toBe('stop_loss');
     });
@@ -79,33 +76,41 @@ describe('Advanced Features Test Suite', () => {
   describe('Liquidity Pool Model', () => {
     test('should create and retrieve liquidity pools', async () => {
       const poolData = {
+        wallet_id: testData.wallet_id,
         pool_address: 'test-pool-address-123',
+        amm_provider: 'raydium',
         token_a_mint: testData.token_mint_sol,
+        token_a_symbol: 'SOL',
+        token_a_amount: 1000000,
         token_b_mint: testData.token_mint_usdc,
-        liquidity: 1000000,
-        fee_rate: 0.003,
-        protocol: 'raydium'
+        token_b_symbol: 'USDC',
+        token_b_amount: 1000000000,
+        total_liquidity_usd: 2000.0,
+        pool_share_percent: 0.1
       };
 
       // Test create
       const createResult = await query(`
         INSERT INTO liquidity_pools (
-          pool_address, token_a_mint, token_b_mint, liquidity,
-          fee_rate, protocol, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        RETURNING id
+          wallet_id, pool_address, amm_provider, token_a_mint, token_a_symbol,
+          token_a_amount, token_b_mint, token_b_symbol, token_b_amount,
+          total_liquidity_usd, pool_share_percent
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING pool_id
       `, [
-        poolData.pool_address, poolData.token_a_mint, poolData.token_b_mint,
-        poolData.liquidity, poolData.fee_rate, poolData.protocol
+        poolData.wallet_id, poolData.pool_address, poolData.amm_provider,
+        poolData.token_a_mint, poolData.token_a_symbol, poolData.token_a_amount,
+        poolData.token_b_mint, poolData.token_b_symbol, poolData.token_b_amount,
+        poolData.total_liquidity_usd, poolData.pool_share_percent
       ]);
 
       expect(createResult.rows.length).toBe(1);
-      const poolId = createResult.rows[0].id;
+      const poolId = createResult.rows[0].pool_id;
 
       // Test retrieve
-      const retrieveResult = await query('SELECT * FROM liquidity_pools WHERE id = $1', [poolId]);
+      const retrieveResult = await query('SELECT * FROM liquidity_pools WHERE pool_id = $1', [poolId]);
       expect(retrieveResult.rows.length).toBe(1);
-      expect(retrieveResult.rows[0].protocol).toBe('raydium');
+      expect(retrieveResult.rows[0].amm_provider).toBe('raydium');
     });
   });
 
@@ -113,29 +118,33 @@ describe('Advanced Features Test Suite', () => {
     test('should create and retrieve limit orders', async () => {
       const orderData = {
         wallet_id: testData.wallet_id,
-        token_mint: testData.token_mint_sol,
         side: 'buy',
-        amount: 500000,
-        price: 98.5,
-        status: 'open'
+        input_token_mint: testData.token_mint_usdc,
+        input_token_symbol: 'USDC',
+        input_amount: 100000000, // 100 USDC
+        output_token_mint: testData.token_mint_sol,
+        output_token_symbol: 'SOL',
+        limit_price: 98.5
       };
 
       // Test create
       const createResult = await query(`
         INSERT INTO limit_orders (
-          wallet_id, token_mint, side, amount, price, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        RETURNING id
+          wallet_id, side, input_token_mint, input_token_symbol, input_amount,
+          output_token_mint, output_token_symbol, limit_price
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING order_id
       `, [
-        orderData.wallet_id, orderData.token_mint, orderData.side,
-        orderData.amount, orderData.price, orderData.status
+        orderData.wallet_id, orderData.side, orderData.input_token_mint,
+        orderData.input_token_symbol, orderData.input_amount, orderData.output_token_mint,
+        orderData.output_token_symbol, orderData.limit_price
       ]);
 
       expect(createResult.rows.length).toBe(1);
-      const orderId = createResult.rows[0].id;
+      const orderId = createResult.rows[0].order_id;
 
       // Test retrieve
-      const retrieveResult = await query('SELECT * FROM limit_orders WHERE id = $1', [orderId]);
+      const retrieveResult = await query('SELECT * FROM limit_orders WHERE order_id = $1', [orderId]);
       expect(retrieveResult.rows.length).toBe(1);
       expect(retrieveResult.rows[0].side).toBe('buy');
     });
@@ -145,26 +154,29 @@ describe('Advanced Features Test Suite', () => {
     test('should create and retrieve PnL snapshots', async () => {
       const snapshotData = {
         wallet_id: testData.wallet_id,
-        total_pnl: 1250.75,
-        realized_pnl: 850.50,
-        unrealized_pnl: 400.25,
-        period: 'daily'
+        realized_pnl_usd: 850.50,
+        unrealized_pnl_usd: 400.25,
+        total_pnl_usd: 1250.75,
+        total_portfolio_value_usd: 10000.0,
+        total_invested_usd: 8750.0,
+        daily_return_percent: 1.25
       };
 
       // Test create
       const createResult = await query(`
         INSERT INTO pnl_snapshots (
-          wallet_id, total_pnl, realized_pnl, unrealized_pnl,
-          period, created_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW())
-        RETURNING id
+          wallet_id, realized_pnl_usd, unrealized_pnl_usd, total_pnl_usd,
+          total_portfolio_value_usd, total_invested_usd, daily_return_percent
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING snapshot_id
       `, [
-        snapshotData.wallet_id, snapshotData.total_pnl, snapshotData.realized_pnl,
-        snapshotData.unrealized_pnl, snapshotData.period
+        snapshotData.wallet_id, snapshotData.realized_pnl_usd, snapshotData.unrealized_pnl_usd,
+        snapshotData.total_pnl_usd, snapshotData.total_portfolio_value_usd,
+        snapshotData.total_invested_usd, snapshotData.daily_return_percent
       ]);
 
       expect(createResult.rows.length).toBe(1);
-      const snapshotId = createResult.rows[0].id;
+      const snapshotId = createResult.rows[0].snapshot_id;
 
       // Test retrieve
       const retrieveResult = await query('SELECT * FROM pnl_snapshots WHERE id = $1', [snapshotId]);

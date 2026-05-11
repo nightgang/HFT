@@ -60,6 +60,28 @@ diContainer.register('anomalyDetectionService', AnomalyDetectionService);
 const autoTradeService = require('./services/auto-trade.service');
 diContainer.register('autoTradeService', autoTradeService);
 
+// Advanced Features Services
+const advancedOrdersService = require('./services/advanced-orders.service');
+const liquidityPoolService = require('./services/liquidity-pool.service');
+const limitOrderBookService = require('./services/limit-order-book.service');
+const pnlDashboardService = require('./services/pnl-dashboard.service');
+const performanceAttributionService = require('./services/performance-attribution.service');
+const riskHeatmapService = require('./services/risk-heatmap.service');
+const correlationAnalysisService = require('./services/correlation.service');
+const jitoBundleService = require('./services/jito-bundle.service');
+const advancedCacheService = require('./services/advanced-cache.service');
+
+diContainer.register('advancedOrdersService', advancedOrdersService);
+diContainer.register('liquidityPoolService', liquidityPoolService);
+diContainer.register('limitOrderBookService', limitOrderBookService);
+diContainer.register('pnlDashboardService', pnlDashboardService);
+diContainer.register('performanceAttributionService', performanceAttributionService);
+diContainer.register('tokenAttributionService', performanceAttributionService); // Same service handles both
+diContainer.register('riskHeatmapService', riskHeatmapService);
+diContainer.register('correlationAnalysisService', correlationAnalysisService);
+diContainer.register('jitoBundleService', jitoBundleService);
+diContainer.register('advancedCacheService', advancedCacheService);
+
 // Initialize Katana Engine
 const KatanaEngine = require('./services/engines/katana.engine');
 const katanaEngine = new KatanaEngine();

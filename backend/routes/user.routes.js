@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/user.model');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -132,7 +132,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Get current user profile
-router.get('/profile', authenticateToken, async (req, res) => {
+router.get('/profile', authenticate, async (req, res) => {
   try {
     const user = await UserModel.findById(req.user.userId);
     if (!user) {
@@ -167,7 +167,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 });
 
 // Update user profile
-router.put('/profile', authenticateToken, async (req, res) => {
+router.put('/profile', authenticate, async (req, res) => {
   try {
     const { firstName, lastName, phone, avatarUrl, preferences } = req.body;
 
@@ -193,7 +193,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 });
 
 // Logout (invalidate session)
-router.post('/logout', authenticateToken, async (req, res) => {
+router.post('/logout', authenticate, async (req, res) => {
   try {
     // In a stateless JWT system, logout is handled client-side
     // But we can clean up the session if needed
@@ -211,7 +211,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
 });
 
 // Change password
-router.post('/change-password', authenticateToken, async (req, res) => {
+router.post('/change-password', authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 

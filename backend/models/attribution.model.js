@@ -109,6 +109,7 @@ class PnLModel {
   }
 }
 
+class PerformanceAttributionModel {
   // Record strategy performance attribution
   static async recordPerformanceAttribution(attributionData) {
     const {
@@ -171,6 +172,7 @@ class PnLModel {
       throw error;
     }
   }
+}
 
 class TokenAttributionModel {
   // Record token attribution
@@ -234,4 +236,4 @@ class TokenAttributionModel {
   }
 }
 
-module.exports = { PnLModel, StrategyPerformanceModel, TokenAttributionModel };
+module.exports = { PnLModel, PerformanceAttributionModel, TokenAttributionModel };

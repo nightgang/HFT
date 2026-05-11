@@ -1,4 +1,4 @@
-const RiskHeatmapModel = require('../models/risk-heatmap.model');
+const { RiskHeatmapModel, CorrelationMatrixModel } = require('../models/risk-heatmap.model');
 const jupiterService = require('../integrations/jupiter.service');
 const logger = require('../utils/logger');
 
@@ -153,10 +153,6 @@ class RiskHeatmapService {
       logger.error('Error fetching risk alerts:', error);
       throw error;
     }
-  }
-}
-
-module.exports = new RiskHeatmapService();
   }
 
   // Get concentration heatmap
