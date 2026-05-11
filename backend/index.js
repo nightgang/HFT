@@ -358,6 +358,9 @@ app.use(['/api/ai', '/ai'], aiRoutes);
 // Jito Bundle routes
 const jitoBundleRoutes = require('./routes/jito-bundle-routes');
 app.use(['/api/jito-bundle', '/jito-bundle'], jitoBundleRoutes);
+// Advanced Features routes
+const advancedFeaturesRoutes = require('./routes/advanced-features.routes');
+app.use('/api', advancedFeaturesRoutes);
 
 // Serve export files from the shared exports directory
 const exportsDir = path.join(__dirname, '../exports');

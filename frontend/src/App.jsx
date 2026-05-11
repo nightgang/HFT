@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react';
+import { Menu, X, Home, Zap, TrendingUp, BarChart3, AlertTriangle, MessageCircle, Link as LinkIcon, Layers, Package, Settings as SettingsIcon } from 'lucide-react';
 import KatanaLayout from './components/KatanaLayout';
+import AdvancedOrders from './pages/AdvancedOrders';
+import PnLDashboard from './pages/PnLDashboard';
+import RiskHeatmap from './pages/RiskHeatmap';
+import PredictiveAlerts from './pages/PredictiveAlerts';
+import SentimentAnalysis from './pages/SentimentAnalysis';
+import CrossChainBridge from './pages/CrossChainBridge';
+import LiquidityPools from './pages/LiquidityPools';
+import JitoBundles from './pages/JitoBundles';
+import Settings from './pages/Settings';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState('trading');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -25,7 +37,97 @@ function App() {
     );
   }
 
-  return <KatanaLayout />;
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'trading':
+        return <KatanaLayout />;
+      case 'advanced-orders':
+        return <AdvancedOrders />;
+      case 'pnl':
+        return <PnLDashboard />;
+      case 'risk':
+        return <RiskHeatmap />;
+      case 'alerts':
+        return <PredictiveAlerts />;
+      case 'sentiment':
+        return <SentimentAnalysis />;
+      case 'bridge':
+        return <CrossChainBridge />;
+      case 'liquidity':
+        return <LiquidityPools />;
+      case 'bundles':
+        return <JitoBundles />;
+      case 'settings':
+        return <Settings />;
+      default:
+        return <KatanaLayout />;
+    }
+  };
+
+  const navItems = [
+    { id: 'trading', label: 'Trading', icon: Home },
+    { id: 'advanced-orders', label: 'Advanced Orders', icon: Zap },
+    { id: 'pnl', label: 'P&L Dashboard', icon: TrendingUp },
+    { id: 'risk', label: 'Risk Heatmap', icon: AlertTriangle },
+    { id: 'alerts', label: 'Alerts', icon: BarChart3 },
+    { id: 'sentiment', label: 'Sentiment', icon: MessageCircle },
+    { id: 'bridge', label: 'Cross-Chain', icon: LinkIcon },
+    { id: 'liquidity', label: 'Liquidity Pools', icon: Layers },
+    { id: 'bundles', label: 'Jito Bundles', icon: Package },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex">
+      {/* Sidebar */}
+      <div
+        className={`${
+          sidebarOpen ? 'w-64' : 'w-20'
+        } bg-slate-900/80 border-r border-purple-500/20 transition-all duration-300 flex flex-col`}
+      >
+        <div className="p-6 flex items-center justify-between">
+          {sidebarOpen && <h1 className="text-xl font-bold text-purple-400">⚔️ KATANA</h1>}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-purple-500/20 rounded transition-colors"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-2 px-4">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  currentPage === item.id
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-400 hover:bg-purple-500/20'
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {sidebarOpen && <span>{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-purple-500/20 text-xs text-gray-500 text-center">
+          {sidebarOpen && <p>Advanced Trading Platform</p>}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-8">
+          {renderPage()}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default App;
