@@ -355,6 +355,9 @@ app.use(['/api/arbitrage', '/arbitrage'], arbitrageRoutes);
 app.use(['/api/katana', '/katana'], katanaRoutes);
 app.use(['/api/system', '/system'], systemRoutes);
 app.use(['/api/ai', '/ai'], aiRoutes);
+// User management routes
+const userRoutes = require('./routes/user.routes');
+app.use('/api/users', userRoutes);
 // Jito Bundle routes
 const jitoBundleRoutes = require('./routes/jito-bundle-routes');
 app.use(['/api/jito-bundle', '/jito-bundle'], jitoBundleRoutes);

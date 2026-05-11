@@ -39,18 +39,19 @@ class WebSocketServer {
         this.clients.add(ws);
         logger.info(`WebSocket client authenticated: ${decoded.username}`);
 
+        // Send authentication success
+        ws.send(JSON.stringify({
+          type: 'AUTH_SUCCESS',
+          user: decoded,
+          timestamp: Date.now()
+        }));
+
         // Send initial auto trade status
         const autoTradeService = require('../services/auto-trade.service');
         const autoTradeStatus = autoTradeService.getStatus();
         ws.send(JSON.stringify({
           type: 'autotrade-status',
           ...autoTradeStatus
-        }));
-
-        ws.send(JSON.stringify({
-          type: 'AUTH_SUCCESS',
-          user: decoded,
-          timestamp: Date.now()
         }));
       } catch (error) {
         logger.warn('WebSocket authentication failed:', error.message);

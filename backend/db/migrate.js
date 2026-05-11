@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 // Load environment variables FIRST
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const { query } = require('./connection');
 const logger = require('../utils/logger');
