@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, AlertCircle, CheckCircle, Sliders } from 'lucide-react';
+import { Settings as SettingsIcon, Save, AlertCircle, CheckCircle, Sliders } from 'lucide-react';
 import axios from 'axios';
 
 const Settings = () => {
@@ -164,7 +164,7 @@ const Settings = () => {
         {/* Signal Weighting */}
         <div className="bg-slate-900/50 border border-purple-500/20 rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Settings className="w-5 h-5 text-purple-400" />
+            <SettingsIcon className="w-5 h-5 text-purple-400" />
             <h2 className="text-xl font-bold text-white">Signal Weighting</h2>
           </div>
           <div className="space-y-4">

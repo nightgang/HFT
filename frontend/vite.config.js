@@ -23,7 +23,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild',
     terserOptions: {
       compress: {
         drop_console: true,
@@ -31,10 +31,16 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          recharts: ['recharts'],
-          lucide: ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor';
+          }
+          if (id.includes('node_modules/recharts')) {
+            return 'recharts';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'lucide';
+          }
         },
       },
     },

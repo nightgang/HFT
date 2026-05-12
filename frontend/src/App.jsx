@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Menu, X, Home, Zap, TrendingUp, BarChart3, AlertTriangle, MessageCircle, Link as LinkIcon, Layers, Package, Settings as SettingsIcon } from 'lucide-react';
+import { Menu, X, Home, Zap, TrendingUp, BarChart3, AlertTriangle, MessageCircle, Link as LinkIcon, Layers, Package, Settings as SettingsIcon, Wallet, History, Search, AreaChart, Bell, Key } from 'lucide-react';
 import KatanaLayout from './components/KatanaLayout';
 import AdvancedOrders from './pages/AdvancedOrders';
 import PnLDashboard from './pages/PnLDashboard';
@@ -10,6 +10,12 @@ import CrossChainBridge from './pages/CrossChainBridge';
 import LiquidityPools from './pages/LiquidityPools';
 import JitoBundles from './pages/JitoBundles';
 import Settings from './pages/Settings';
+import PortfolioDashboard from './pages/PortfolioDashboard';
+import TradeHistory from './pages/TradeHistory';
+import MarketScreener from './pages/MarketScreener';
+import PerformanceAnalytics from './pages/PerformanceAnalytics';
+import NotificationsHub from './pages/NotificationsHub';
+import APIKeysManager from './pages/APIKeysManager';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +47,18 @@ function App() {
     switch (currentPage) {
       case 'trading':
         return <KatanaLayout />;
+      case 'portfolio':
+        return <PortfolioDashboard />;
+      case 'history':
+        return <TradeHistory />;
+      case 'screener':
+        return <MarketScreener />;
+      case 'analytics':
+        return <PerformanceAnalytics />;
+      case 'notifications':
+        return <NotificationsHub />;
+      case 'api-keys':
+        return <APIKeysManager />;
       case 'advanced-orders':
         return <AdvancedOrders />;
       case 'pnl':
@@ -66,6 +84,12 @@ function App() {
 
   const navItems = [
     { id: 'trading', label: 'Trading', icon: Home },
+    { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+    { id: 'history', label: 'Trade History', icon: History },
+    { id: 'screener', label: 'Market Screener', icon: Search },
+    { id: 'analytics', label: 'Analytics', icon: AreaChart },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'api-keys', label: 'API Keys', icon: Key },
     { id: 'advanced-orders', label: 'Advanced Orders', icon: Zap },
     { id: 'pnl', label: 'P&L Dashboard', icon: TrendingUp },
     { id: 'risk', label: 'Risk Heatmap', icon: AlertTriangle },
