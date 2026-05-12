@@ -8,11 +8,14 @@ const API_BASE = 'http://localhost:3001';
 const KATANA_WS_URL = 'ws://localhost:3003';
 
 class KatanaTerminal {
-  constructor() {
+  constructor(options = {}) {
+    this.demoMode = options.demo || false;
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: '⚔️ katana> '
+      prompt: '⚔️ katana> ',
+      historySize: 100,
+      completer: this.completer.bind(this)
     });
     this.ws = null;
     this.isConnected = false;
@@ -20,15 +23,38 @@ class KatanaTerminal {
     this.katanaActive = false;
     this.currentPositions = [];
     this.pnlData = { totalPnL: 0, pnlPercentage: 0, activeTrades: 0 };
-    this.autoTradeEnabled = true; // Initialize auto-trade as enabled
+    this.autoTradeEnabled = true;
     this.selectedToken = null;
     this.selectedWallet = null;
+    this.commandHistory = [];
+    this.availableCommands = [
+      'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
+      'predict', 'positions', 'tokens', 'help', 'exit', 'toggle', 'autotrade'
+    ];
+  }
+
+  completer(line) {
+    const commands = this.availableCommands.filter(cmd => cmd.startsWith(line));
+    return [commands.length ? commands : this.availableCommands, line];
   }
 
   async start() {
     console.clear();
     console.log('⚔️  KATANA MODE TERMINAL');
     console.log('========================');
+
+    if (this.demoMode) {
+      console.log('🎭 DEMO MODE - No backend required');
+      console.log('');
+      this.authToken = 'demo-token';
+      this.isConnected = true;
+      this.showWelcome();
+      this.rl.prompt();
+      this.rl.on('line', (line) => this.handleCommand(line.trim()));
+      this.rl.on('SIGINT', () => this.handleExit());
+      return;
+    }
+
     console.log('Ultra-fast Solana trading system');
     console.log('');
 
@@ -46,31 +72,57 @@ class KatanaTerminal {
   }
 
   async login() {
-    const username = await this.question('Username: ');
-    const password = await this.question('Password: ');
+    const maxRetries = 3;
+    let retryCount = 0;
 
-    try {
-      const response = await axios.post(`${API_BASE}/auth/login`, {
-        username,
-        password
-      });
+    while (retryCount < maxRetries) {
+      try {
+        const username = await this.question('Username: ');
+        const password = await this.question('Password: ');
 
-      if (response.data.success) {
-        this.authToken = response.data.token;
-        console.log('✅ Authentication successful');
-        axios.defaults.headers.common['Authorization'] = `Bearer ${this.authToken}`;
-      } else {
-        console.log('❌ Authentication failed');
-        process.exit(1);
+        const response = await axios.post(`${API_BASE}/auth/login`, {
+          username,
+          password
+        }, { timeout: 10000 });
+
+        if (response.data.success) {
+          this.authToken = response.data.token;
+          console.log('✅ Authentication successful');
+          axios.defaults.headers.common['Authorization'] = `Bearer ${this.authToken}`;
+          return;
+        } else {
+          console.log('❌ Authentication failed:', response.data.error || 'Invalid credentials');
+          retryCount++;
+          if (retryCount < maxRetries) {
+            console.log(`Retrying... (${retryCount}/${maxRetries})`);
+          }
+        }
+      } catch (error) {
+        if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+          console.log('❌ Cannot connect to backend server. Is it running?');
+          console.log('💡 Try running in demo mode: node katana-terminal.js --demo');
+          process.exit(1);
+        } else if (error.response) {
+          console.log('❌ Login error:', error.response.data?.error || error.response.statusText);
+        } else {
+          console.log('❌ Network error:', error.message);
+        }
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.log(`Retrying... (${retryCount}/${maxRetries})`);
+        }
       }
-    } catch (error) {
-      console.log('❌ Login error:', error.response?.data?.error || error.message);
-      process.exit(1);
     }
+
+    console.log('❌ Maximum login attempts exceeded');
+    process.exit(1);
   }
 
   async connectWebSocket() {
+    if (this.demoMode) return;
+
     try {
+      console.log('🔌 Connecting to Katana engine...');
       this.ws = new WebSocket(`${KATANA_WS_URL}?token=${this.authToken}`);
 
       this.ws.on('open', () => {
@@ -100,13 +152,35 @@ class KatanaTerminal {
 
       this.ws.on('error', (error) => {
         console.error('WebSocket error:', error.message);
+        this.isConnected = false;
+      });
+
+      // Wait for connection or timeout
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          if (!this.isConnected) {
+            reject(new Error('WebSocket connection timeout'));
+          }
+        }, 5000);
+
+        this.ws.on('open', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+
+        this.ws.on('error', (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
       });
 
       // Fetch initial auto-trade status
       await this.fetchAutoTradeStatus();
 
     } catch (error) {
-      console.error('Failed to connect to Katana WebSocket:', error);
+      console.error('Failed to connect to Katana WebSocket:', error.message);
+      console.log('⚠️  Continuing in offline mode...');
+      this.isConnected = false;
     }
   }
 
@@ -257,6 +331,12 @@ class KatanaTerminal {
   }
 
   async startKatana() {
+    if (this.demoMode) {
+      this.katanaActive = true;
+      console.log('✅ Katana Mode started (DEMO)');
+      return;
+    }
+
     try {
       const response = await axios.post(`${API_BASE}/api/katana/start`);
       if (response.data.success) {
@@ -269,6 +349,12 @@ class KatanaTerminal {
   }
 
   async stopKatana() {
+    if (this.demoMode) {
+      this.katanaActive = false;
+      console.log('🛑 Katana Mode stopped (DEMO)');
+      return;
+    }
+
     try {
       const response = await axios.post(`${API_BASE}/api/katana/stop`);
       if (response.data.success) {
@@ -281,6 +367,16 @@ class KatanaTerminal {
   }
 
   async showStatus() {
+    if (this.demoMode) {
+      console.log('\n📊 Katana Status (DEMO):');
+      console.log(`   Active: ${this.katanaActive ? '✅' : '❌'}`);
+      console.log(`   Active Trades: ${Math.floor(Math.random() * 5)}`);
+      console.log(`   Watched Tokens: ${Math.floor(Math.random() * 20)}`);
+      console.log(`   Total PnL: ${this.pnlData.totalPnL >= 0 ? '+' : ''}$${this.pnlData.totalPnL.toFixed(2)}`);
+      console.log(`   PnL %: ${this.pnlData.pnlPercentage >= 0 ? '+' : ''}${this.pnlData.pnlPercentage.toFixed(2)}%`);
+      return;
+    }
+
     try {
       const response = await axios.get(`${API_BASE}/api/katana/status`);
       const status = response.data.data;
@@ -298,6 +394,15 @@ class KatanaTerminal {
   }
 
   async executeTrade(side, amount) {
+    if (this.demoMode) {
+      if (!this.selectedToken) {
+        console.log('❌ No token selected. Use "select <mint>" first.');
+        return;
+      }
+      console.log(`✅ ${side.toUpperCase()} order submitted (DEMO) - ${amount} ${this.selectedToken.slice(0, 8)}...`);
+      return;
+    }
+
     if (!this.selectedToken) {
       console.log('❌ No token selected. Use "select <mint>" first.');
       return;
@@ -327,6 +432,19 @@ class KatanaTerminal {
   }
 
   async showWallets() {
+    if (this.demoMode) {
+      console.log('\n🔐 Configured Wallets (DEMO):');
+      const demoWallets = [
+        { name: 'Main Wallet', publicKey: '11111111111111111111111111111112', balance: 1250.50 },
+        { name: 'Trading Wallet', publicKey: '22222222222222222222222222222222', balance: 500.25 }
+      ];
+      demoWallets.forEach((wallet, index) => {
+        const selected = wallet.publicKey === this.selectedWallet ? ' [ACTIVE]' : '';
+        console.log(`   ${index + 1}. ${wallet.name} - ${wallet.publicKey}${selected} ($${wallet.balance})`);
+      });
+      return;
+    }
+
     try {
       const response = await axios.get(`${API_BASE}/api/trading/wallets`);
       const wallets = response.data.wallets || [];
@@ -356,6 +474,25 @@ class KatanaTerminal {
   }
 
   async requestPrediction(tokenMint) {
+    if (this.demoMode) {
+      if (!tokenMint) {
+        console.log('❌ Usage: predict <tokenMint>');
+        return;
+      }
+
+      const predictions = ['BUY', 'SELL', 'HOLD'];
+      const scores = [Math.floor(Math.random() * 40) + 30, Math.floor(Math.random() * 40) + 60];
+      const score = scores[Math.floor(Math.random() * scores.length)];
+      const recommendation = score > 70 ? 'BUY' : score > 40 ? 'HOLD' : 'SELL';
+      const confidence = Math.random() * 0.5 + 0.5;
+
+      console.log(`\n🤖 Prediction for ${tokenMint} (DEMO):`);
+      console.log(`   Score        : ${score}`);
+      console.log(`   Recommendation: ${recommendation}`);
+      console.log(`   Confidence   : ${confidence.toFixed(2)}`);
+      return;
+    }
+
     if (!tokenMint) {
       console.log('❌ Usage: predict <tokenMint>');
       return;
@@ -386,6 +523,19 @@ class KatanaTerminal {
   }
 
   async showPositions() {
+    if (this.demoMode) {
+      console.log('\n📈 Active Positions (DEMO):');
+      const demoPositions = [
+        { tokenMint: 'So11111111111111111111111111111111111111112', amount: 0.5, pnl: 25.30 },
+        { tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', amount: 100, pnl: -5.20 }
+      ];
+      demoPositions.forEach((pos, index) => {
+        const pnl = pos.pnl >= 0 ? `+$${pos.pnl.toFixed(2)}` : `-$${Math.abs(pos.pnl).toFixed(2)}`;
+        console.log(`   ${index + 1}. ${pos.tokenMint.slice(0, 8)}... | ${pos.amount} | ${pnl}`);
+      });
+      return;
+    }
+
     try {
       const response = await axios.get(`${API_BASE}/api/katana/positions`);
       const positions = response.data.data.positions;
@@ -405,6 +555,19 @@ class KatanaTerminal {
   }
 
   async showTokens() {
+    if (this.demoMode) {
+      console.log('\n🎯 Recent Token Detections (DEMO):');
+      const demoTokens = [
+        { symbol: 'BONK', mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', riskLevel: 'Low', liquidity: 150000 },
+        { symbol: 'WIF', mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', riskLevel: 'Medium', liquidity: 75000 },
+        { symbol: 'NEW', mint: '11111111111111111111111111111112', riskLevel: 'High', liquidity: 25000 }
+      ];
+      demoTokens.forEach((token, index) => {
+        console.log(`   ${index + 1}. ${token.symbol || token.mint} (${token.mint.slice(0, 8)}...) - ${token.riskLevel} - Liquidity: ${token.liquidity}`);
+      });
+      return;
+    }
+
     try {
       const response = await axios.get(`${API_BASE}/api/katana/detections`);
       const detections = response.data.data.detections || [];
@@ -520,7 +683,10 @@ class KatanaTerminal {
 
 // Start the terminal
 if (require.main === module) {
-  const terminal = new KatanaTerminal();
+  const args = process.argv.slice(2);
+  const demoMode = args.includes('--demo') || args.includes('-d');
+
+  const terminal = new KatanaTerminal({ demo: demoMode });
   terminal.start().catch(console.error);
 }
 

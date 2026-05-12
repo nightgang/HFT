@@ -1,0 +1,24 @@
+{
+  "name": "katana-terminal",
+  "version": "1.0.0",
+  "description": "Katana Mode Terminal for HFT Solana Trading System",
+  "main": "katana-terminal.js",
+  "bin": {
+    "katana": "./katana-terminal.js"
+  },
+  "scripts": {
+    "start": "node katana-terminal.js",
+    "demo": "node katana-terminal.js --demo",
+    "dev": "node katana-terminal.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ws": "^8.14.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": ["trading", "solana", "terminal", "hft", "katana"],
+  "author": "HFT Team",
+  "license": "MIT"
+}

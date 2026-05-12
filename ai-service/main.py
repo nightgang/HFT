@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import random
@@ -20,7 +21,16 @@ import json
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Solana Trading AI Service", version="2.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown"""
+    # Startup
+    load_models()
+    yield
+    # Shutdown
+    pass
+
+app = FastAPI(title="Solana Trading AI Service", version="2.0.0", lifespan=lifespan)
 
 class PredictionRequest(BaseModel):
     tokenMint: str
@@ -432,11 +442,6 @@ def assess_risk(token_data: Dict[str, Any]) -> Dict[str, Any]:
         'risk_factors': risk_factors
     }
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize models on startup"""
-    load_models()
-
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_token_score(request: PredictionRequest):
     """Enhanced token score prediction with real market data"""
@@ -553,150 +558,24 @@ async def health_check():
         "version": "2.0.0"
     }
 
+@app.get("/")
+async def root():
+    """Service information endpoint"""
+    return {
+        "service": "Solana Trading AI Service",
+        "version": "2.0.0",
+        "description": "ML-powered trade signal scoring for Solana tokens",
+        "endpoints": {
+            "POST /predict": "Get trade prediction for a token",
+            "POST /risk-assessment": "Assess trading risk for a token",
+            "GET /health": "Health check",
+            "GET /": "Service information"
+        }
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-def train_model():
-    """Train the ML model"""
-    global model, name_encoder, symbol_encoder
-    logger.info("Training ML model...")
-
-    df = create_dummy_training_data()
-
-    # Encode categorical features
-    name_encoder.fit(df['name'])
-    symbol_encoder.fit(df['symbol'])
-
-    df['name_encoded'] = name_encoder.transform(df['name'])
-    df['symbol_encoded'] = symbol_encoder.transform(df['symbol'])
-
-    # Features - including market indicators
-    feature_cols = [
-        'name_length', 'symbol_length', 'has_description', 'has_website',
-        'age_days', 'holder_count', 'liquidity_usd', 'volume_24h',
-        'name_encoded', 'symbol_encoded'
-    ]
-    X = df[feature_cols]
-    y = df['score']
-
-    # Train model with better parameters
-    model = RandomForestRegressor(
-        n_estimators=150,
-        max_depth=15,
-        min_samples_split=5,
-        random_state=42,
-        n_jobs=-1
-    )
-    model.fit(X, y)
-
-    # Save model
-    joblib.dump(model, 'model.pkl')
-    joblib.dump(name_encoder, 'name_encoder.pkl')
-    joblib.dump(symbol_encoder, 'symbol_encoder.pkl')
-
-    logger.info("ML model trained and saved")
-
-def load_model():
-    """Load the ML model if exists"""
-    global model, name_encoder, symbol_encoder
-    try:
-        model = joblib.load('model.pkl')
-        name_encoder = joblib.load('name_encoder.pkl')
-        symbol_encoder = joblib.load('symbol_encoder.pkl')
-        logger.info("ML model loaded from disk")
-    except FileNotFoundError:
-        train_model()
-
-# Load or train model on startup
-load_model()
-
-@app.post("/predict", response_model=PredictionResponse)
-async def predict_trade(request: PredictionRequest):
-    """
-    ML-powered trade prediction endpoint.
-    Uses trained RandomForest model with market indicators.
-    Based on token metadata and market activity.
-    """
-    import time
-    start_time = time.time()
-    
-    try:
-        # Extract features from request metadata
-        metadata = request.metadata or {}
-        name = metadata.get('name', '')
-        symbol = metadata.get('symbol', '')
-        name_length = len(name)
-        symbol_length = len(symbol)
-        has_description = 1 if metadata.get('description') else 0
-        has_website = 1 if metadata.get('website') else 0
-        
-        # Market indicators (with defaults for real data integration)
-        age_days = int(metadata.get('age_days', random.randint(1, 365)))
-        holder_count = int(metadata.get('holder_count', random.randint(100, 50000)))
-        liquidity_usd = float(metadata.get('liquidity_usd', random.uniform(10000, 500000)))
-        volume_24h = float(metadata.get('volume_24h', random.uniform(0, liquidity_usd)))
-
-        # Handle unknown categories
-        try:
-            name_encoded = name_encoder.transform([name])[0] if name else 0
-        except ValueError:
-            name_encoded = 0
-
-        try:
-            symbol_encoded = symbol_encoder.transform([symbol])[0] if symbol else 0
-        except ValueError:
-            symbol_encoded = 0
-
-        # Normalize features to reasonable ranges
-        holder_count = min(holder_count, 1000000)  # Cap at 1M
-        liquidity_usd = min(liquidity_usd, 10000000)  # Cap at 10M
-        volume_24h = min(volume_24h, liquidity_usd)
-
-        # Prepare features with all indicators
-        features = np.array([[
-            name_length, symbol_length, has_description, has_website,
-            age_days, holder_count, liquidity_usd, volume_24h,
-            name_encoded, symbol_encoded
-        ]])
-
-        # Predict score
-        predicted_score = model.predict(features)[0]
-        final_score = max(0, min(100, int(predicted_score)))
-
-        # Determine recommendation based on score
-        if final_score >= 75:
-            recommendation = "BUY"
-        elif final_score >= 40:
-            recommendation = "HOLD"
-        else:
-            recommendation = "SELL"
-
-        confidence = final_score / 100.0
-        latency = time.time() - start_time
-        
-        logger.info(
-            f"Prediction for {request.tokenMint}: score={final_score}, "
-            f"recommendation={recommendation}, confidence={confidence:.2f}, latency={latency:.4f}s"
-        )
-
-        return PredictionResponse(
-            tokenMint=request.tokenMint,
-            model="ml-signal-model-v1",
-            score=final_score,
-            recommendation=recommendation,
-            confidence=round(confidence, 2)
-        )
-
-    except Exception as e:
-        latency = time.time() - start_time
-        logger.error(f"Prediction error for {request.tokenMint}: {str(e)}, latency={latency:.4f}s")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
-
-@app.get("/model/version")
-async def get_model_version():
-    """Get current model version"""
-    return {"version": model_version, "model": "ml-signal-model"}
 
 @app.post("/abtest")
 async def ab_test(request: PredictionRequest):
