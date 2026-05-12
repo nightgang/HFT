@@ -35,17 +35,17 @@ scrape_configs:
   # PostgreSQL Metrics (via postgres_exporter)
   - job_name: 'postgres'
     static_configs:
-      - targets: ['localhost:9187']
+      - targets: ['postgres-exporter:9187']
     scrape_interval: 15s
 
   # Redis Metrics (via redis_exporter)
   - job_name: 'redis'
     static_configs:
-      - targets: ['localhost:9121']
+      - targets: ['redis-exporter:9121']
     scrape_interval: 15s
 
   # Node Exporter (System Metrics)
   - job_name: 'node'
     static_configs:
-      - targets: ['localhost:9100']
+      - targets: ['node-exporter:9100']
     scrape_interval: 15s
