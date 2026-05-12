@@ -15,7 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - hft-network
     healthcheck:
@@ -104,13 +104,19 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://hft_user:hft_secure_password_change_in_production@postgres:5432/hft_trading
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-hft_user}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+      DB_NAME: ${DB_NAME:-hft_trading}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_me_in_production}
+      REDIS_DB: ${REDIS_DB:-0}
       AI_SERVICE_URL: http://ai-service:8000
       AI_SERVICE_ENABLED: 'true'
-      JWT_SECRET: change_this_in_production
-      ENCRYPTION_KEY: change_this_in_production
+      JWT_SECRET: ${JWT_SECRET:-change_this_in_production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change_this_in_production}
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: 587
       SMTP_USER: your-email@gmail.com

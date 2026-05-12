@@ -46,7 +46,7 @@
     "redis": "^5.12.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "uuid": "^7.0.3",
+    "uuid": "^8.3.2",
     "winston": "^3.11.0",
     "ws": "^8.20.0",
     "zod": "^3.22.4"

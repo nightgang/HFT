@@ -50,7 +50,13 @@ CREATE TABLE IF NOT EXISTS wallets (
     encrypted_private_key TEXT, -- Encrypted with libsodium
     key_derivation_path VARCHAR(255), -- BIP44 path
     notes TEXT
-);
+) PARTITION BY HASH (wallet_id);
+
+-- Create 4 partitions for wallet sharding
+CREATE TABLE IF NOT EXISTS wallets_0 PARTITION OF wallets FOR VALUES WITH (MODULUS 4, REMAINDER 0);
+CREATE TABLE IF NOT EXISTS wallets_1 PARTITION OF wallets FOR VALUES WITH (MODULUS 4, REMAINDER 1);
+CREATE TABLE IF NOT EXISTS wallets_2 PARTITION OF wallets FOR VALUES WITH (MODULUS 4, REMAINDER 2);
+CREATE TABLE IF NOT EXISTS wallets_3 PARTITION OF wallets FOR VALUES WITH (MODULUS 4, REMAINDER 3);
 
 CREATE INDEX IF NOT EXISTS idx_wallet_address ON wallets(wallet_address);
 CREATE INDEX IF NOT EXISTS idx_active_wallets ON wallets(is_active);

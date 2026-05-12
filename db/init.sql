@@ -11,7 +11,16 @@ CREATE SCHEMA IF NOT EXISTS audit;
 
 -- Load the core schema definitions from schema.sql
 \set ON_ERROR_STOP on
-\i schema.sql
+\i /docker-entrypoint-initdb.d/schema.sql
+
+-- Migration bookkeeping table used by backend migration runner
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    migration_id SERIAL PRIMARY KEY,
+    migration_name TEXT UNIQUE NOT NULL,
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create application role and permissions for the HFT app
 DO $$

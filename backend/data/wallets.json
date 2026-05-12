@@ -1,0 +1,12 @@
+{
+  "wallets": [
+    {
+      "publicKey": "multisig-demo-1",
+      "external": false,
+      "created": "2026-05-11T10:37:28.726Z",
+      "connected": null
+    }
+  ],
+  "activeWallet": null,
+  "tradeHistory": []
+}

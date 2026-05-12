@@ -28,7 +28,7 @@ class EmailConfig {
    */
   initialize() {
     try {
-      this.transporter = nodemailer.createTransporter(this.config);
+      this.transporter = nodemailer.createTransport(this.config);
 
       // Verify connection
       this.transporter.verify((error, success) => {
@@ -62,7 +62,7 @@ class EmailConfig {
   updateConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
     if (this.transporter) {
-      this.transporter = nodemailer.createTransporter(this.config);
+      this.transporter = nodemailer.createTransport(this.config);
     }
   }
 

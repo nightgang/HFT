@@ -1,400 +1,160 @@
-# HFT ⚔️ KATANA MODE
+# HFT - Solana Trading System
 
-Ultra-fast Solana trading system with AI-powered signals and cyberpunk interface.
+High-frequency Solana trading platform with a Node/Express backend, React/Vite frontend, PostgreSQL, Redis, and a Katana CLI trading engine.
 
-## 🚀 Quick Start (Docker - Recommended)
+## Features
 
-### 1. Clone & Setup
+- REST API backend with advanced trade and wallet management
+- React/Vite frontend with real-time dashboards
+- PostgreSQL schema and migration support
+- Redis caching and session support
+- Solana integration for trading and execution
+- Katana terminal for CLI trading control
+- Risk protection, alerts, and audit logging
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL 14+
+- Redis
+- Docker / Docker Compose (optional)
+
+## Setup
+
 ```bash
 git clone https://github.com/nightgang/HFT.git
 cd HFT
+npm install
+```
+
+## Environment
+
+Copy the template and fill in the required values:
+
+```bash
 cp .env.example .env
 ```
 
-### 2. Configure Environment
-Edit `.env` with your settings:
-```env
-# Database
-DB_USER=hft_user
-DB_PASSWORD=your_secure_password
-DB_NAME=hft_trading
+Edit `.env` and update database credentials, secrets, and Solana endpoints.
 
-# Solana
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+## Run Locally
 
-# JWT
-JWT_SECRET=your_jwt_secret_key
+### Start all services
+
+```bash
+npm run dev
 ```
 
-### 3. Launch System
+### Start backend only
+
+```bash
+npm run dev:backend
+```
+
+### Start frontend only
+
+```bash
+npm run dev:frontend
+```
+
+### Run backend migrations
+
+```bash
+cd backend && npm run migrate
+```
+
+## Production
+
+### Start backend
+
+```bash
+cd backend && npm start
+```
+
+### Start frontend
+
+```bash
+cd frontend && npm run build
+```
+
+## Docker
+
+If you want to run the stack with Docker Compose:
+
 ```bash
 docker-compose up -d
 ```
 
-### 4. Access Dashboard
-- **Web Dashboard**: http://localhost:5173
-- **Katana Terminal**: `npm run katana`
+## Project Structure
 
-## 🎯 Usage Guide
+- `backend/` - Express API and trading engine
+- `frontend/` - React/Vite user interface
+- `cli/` - Katana terminal CLI
+- `db/` - Root database schema and migration scaffolding
+- `docker-compose.yml` - Docker compose setup
+- `k8s/` - Kubernetes deployment manifests
 
-### First Time Setup
-1. **Create Account**: Register at http://localhost:5173
-2. **Add Wallet**: Go to Settings → Add Wallet → Enter private key
-3. **Fund Wallet**: Send SOL to your wallet for trading
+## Important Environment Variables
 
-### Trading Methods
+- `PORT` - Backend port (default `3001`)
+- `WS_PORT` - Backend WebSocket port (default `3002`)
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+- `JWT_SECRET` - Authentication secret
+- `ENCRYPTION_KEY` / `MASTER_ENCRYPTION_KEY` - Encryption keys for sensitive data
+- `RPC_URL` - Solana RPC endpoint
+- `JUPITER_API_URL` - Jupiter quote API endpoint
+- `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` - Email delivery
 
-#### Web Dashboard
-- **Katana Mode**: Ultra-fast automated trading for meme coins
-- **Manual Trading**: View charts, place manual orders
-- **Real-time Charts**: TradingView-style interface with live data
+## Katana Mode
 
-#### Katana Terminal
-```bash
-npm run katana
-# Commands: start, buy <amount>, sell <amount>, positions, status
-```
+Katana Mode is the platform's ultra-fast trading engine for Solana.
 
-## ⚙️ Key Features
-
-- **⚡ Ultra-Fast Execution**: Optimized for Solana speed
-- **🤖 AI Signals**: ML-powered trade predictions
-- **🛡️ Risk Protection**: Honeypot detection, liquidity checks
-- **📊 Real-Time Charts**: Professional trading interface
-- **🔄 Multi-Wallet**: Trade across multiple wallets
-- **🎯 Sniper Tools**: Detect new token launches
-- **📱 WebSocket Updates**: Live price feeds and notifications
-- **⌨️ Terminal Interface**: Command-line trading controls
-
-## 🔧 Configuration
-
-### Katana Mode Settings (.env)
-```env
-KATANA_ENABLED=true
-KATANA_MAX_CONCURRENT_TRADES=5
-KATANA_MIN_LIQUIDITY_SOL=5
-KATANA_AUTO_BUY_ENABLED=true
-KATANA_TP1_PROFIT=200  # Take profit levels
-```
-
-### Risk Management
-- Automatic honeypot detection
-- Liquidity monitoring
-- Developer wallet analysis
-- Slippage protection
-
-## 📊 Monitoring
-
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3001
-- **Health Checks**: All services include health monitoring
-
-## 🐛 Troubleshooting
-
-**Services not starting?**
-```bash
-docker-compose logs
-```
-
-**Database connection issues?**
-```bash
-docker-compose exec postgres pg_isready
-```
-
-**Frontend not loading?**
-```bash
-cd frontend && npm run dev
-```
-
-## 📚 API Reference
-
-### Trading
-```
-POST /api/trades/execute    # Execute trade
-GET  /api/portfolio/balance # View balance
-```
-
-### Katana Mode
-```
-POST /api/katana/start     # Start automated trading
-GET  /api/katana/status    # Check status
-GET  /api/katana/positions # View active positions
-```
-
----
-
-**⚠️ Disclaimer**: This is experimental software. Use at your own risk. Always test with small amounts first.# HFT - Solana Trading System
-
-Sistem trading otomatis untuk Solana blockchain dengan AI-powered signal scoring.
-
-## Quick Start
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL
-- Redis
-- Python 3.9+
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/nightgang/HFT.git
-cd HFT
-
-# Install dependencies
-npm install
-
-# Setup environment
-cp .env.example .env
-# Edit .env dengan konfigurasi Anda
-```
-
-### Running the System
-
-**Development Mode:**
-```bash
-# Run backend + frontend secara bersamaan
-npm run dev
-
-# Atau jalankan terpisah:
-npm run dev:backend  # Backend di port 3000
-npm run dev:frontend # Frontend di port 5173
-```
-
-**CLI Mode:**
-```bash
-npm run cli
-```
-
-**Katana Mode (Ultra-fast Trading):**
-```bash
-# Terminal mode
-npm run katana
-
-# Or access via web dashboard at /katana
-```
-
-**Production:**
-```bash
-npm run start-backend
-npm run start-frontend
-```
-
-## Cara Menggunakan
-
-### 1. Setup Wallet
-```
-CLI → Login → Add Wallet → Input private key
-```
-
-### 2. Trading via Web Dashboard
-1. Buka http://localhost:5173
-2. Login dengan akun Anda
-3. Lihat real-time price chart
-4. Click "BUY" atau "SELL" untuk trade
-5. Lihat order history
-
-### 3. Trading via CLI
-```bash
-npm run cli
-
-# Command tersedia:
-- account login      # Login
-- wallet add        # Tambah wallet
-- trade buy         # Beli token
-- trade sell        # Jual token
-- portfolio view    # Lihat portfolio
-- order history     # Lihat riwayat order
-```
-
-## API Endpoints
-
-### Authentication
-```
-POST   /api/auth/login
-POST   /api/auth/register
-POST   /api/auth/logout
-```
-
-### Trading
-```
-POST   /api/trades/execute      # Execute trade
-GET    /api/trades/history      # Order history
-GET    /api/portfolio/balance   # Lihat balance
-```
-
-### Market Data
-```
-GET    /api/market/price/:token    # Get price
-GET    /api/market/chart/:token    # Get chart data
-```
-
-### AI Predictions
-```
-POST   /api/ai/predict/:token     # Get trade signal
-```
-
-## ⚔️ Katana Mode (Ultra-fast Trading)
-
-Katana Mode adalah sistem trading ultra-cepat untuk meme coin Solana dengan fitur-fitur canggih:
-
-### 🚀 Fitur Utama
-
-- **Ultra Fast Execution**: Optimasi kecepatan eksekusi dengan priority fees
-- **Sniper Features**: Deteksi peluncuran token baru secara real-time
-- **Risk Protection**: Deteksi honeypot, freeze authority, dan risiko lainnya
-- **TP System**: Take Profit otomatis (TP1: 200%, TP2: 400%, TP3: 600%)
-- **Multi-wallet**: Eksekusi trading di multiple wallet secara bersamaan
-
-### 🎯 Cara Menggunakan Katana Mode
-
-#### Web Dashboard
-1. Buka http://localhost:5173
-2. Pilih tab "⚔️ Katana"
-3. Klik "Start Katana" untuk mengaktifkan
-4. Pilih token dari live feed
-5. Klik "Buy Token" untuk trading otomatis
-
-#### Terminal Mode
-```bash
-npm run katana
-
-# Commands:
-start          # Start Katana Mode
-stop           # Stop Katana Mode
-status         # Show current status
-buy <amount>   # Buy selected token
-sell <amount>  # Sell selected token
-select <mint>  # Select token for trading
-positions      # Show active positions
-help           # Show help
-exit           # Exit terminal
-```
-
-### 🛡️ Risk Management
-
-Katana Mode secara otomatis mendeteksi:
-- **Honeypot tokens** (freeze/mint authority tidak revoked)
-- **Liquidity removal** (penarikan liquidity yang mencurigakan)
-- **Suspicious dev wallets** (wallet developer memiliki terlalu banyak supply)
-- **Rug pull indicators** (sinyal-sinyal manipulasi harga)
-
-### ⚙️ Konfigurasi Katana
-
-Tambahkan ke `.env`:
+### Environment variables
 
 ```env
-# Katana Mode
 KATANA_ENABLED=true
 KATANA_TERMINAL_MODE=false
-KATANA_WS_PORT=3003
-
-# Trading Config
 KATANA_MAX_CONCURRENT_TRADES=5
 KATANA_MIN_LIQUIDITY_SOL=5
 KATANA_MAX_SLIPPAGE=0.3
 KATANA_AUTO_BUY_ENABLED=true
-
-# Strategy
-KATANA_TP1_PROFIT=200
-KATANA_TP1_SELL=30
-KATANA_TP2_PROFIT=400
-KATANA_TP2_SELL=30
-KATANA_TP3_PROFIT=600
-KATANA_TP3_SELL=100
-
-# Risk Protection
-KATANA_RISK_HONEYPOT_CHECK=true
-KATANA_RISK_LIQUIDITY_CHECK=true
-KATANA_RISK_DEV_CHECK=true
-
-# Execution
-KATANA_EXECUTOR_MAX_RETRIES=3
 KATANA_JITO_ENABLED=false
 KATANA_JITO_TIP=10000
+KATANA_WS_PORT=3003
 ```
 
-### 📊 API Endpoints Katana
+### CLI usage
 
-```
-GET    /api/katana/status         # Status Katana
-POST   /api/katana/start          # Start Katana
-POST   /api/katana/stop           # Stop Katana
-POST   /api/katana/trade          # Execute trade
-GET    /api/katana/positions      # Active positions
-GET    /api/katana/stats          # Statistics
-```
-
-## Deployment
-
-### Docker
 ```bash
-docker-compose up -d
+npm run katana
 ```
 
-### Kubernetes
+Available commands:
+
+- `start`
+- `stop`
+- `status`
+- `buy <amount>`
+- `sell <amount>`
+- `positions`
+- `help`
+
+## Migrations
+
+The root `db/` folder contains the schema and migration bootstrap.
+
+To run backend migrations:
+
 ```bash
-kubectl apply -f k8s/
+cd backend && npm run migrate
 ```
 
-## Konfigurasi (.env)
+## Notes
 
-```env
-# Database
-DATABASE_URL=postgresql://user:pass@localhost/hft
-REDIS_URL=redis://localhost:6379
-
-# Solana
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-SOLANA_NETWORK=mainnet
-
-# AI Service
-AI_SERVICE_URL=http://localhost:8000
-AI_SERVICE_ENABLED=true
-
-# JWT
-JWT_SECRET=your-secret-key
-JWT_EXPIRE=24h
-```
-
-## Monitoring
-
-- **Metrics**: Prometheus (localhost:9090)
-- **Logs**: Winston & Centralized Logging
-- **Dashboard**: Grafana (localhost:3001)
-
-## Security Features
-
-✅ JWT authentication  
-✅ CSRF protection  
-✅ Rate limiting  
-✅ Encrypted wallet storage  
-✅ Input validation  
-✅ Security headers (Helmet)
-
-## Troubleshooting
-
-**Database connection error:**
-```bash
-# Pastikan PostgreSQL running
-# Check DATABASE_URL di .env
-```
-
-**WebSocket disconnected:**
-```bash
-# Restart backend service
-npm run dev:backend
-```
-
-**AI Service unavailable:**
-```bash
-# Pastikan Python service running
-# cd ai-service && python -m uvicorn main:app
-```
+- Do not commit `.env` or real secrets.
+- Keep database backups and dumps out of version control.
+- Use the `.env.example` file as the canonical template.
 
 ## Support
 
-📖 [Dokumentasi lengkap](./docs/)  
-🐛 [Report bugs](https://github.com/nightgang/HFT/issues)  
-💬 [Diskusi](https://github.com/nightgang/HFT/discussions)
+If you need help, open an issue in the repository.
