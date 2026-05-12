@@ -21,23 +21,34 @@ ALTER TABLE IF EXISTS limit_orders
 ALTER TABLE IF EXISTS limit_orders
   ALTER COLUMN status SET DEFAULT 'pending';
 
--- Add missing landed_at field and accepted status for Jito bundle lifecycle
+-- Add 'accepted' value to bundle_status enum if it doesn't exist and the type exists
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type t
-    JOIN pg_enum e ON t.oid = e.enumtypid
-    WHERE t.typname = 'bundle_status'
-      AND e.enumlabel = 'accepted'
+  -- Check if bundle_status type exists before trying to alter it
+  IF EXISTS (
+    SELECT 1 FROM pg_type 
+    WHERE typname = 'bundle_status' 
+      AND typtype = 'e'
   ) THEN
-    ALTER TYPE bundle_status ADD VALUE 'accepted';
+    -- Check if 'accepted' value doesn't already exist
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_enum 
+      WHERE enumtypid = 'bundle_status'::regtype 
+        AND enumlabel = 'accepted'
+    ) THEN
+      ALTER TYPE bundle_status ADD VALUE 'accepted';
+    END IF;
   END IF;
 END$$;
 
-ALTER TABLE IF EXISTS jito_bundles
-  ADD COLUMN IF NOT EXISTS landed_at TIMESTAMP;
-
--- Record migration execution state
-INSERT INTO schema_migrations (migration_name, success)
-VALUES ('009_fix_limit_and_jito_schema', true)
-ON CONFLICT DO NOTHING;
+-- Add landed_at field to Jito bundles if table and type both exist
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = 'jito_bundles'
+  ) THEN
+    ALTER TABLE IF EXISTS jito_bundles
+      ADD COLUMN IF NOT EXISTS landed_at TIMESTAMP;
+  END IF;
+END$$;

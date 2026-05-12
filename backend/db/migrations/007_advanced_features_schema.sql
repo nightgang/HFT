@@ -1,7 +1,8 @@
 -- Migration: Advanced features schema
 -- Adds tables for advanced orders, limit orders, cross-chain transactions, Jito bundles, liquidity pools, predictive alerts, risk heatmap, sentiment scores, P&L snapshots
 
--- Create custom types for advanced features
+-- Create custom types for advanced features ONLY if they don't exist
+-- These enums add to existing ones from migration 001 (trade_direction)
 DO $$ BEGIN
     CREATE TYPE order_type AS ENUM ('limit', 'stop_loss', 'take_profit', 'trailing_stop', 'bracket', 'oco');
 EXCEPTION
@@ -15,7 +16,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE bundle_status AS ENUM ('pending', 'submitted', 'landed', 'dropped', 'failed');
+    CREATE TYPE bundle_status AS ENUM ('pending', 'submitted', 'landed', 'dropped', 'failed', 'accepted');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -91,90 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_advanced_orders_execute_at ON advanced_orders(exe
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_expires_at ON advanced_orders(expires_at);
 
 -- ============================================================================
--- LIMIT ORDERS
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS limit_orders (
-    order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    wallet_id UUID NOT NULL REFERENCES wallets(wallet_id) ON DELETE CASCADE,
-    side trade_direction NOT NULL,
-    status order_status DEFAULT 'pending',
-
-    -- Token details
-    input_token_mint VARCHAR(255) NOT NULL,
-    input_token_symbol VARCHAR(20),
-    input_amount NUMERIC(38, 8) NOT NULL,
-    remaining_amount NUMERIC(38, 8) NOT NULL,
-
-    output_token_mint VARCHAR(255) NOT NULL,
-    output_token_symbol VARCHAR(20),
-
-    -- Order parameters
-    limit_price NUMERIC(38, 8) NOT NULL,
-    is_post_only BOOLEAN DEFAULT false,
-    is_ioc BOOLEAN DEFAULT false, -- Immediate or Cancel
-
-    -- Timing
-    expires_at TIMESTAMP,
-    executed_at TIMESTAMP,
-
-    -- Metadata
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_limit_orders_wallet ON limit_orders(wallet_id);
-CREATE INDEX IF NOT EXISTS idx_limit_orders_status ON limit_orders(status);
-CREATE INDEX IF NOT EXISTS idx_limit_orders_side ON limit_orders(side);
-CREATE INDEX IF NOT EXISTS idx_limit_orders_expires_at ON limit_orders(expires_at);
-
--- ============================================================================
--- CROSS-CHAIN TRANSACTIONS
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS cross_chain_transactions (
-    bridge_tx_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    wallet_id UUID NOT NULL REFERENCES wallets(wallet_id) ON DELETE CASCADE,
-
-    -- Bridge details
-    bridge_direction bridge_direction NOT NULL,
-    bridge_program VARCHAR(100) NOT NULL, -- 'wormhole', 'allbridge', etc.
-
-    -- Source chain
-    source_chain VARCHAR(50) NOT NULL,
-    source_tx_signature VARCHAR(255) UNIQUE,
-    source_token_mint VARCHAR(255) NOT NULL,
-    source_token_symbol VARCHAR(20),
-    source_amount NUMERIC(38, 8) NOT NULL,
-
-    -- Target chain
-    target_chain VARCHAR(50) NOT NULL,
-    target_token_address VARCHAR(255),
-    target_amount NUMERIC(38, 8),
-    target_recipient_address VARCHAR(255),
-
-    -- Fees
-    bridge_fee_usd NUMERIC(18, 2),
-    gas_fee_usd NUMERIC(18, 2),
-
-    -- Status
-    status transaction_status DEFAULT 'pending',
-    completed_at TIMESTAMP,
-
-    -- Metadata
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_cross_chain_wallet ON cross_chain_transactions(wallet_id);
-CREATE INDEX IF NOT EXISTS idx_cross_chain_status ON cross_chain_transactions(status);
-CREATE INDEX IF NOT EXISTS idx_cross_chain_source_chain ON cross_chain_transactions(source_chain);
-CREATE INDEX IF NOT EXISTS idx_cross_chain_target_chain ON cross_chain_transactions(target_chain);
-
--- ============================================================================
--- JITO BUNDLES
+-- JITO BUNDLES (skipping limit_orders and cross_chain as they're in 003)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS jito_bundles (
@@ -194,6 +112,7 @@ CREATE TABLE IF NOT EXISTS jito_bundles (
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     slot_submitted BIGINT,
     slot_landed BIGINT,
+    landed_at TIMESTAMP,
     mev_reward_lamports BIGINT,
 
     -- Metadata

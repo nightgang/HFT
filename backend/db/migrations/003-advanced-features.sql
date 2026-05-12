@@ -116,14 +116,12 @@ CREATE INDEX IF NOT EXISTS idx_liquidity_positions_active ON liquidity_positions
 -- 3. LIMIT ORDER BOOK
 -- ============================================================================
 
-CREATE TYPE order_side AS ENUM ('buy', 'sell');
-
 CREATE TABLE IF NOT EXISTS limit_orders (
     order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id UUID NOT NULL REFERENCES wallets(wallet_id) ON DELETE CASCADE,
     
     -- Order details
-    side order_side NOT NULL,
+    side trade_direction NOT NULL,
     input_token_mint VARCHAR(255) NOT NULL,
     input_token_symbol VARCHAR(20),
     input_amount NUMERIC(38, 8) NOT NULL,

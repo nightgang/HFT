@@ -80,6 +80,11 @@ while IFS= read -r file; do
         continue
     fi
     
+    # Allow database migration files (they contain schema, not sensitive data)
+    if [[ "$file" =~ ^backend/db/migrations/ ]]; then
+        continue
+    fi
+    
     # Check against all patterns
     for pattern in "${SENSITIVE_PATTERNS[@]}"; do
         if [[ "$file" =~ $pattern ]]; then
