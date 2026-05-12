@@ -85,6 +85,28 @@ out/
 .parcel-cache/
 coverage/
 
+# Cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+
 # TypeScript cache
 *.tsbuildinfo
 *.tsbuilding
