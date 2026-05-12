@@ -25,6 +25,13 @@ credentials.json
 api_keys.json
 access_tokens.json
 
+# Wallet & secrets
+**/wallet*.json
+**/*secret*.json
+**/*private*.json
+**/*credential*.json
+**/*token*.json
+
 # Cloud credentials
 ~/.aws/
 ~/.gcloud/
