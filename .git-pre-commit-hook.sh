@@ -34,6 +34,7 @@ SENSITIVE_PATTERNS=(
     
     # Wallet & secrets
     'wallet\.json'
+    'wallets\.json'
     'wallet\.secret\.json'
     'private_?keys?\.json'
     'secrets\.json'
