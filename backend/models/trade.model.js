@@ -206,6 +206,52 @@ class TradeModel {
     }
   }
 
+  // Get active trades for recovery/resume
+  static async findActive() {
+    const sql = `
+      SELECT
+        trade_id AS id,
+        wallet_id,
+        strategy_type,
+        request_id,
+        status,
+        direction,
+        input_token_mint AS inputTokenMint,
+        input_token_symbol AS inputTokenSymbol,
+        input_amount AS inputAmount,
+        output_token_mint AS outputTokenMint,
+        output_token_symbol AS outputTokenSymbol,
+        expected_output_amount AS expectedOutputAmount,
+        actual_output_amount AS actualOutputAmount,
+        expected_price AS expectedPrice,
+        actual_price AS actualPrice,
+        slippage_percent AS slippagePercent,
+        transaction_fee AS transactionFee,
+        priority_fee AS priorityFee,
+        total_cost_usd AS totalCostUsd,
+        executed_at AS executedAt,
+        settlement_at AS settlementAt,
+        tx_signature AS txSignature,
+        tx_confirmation_status AS txConfirmationStatus,
+        rpc_endpoint AS rpcEndpoint,
+        pnl_usd AS pnlUsd,
+        pnl_percent AS pnlPercent,
+        notes,
+        error_message AS errorMessage,
+        created_at
+      FROM trades
+      WHERE status IN ('pending', 'executing', 'active')
+      ORDER BY created_at ASC
+    `;
+    try {
+      const result = await query(sql);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error finding active trades:', error);
+      throw error;
+    }
+  }
+
   // Delete old trades (for cleanup)
   static async deleteOldTrades(daysOld = 90) {
     const sql = `
