@@ -27,7 +27,7 @@ scrape_configs:
   # Backend Node.js Application Metrics
   - job_name: 'hft-backend'
     static_configs:
-      - targets: ['localhost:3001']
+      - targets: ['backend:3000']
     metrics_path: '/metrics'
     scrape_interval: 10s
     scrape_timeout: 5s

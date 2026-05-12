@@ -1,6 +1,36 @@
 -- Core Schema for HFT Trading System
 -- Persistence Layer: Trade History, Wallet State, Risk Logs, Audit Trail
 
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE SCHEMA IF NOT EXISTS audit;
+
+DO $$ BEGIN
+    CREATE TYPE trade_status AS ENUM ('pending', 'executed', 'failed', 'cancelled', 'partial');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE trade_direction AS ENUM ('buy', 'sell');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE risk_violation_type AS ENUM ('daily_loss_limit', 'position_limit', 'correlation_risk', 'slippage_exceeded', 'sandwich_attack', 'other');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE transaction_status AS ENUM ('pending', 'confirmed', 'failed', 'unknown');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- ============================================================================
 -- WALLETS & ACCOUNTS
 -- ============================================================================
@@ -240,6 +270,7 @@ CREATE TABLE IF NOT EXISTS health_checks (
     status VARCHAR(20) NOT NULL, -- 'healthy', 'degraded', 'unhealthy'
     latency_ms INT,
     error_message TEXT,
+    details JSONB,
     checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -421,26 +452,3 @@ FROM health_checks
 WHERE checked_at >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
 GROUP BY service_name, status;
 
--- ============================================================================
--- GRANTS & PERMISSIONS
--- ============================================================================
-
--- Create application role (least privilege)
-DO $$
-BEGIN
-    CREATE ROLE hft_app_role WITH LOGIN PASSWORD 'change_in_production';
-EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    NULL;
-END
-$$;
-
--- Grant permissions
-GRANT CONNECT ON DATABASE hft_trading TO hft_app_role;
-GRANT USAGE ON SCHEMA public TO hft_app_role;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO hft_app_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO hft_app_role;
-
--- Restrict audit schema
-GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role;
-REVOKE INSERT, UPDATE, DELETE ON audit.key_access_logs FROM hft_app_role;

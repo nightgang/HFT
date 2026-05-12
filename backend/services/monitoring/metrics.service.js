@@ -1,16 +1,13 @@
 const promClient = require('prom-client');
 const logger = require('../../utils/logger');
 
-// Create a Registry which registers the metrics
-const register = new promClient.Registry();
+// Use the global Prometheus registry so all metrics are exposed together
+const register = promClient.register;
 
 // Add a default label which is added to all metrics
 register.setDefaultLabels({
   app: 'hft-trading-backend'
 });
-
-// Enable the collection of default metrics
-promClient.collectDefaultMetrics({ register });
 
 // Custom metrics
 const metrics = {
@@ -208,7 +205,6 @@ class MetricsService {
   reset() {
     try {
       register.resetMetrics();
-      promClient.collectDefaultMetrics({ register });
     } catch (error) {
       logger.error('Error resetting metrics:', error);
     }
