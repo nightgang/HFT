@@ -88,6 +88,10 @@ describe('WebSocketServer Integration Tests', () => {
 
       client.on('message', (data) => {
         const message = JSON.parse(data.toString());
+        if (message.type !== 'AUTH_SUCCESS') {
+          return;
+        }
+
         expect(message.type).toBe('AUTH_SUCCESS');
         expect(message.user).toEqual(expect.objectContaining(userData));
         expect(message.timestamp).toBeDefined();

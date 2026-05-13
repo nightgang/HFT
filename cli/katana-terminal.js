@@ -685,6 +685,14 @@ class KatanaTerminal {
 if (require.main === module) {
   const args = process.argv.slice(2);
   const demoMode = args.includes('--demo') || args.includes('-d');
+  const showHelp = args.includes('--help') || args.includes('-h');
+
+  if (showHelp) {
+    console.log('Usage: node katana-terminal.js [--demo] [--help]');
+    console.log('  --demo      Start in demo mode without backend authentication');
+    console.log('  --help, -h  Show this help message');
+    process.exit(0);
+  }
 
   const terminal = new KatanaTerminal({ demo: demoMode });
   terminal.start().catch(console.error);

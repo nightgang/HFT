@@ -181,7 +181,7 @@ describe('Advanced Features Test Suite', () => {
       // Test retrieve
       const retrieveResult = await query('SELECT * FROM pnl_snapshots WHERE id = $1', [snapshotId]);
       expect(retrieveResult.rows.length).toBe(1);
-      expect(retrieveResult.rows[0].total_pnl).toBe(1250.75);
+      expect(retrieveResult.rows[0].total_pnl_usd).toBe(1250.75);
     });
   });
 

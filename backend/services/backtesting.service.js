@@ -70,7 +70,11 @@ class AdvancedBacktestingService {
       // Get historical price data
       const priceSeries = await this.getHistoricalPrices(tokenMint, start, end);
 
-      if (priceSeries.length < 30) {
+      if (priceSeries.length < 2) {
+        throw new Error('Insufficient historical data for backtesting');
+      }
+
+      if (priceSeries.length < 30 && strategy !== 'buy_and_hold') {
         throw new Error('Insufficient historical data for backtesting');
       }
 
@@ -449,8 +453,9 @@ class AdvancedBacktestingService {
     let takeProfitPrice = 0;
 
     const positionSize = (capital * config.positionSizePercent) / 100;
+    const startIndex = strategy === 'buy_and_hold' ? 0 : 50;
 
-    for (let i = 50; i < priceSeries.length; i++) { // Start after indicator warmup
+    for (let i = startIndex; i < priceSeries.length; i++) {
       const currentPrice = priceSeries[i].price;
       const currentDate = priceSeries[i].date;
 
@@ -477,7 +482,7 @@ class AdvancedBacktestingService {
           signal = this.checkMomentum(priceSeries, i, parameters);
           break;
         case 'buy_and_hold':
-          if (i === 50) signal = 'BUY';
+          if (position === 0) signal = 'BUY';
           break;
         case 'dollar_cost_average':
           if (i % 7 === 0) signal = 'BUY'; // Weekly DCA
@@ -485,13 +490,17 @@ class AdvancedBacktestingService {
       }
 
       // Execute trades
-      if (signal === 'BUY' && position === 0 && capital >= positionSize) {
-        const feeAmount = (positionSize * config.feeBps) / 10000;
-        const slippageAmount = (positionSize * config.slippageBps) / 10000;
-        const totalCost = positionSize + feeAmount + slippageAmount;
+      if (signal === 'BUY' && position === 0) {
+        const feePct = config.feeBps / 10000;
+        const slippagePct = config.slippageBps / 10000;
+        const maxAllocatable = capital / (1 + feePct + slippagePct);
+        const tradeAmount = Math.min(positionSize, maxAllocatable);
+        const feeAmount = (tradeAmount * config.feeBps) / 10000;
+        const slippageAmount = (tradeAmount * config.slippageBps) / 10000;
+        const totalCost = tradeAmount + feeAmount + slippageAmount;
 
-        if (capital >= totalCost) {
-          position = (positionSize / currentPrice);
+        if (tradeAmount > 0 && totalCost <= capital + 1e-6) {
+          position = tradeAmount / currentPrice;
           entryPrice = currentPrice;
           capital -= totalCost;
 
