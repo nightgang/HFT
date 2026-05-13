@@ -2,6 +2,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const auditLogger = require('../utils/audit');
+const logger = require('../utils/logger');
+const UserModel = require('../models/user.model');
 
 // JWT Authentication Middleware
 const authenticate = (req, res, next) => {
@@ -41,18 +43,46 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// API Key Authentication for Webhooks
-const authenticateApiKey = (req, res, next) => {
+// API Key Authentication for Webhooks and service endpoints
+const authenticateApiKey = async (req, res, next) => {
   const apiKey = req.headers['x-api-key'] || req.query.api_key;
 
-  if (!apiKey || apiKey !== process.env.HELIUS_API_KEY) {
+  if (!apiKey) {
     return res.status(401).json({
       error: 'Invalid API key.',
       code: 'API_KEY_INVALID'
     });
   }
 
-  next();
+  try {
+    if (apiKey === process.env.HELIUS_API_KEY) {
+      return next();
+    }
+
+    const apiKeyRecord = await UserModel.findApiKeyByKey(apiKey);
+    if (!apiKeyRecord) {
+      return res.status(401).json({
+        error: 'Invalid API key.',
+        code: 'API_KEY_INVALID'
+      });
+    }
+
+    await UserModel.recordApiKeyUsage(apiKeyRecord.key_id);
+    req.apiKey = {
+      keyId: apiKeyRecord.key_id,
+      userId: apiKeyRecord.user_id,
+      keyName: apiKeyRecord.key_name,
+      scopes: apiKeyRecord.scopes,
+    };
+
+    next();
+  } catch (error) {
+    logger.error('API key authentication error:', error);
+    return res.status(500).json({
+      error: 'API key authentication failed.',
+      code: 'API_KEY_AUTH_ERROR'
+    });
+  }
 };
 
 // Encrypt/Decrypt functions for sensitive data

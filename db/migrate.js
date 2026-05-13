@@ -3,6 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+
+// Load environment variables first
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 const logger = require('../backend/utils/logger');
 
 // Database configuration constants

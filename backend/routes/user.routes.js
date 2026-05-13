@@ -192,6 +192,75 @@ router.put('/profile', authenticate, async (req, res) => {
   }
 });
 
+// List API keys for current user
+router.get('/api-keys', authenticate, async (req, res) => {
+  try {
+    const apiKeys = await UserModel.listApiKeys(req.user.userId);
+
+    res.json({
+      success: true,
+      data: apiKeys
+    });
+  } catch (error) {
+    logger.error('List API keys error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Create a new API key for current user
+router.post('/api-keys', authenticate, async (req, res) => {
+  try {
+    const { keyName, expiresAt, scopes } = req.body;
+
+    const result = await UserModel.createApiKey(req.user.userId, {
+      keyName: keyName || `key-${Date.now()}`,
+      expiresAt,
+      scopes
+    });
+
+    res.status(201).json({
+      success: true,
+      data: result.apiKey,
+      secret: result.secret
+    });
+  } catch (error) {
+    logger.error('Create API key error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Revoke an existing API key
+router.delete('/api-keys/:keyId', authenticate, async (req, res) => {
+  try {
+    const { keyId } = req.params;
+    const revokedKey = await UserModel.revokeApiKey(req.user.userId, keyId);
+
+    if (!revokedKey) {
+      return res.status(404).json({
+        success: false,
+        error: 'API key not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'API key revoked successfully'
+    });
+  } catch (error) {
+    logger.error('Revoke API key error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // Logout (invalidate session)
 router.post('/logout', authenticate, async (req, res) => {
   try {

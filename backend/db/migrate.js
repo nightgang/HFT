@@ -11,12 +11,42 @@ class DatabaseMigrator {
     this.migrationsPath = path.join(__dirname, 'migrations');
   }
 
+  parseMigrationPrefix(fileName) {
+    const match = fileName.match(/^(\d{3})/);
+    return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+  }
+
+  logDuplicateMigrationPrefixes(files) {
+    const prefixMap = files.reduce((map, file) => {
+      const prefix = this.parseMigrationPrefix(file);
+      if (!map[prefix]) map[prefix] = [];
+      map[prefix].push(file);
+      return map;
+    }, {});
+
+    Object.entries(prefixMap).forEach(([prefix, group]) => {
+      if (group.length > 1) {
+        logger.warn(
+          `Duplicate migration prefix ${prefix} found: ${group.join(', ')}. ` +
+          'Review migration ordering to avoid ambiguity.'
+        );
+      }
+    });
+  }
+
   // Get list of migration files
   getMigrationFiles() {
     try {
       const files = fs.readdirSync(this.migrationsPath)
         .filter(file => file.endsWith('.sql'))
-        .sort();
+        .sort((a, b) => {
+          const prefixA = this.parseMigrationPrefix(a);
+          const prefixB = this.parseMigrationPrefix(b);
+          if (prefixA !== prefixB) return prefixA - prefixB;
+          return a.localeCompare(b);
+        });
+
+      this.logDuplicateMigrationPrefixes(files);
       return files;
     } catch (error) {
       logger.error('Error reading migration files:', error);
@@ -131,8 +161,28 @@ class DatabaseMigrator {
     }
   }
 
+  async ensureSchemaMigrationsTable() {
+    const createTableSql = `
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        migration_name TEXT PRIMARY KEY,
+        success BOOLEAN NOT NULL,
+        error_message TEXT,
+        executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `;
+
+    try {
+      await query(createTableSql);
+    } catch (error) {
+      logger.error('Failed to ensure schema_migrations table exists:', error);
+      throw error;
+    }
+  }
+
   // Run all pending migrations
   async runMigrations() {
+    await this.ensureSchemaMigrationsTable();
+
     logger.info('Starting database migrations...');
 
     const migrationFiles = this.getMigrationFiles();
@@ -166,6 +216,7 @@ class DatabaseMigrator {
   // Get migration status
   async getMigrationStatus() {
     try {
+      await this.ensureSchemaMigrationsTable();
       const result = await query(
         'SELECT migration_name, executed_at, success, error_message FROM schema_migrations ORDER BY executed_at DESC'
       );

@@ -166,7 +166,9 @@ db_backups/
 # Avoid ignoring source SQL schema and migrations
 !db/schema.sql
 !db/migrations/
+!db/migrations/*.sql
 !backend/db/migrations/
+!backend/db/migrations/*.sql
 
 # Runtime database files
 *.db

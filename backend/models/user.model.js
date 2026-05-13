@@ -157,6 +157,107 @@ class UserModel {
     }
   }
 
+  static async hashApiKey(apiKey) {
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(apiKey).digest('hex');
+  }
+
+  static async createApiKey(userId, { keyName = 'default', expiresAt = null, scopes = [] } = {}) {
+    const crypto = require('crypto');
+    const plainKey = crypto.randomBytes(32).toString('hex');
+    const keyHash = await this.hashApiKey(plainKey);
+
+    const sql = `
+      INSERT INTO api_keys (user_id, key_name, key_hash, scopes, expires_at)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING key_id, user_id, key_name, is_active, created_at, updated_at, expires_at, last_used_at, scopes
+    `;
+
+    const values = [userId, keyName, keyHash, JSON.stringify(scopes), expiresAt];
+
+    try {
+      const result = await query(sql, values);
+      return {
+        apiKey: result.rows[0],
+        secret: plainKey,
+      };
+    } catch (error) {
+      logger.error('Error creating API key:', error);
+      throw error;
+    }
+  }
+
+  static async listApiKeys(userId) {
+    const sql = `
+      SELECT key_id, user_id, key_name, is_active, created_at, updated_at, expires_at, last_used_at, scopes
+      FROM api_keys
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `;
+
+    try {
+      const result = await query(sql, [userId]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error listing API keys:', error);
+      throw error;
+    }
+  }
+
+  static async revokeApiKey(userId, keyId) {
+    const sql = `
+      UPDATE api_keys
+      SET is_active = false, updated_at = CURRENT_TIMESTAMP
+      WHERE key_id = $1 AND user_id = $2
+      RETURNING key_id, user_id, key_name, is_active, expires_at, created_at, updated_at, last_used_at, scopes
+    `;
+
+    try {
+      const result = await query(sql, [keyId, userId]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error revoking API key:', error);
+      throw error;
+    }
+  }
+
+  static async findApiKeyByKey(apiKey) {
+    const hashedKey = await this.hashApiKey(apiKey);
+    const sql = `
+      SELECT *
+      FROM api_keys
+      WHERE key_hash = $1
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+      LIMIT 1
+    `;
+
+    try {
+      const result = await query(sql, [hashedKey]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error finding API key by value:', error);
+      throw error;
+    }
+  }
+
+  static async recordApiKeyUsage(keyId) {
+    const sql = `
+      UPDATE api_keys
+      SET last_used_at = CURRENT_TIMESTAMP
+      WHERE key_id = $1
+      RETURNING *
+    `;
+
+    try {
+      const result = await query(sql, [keyId]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error recording API key usage:', error);
+      throw error;
+    }
+  }
+
   // Find session by token hash
   static async findSessionByToken(tokenHash) {
     const sql = `
