@@ -32,6 +32,8 @@ class DatabaseMigrator {
   constructor() {
     this.migrations = [];
     this.migrationDir = path.join(__dirname, 'migrations');
+    console.error('DEBUG: Constructor - migrationDir =', this.migrationDir);
+    console.error('DEBUG: Constructor - __dirname =', __dirname);
   }
 
   /**
@@ -58,11 +60,11 @@ class DatabaseMigrator {
   }
 
   /**
-   * Create schema_migrations table if it doesn't exist
+   * Create schema_migrations table if it doesn't exist (ROOT DB VERSION)
    */
   async createMigrationsTable() {
     const query = `
-      CREATE TABLE IF NOT EXISTS schema_migrations (
+      CREATE TABLE IF NOT EXISTS root_schema_migrations (
         version VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -71,16 +73,16 @@ class DatabaseMigrator {
 
     try {
       await pool.query(query);
-      logger.info('Migrations table created/verified');
+      logger.info('Root migrations table created/verified');
     } catch (error) {
-      logger.error('Failed to create migrations table:', error.message);
+      logger.error('Failed to create root migrations table:', error.message);
       throw error;
     }
   }
 
   async getExecutedMigrations() {
     try {
-      const result = await pool.query('SELECT version FROM schema_migrations ORDER BY version');
+      const result = await pool.query('SELECT version FROM root_schema_migrations ORDER BY version');
       return result.rows.map(row => row.version);
     } catch (error) {
       logger.error('Failed to get executed migrations:', error.message);
@@ -105,7 +107,8 @@ class DatabaseMigrator {
       path: path.join(this.migrationDir, file)
     }));
 
-    logger.info(`Found ${this.migrations.length} migration files`);
+    logger.info(`Found ${this.migrations.length} migration files in ${this.migrationDir}`);
+    logger.info(`Migration files: ${files.join(', ')}`);
   }
 
   async executeMigration(migration) {
@@ -118,9 +121,9 @@ class DatabaseMigrator {
       // Execute the migration
       await client.query(sql);
 
-      // Record the migration
+      // Record the migration in root_schema_migrations
       await client.query(
-        'INSERT INTO schema_migrations (version, name) VALUES ($1, $2)',
+        'INSERT INTO root_schema_migrations (version, name) VALUES ($1, $2)',
         [migration.version, migration.name]
       );
 
@@ -241,6 +244,8 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
+  console.error('🔍 [ROOT DB/MIGRATE.JS] Starting migration from', __filename);
+  
   const migrator = new DatabaseMigrator();
 
   if (!await migrator.connect()) {
