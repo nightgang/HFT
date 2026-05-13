@@ -65,9 +65,10 @@ class AdvancedOrderService {
         return currentPrice >= order.condition_value;
       case 'price_below':
         return currentPrice <= order.condition_value;
-      case 'price_between':
+      case 'price_between': {
         const range = JSON.parse(order.condition_metadata);
         return currentPrice >= range.min && currentPrice <= range.max;
+      }
       case 'volatility_above':
         // Would integrate with volatility calculation service
         return true;

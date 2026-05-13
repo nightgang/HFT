@@ -23,7 +23,7 @@ const pnlDashboardService = require('../services/pnl-dashboard.service');
 const performanceAttributionService = require('../services/performance-attribution.service');
 const riskHeatmapService = require('../services/risk-heatmap.service');
 const { PredictiveAlertService, AnomalyDetectionService } = require('../services/predictive-alerts.service');
-const { SentimentAnalysisService, SocialSignalService } = require('../services/sentiment-analysis.service');
+const { SentimentAnalysisService: sentimentAnalysisService, SocialSignalService } = require('../services/sentiment-analysis.service');
 const crossChainBridgeService = require('../services/cross-chain-bridge.service');
 const tradeHistoryAggregationService = require('../services/trade-history-aggregation.service');
 const {

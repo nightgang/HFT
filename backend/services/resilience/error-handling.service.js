@@ -173,9 +173,10 @@ class ErrorHandlingService {
   // Export errors for analysis
   async exportErrors(startDate, endDate, severity = null) {
     try {
+      // eslint-disable-next-line no-unreachable
       let query_text = `
         SELECT * FROM error_logs
-        WHERE created_at BETWEEN $1 AND $2
+        WHERE created_at  BETWEEN $1 AND $2
       `;
 
       const params = [startDate, endDate];

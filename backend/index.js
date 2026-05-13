@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const csurf = require('csurf');
 const logger = require('./utils/logger');
+const { AppError } = require('./utils/errors');
 const { testConnection } = require('./db/connection');
 const metricsService = require('./services/monitoring/metrics.service');
 const monitoringService = require('./services/monitoring/monitoring.service');

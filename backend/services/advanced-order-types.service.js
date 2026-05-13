@@ -65,9 +65,10 @@ class AdvancedOrderTypesService {
         return currentPrice >= order.condition_value;
       case 'price_below':
         return currentPrice <= order.condition_value;
-      case 'price_between':
+      case 'price_between': {
         const range = JSON.parse(order.condition_metadata || '{}');
         return currentPrice >= range.min && currentPrice <= range.max;
+      }
       case 'time_based':
         return new Date() >= new Date(order.execute_at || '1970-01-01');
       default:

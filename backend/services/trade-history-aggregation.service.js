@@ -89,29 +89,33 @@ class TradeHistoryAggregationService {
     switch (timeframe) {
       case '1m':
         return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
-      case '5m':
+      case '5m': {
         const minutes = Math.floor(date.getMinutes() / 5) * 5;
         date.setMinutes(minutes, 0, 0);
         return date.toISOString().slice(0, 16);
-      case '15m':
+      }
+      case '15m': {
         const quarterHour = Math.floor(date.getMinutes() / 15) * 15;
         date.setMinutes(quarterHour, 0, 0);
         return date.toISOString().slice(0, 16);
+      }
       case '1h':
         date.setMinutes(0, 0, 0);
         return date.toISOString().slice(0, 13); // YYYY-MM-DDTHH
-      case '4h':
+      case '4h': {
         const fourHour = Math.floor(date.getHours() / 4) * 4;
         date.setHours(fourHour, 0, 0, 0);
         return date.toISOString().slice(0, 13);
+      }
       case '1d':
         date.setHours(0, 0, 0, 0);
         return date.toISOString().slice(0, 10); // YYYY-MM-DD
-      case '1w':
+      case '1w': {
         const dayOfWeek = date.getDay();
         date.setDate(date.getDate() - dayOfWeek);
         date.setHours(0, 0, 0, 0);
         return date.toISOString().slice(0, 10);
+      }
       case '1M':
         date.setDate(1);
         date.setHours(0, 0, 0, 0);

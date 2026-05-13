@@ -147,7 +147,7 @@ class AnalyticsService {
       });
 
       logger.info(`Weekly report sent to ${recipientEmail}`);
-      return { sent: true, report_id: wallet.wallet_id };
+      return { sent: true, report_id: walletId };
     } catch (error) {
       logger.error('Failed to send weekly report:', error);
       return { sent: false, error: error.message };

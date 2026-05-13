@@ -5,6 +5,7 @@ const logger = require('../../utils/logger');
 const { tradeBuyRequestSchema, tradeSellRequestSchema } = require('../../utils/validator');
 const multiExchangeService = require('../multi-exchange.service');
 const heliusService = require('../../integrations/helius.service');
+const jupiterService = require('../../integrations/jupiter.service');
 const smartMoneyEngine = require('./smartmoney.engine');
 const websocketServer = require('../../ws/websocket.server');
 const { encrypt, decrypt } = require('../../middleware/auth');

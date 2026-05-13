@@ -101,11 +101,12 @@ class PriceAlertService extends EventEmitter {
         case 'below':
           shouldTrigger = currentPrice < alert.threshold;
           break;
-        case 'change_percent':
+        case 'change_percent': {
           const lastPrice = alert.last_checked_price || currentPrice;
           const changePercent = ((currentPrice - lastPrice) / lastPrice) * 100;
           shouldTrigger = Math.abs(changePercent) >= alert.threshold;
           break;
+        }
       }
 
       // Update last checked
