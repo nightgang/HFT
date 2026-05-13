@@ -1,10 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
-import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Target, AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from "react";
+import { createChart, ColorType } from "lightweight-charts";
+import {
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  PieChart,
+  Activity,
+  Target,
+  AlertTriangle,
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 function BacktestVisualizer({ backtestData }) {
-  const [activeTab, setActiveTab] = useState('equity');
+  const [activeTab, setActiveTab] = useState("equity");
   const equityChartRef = useRef(null);
   const priceChartRef = useRef(null);
   const drawdownChartRef = useRef(null);
@@ -36,19 +44,19 @@ function BacktestVisualizer({ backtestData }) {
     if (equityChartRef.current) {
       equityChart.current = createChart(equityChartRef.current, {
         layout: {
-          background: { type: ColorType.Solid, color: 'transparent' },
-          textColor: '#94a3b8',
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#94a3b8",
           fontSize: 12,
         },
         grid: {
-          vertLines: { color: 'rgba(148, 163, 184, 0.1)' },
-          horzLines: { color: 'rgba(148, 163, 184, 0.1)' },
+          vertLines: { color: "rgba(148, 163, 184, 0.1)" },
+          horzLines: { color: "rgba(148, 163, 184, 0.1)" },
         },
         rightPriceScale: {
-          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderColor: "rgba(148, 163, 184, 0.2)",
         },
         timeScale: {
-          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderColor: "rgba(148, 163, 184, 0.2)",
           timeVisible: true,
         },
         width: equityChartRef.current.clientWidth,
@@ -56,13 +64,13 @@ function BacktestVisualizer({ backtestData }) {
       });
 
       const equitySeries = equityChart.current.addLineSeries({
-        color: analytics.totalReturn >= 0 ? '#10b981' : '#ef4444',
+        color: analytics.totalReturn >= 0 ? "#10b981" : "#ef4444",
         lineWidth: 2,
       });
 
-      const equityData = chartData.equityCurve.map(point => ({
+      const equityData = chartData.equityCurve.map((point) => ({
         time: new Date(point.date).getTime() / 1000,
-        value: point.capital
+        value: point.capital,
       }));
 
       equitySeries.setData(equityData);
@@ -72,19 +80,19 @@ function BacktestVisualizer({ backtestData }) {
     if (priceChartRef.current) {
       priceChart.current = createChart(priceChartRef.current, {
         layout: {
-          background: { type: ColorType.Solid, color: 'transparent' },
-          textColor: '#94a3b8',
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#94a3b8",
           fontSize: 12,
         },
         grid: {
-          vertLines: { color: 'rgba(148, 163, 184, 0.1)' },
-          horzLines: { color: 'rgba(148, 163, 184, 0.1)' },
+          vertLines: { color: "rgba(148, 163, 184, 0.1)" },
+          horzLines: { color: "rgba(148, 163, 184, 0.1)" },
         },
         rightPriceScale: {
-          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderColor: "rgba(148, 163, 184, 0.2)",
         },
         timeScale: {
-          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderColor: "rgba(148, 163, 184, 0.2)",
           timeVisible: true,
         },
         width: priceChartRef.current.clientWidth,
@@ -92,24 +100,24 @@ function BacktestVisualizer({ backtestData }) {
       });
 
       const priceSeries = priceChart.current.addLineSeries({
-        color: '#3b82f6',
+        color: "#3b82f6",
         lineWidth: 1,
       });
 
-      const priceData = chartData.equityCurve.map(point => ({
+      const priceData = chartData.equityCurve.map((point) => ({
         time: new Date(point.date).getTime() / 1000,
-        value: point.price
+        value: point.price,
       }));
 
       priceSeries.setData(priceData);
 
       // Add trade markers
-      const markers = chartData.tradeMarkers.map(trade => ({
+      const markers = chartData.tradeMarkers.map((trade) => ({
         time: new Date(trade.date).getTime() / 1000,
-        position: trade.type === 'BUY' ? 'belowBar' : 'aboveBar',
-        color: trade.type === 'BUY' ? '#10b981' : '#ef4444',
-        shape: trade.type === 'BUY' ? 'arrowUp' : 'arrowDown',
-        text: `${trade.type} @ $${trade.price.toFixed(4)}`
+        position: trade.type === "BUY" ? "belowBar" : "aboveBar",
+        color: trade.type === "BUY" ? "#10b981" : "#ef4444",
+        shape: trade.type === "BUY" ? "arrowUp" : "arrowDown",
+        text: `${trade.type} @ $${trade.price.toFixed(4)}`,
       }));
 
       priceSeries.setMarkers(markers);
@@ -119,19 +127,19 @@ function BacktestVisualizer({ backtestData }) {
     if (drawdownChartRef.current && chartData.drawdownPeriods) {
       drawdownChart.current = createChart(drawdownChartRef.current, {
         layout: {
-          background: { type: ColorType.Solid, color: 'transparent' },
-          textColor: '#94a3b8',
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#94a3b8",
           fontSize: 12,
         },
         grid: {
-          vertLines: { color: 'rgba(148, 163, 184, 0.1)' },
-          horzLines: { color: 'rgba(148, 163, 184, 0.1)' },
+          vertLines: { color: "rgba(148, 163, 184, 0.1)" },
+          horzLines: { color: "rgba(148, 163, 184, 0.1)" },
         },
         rightPriceScale: {
-          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderColor: "rgba(148, 163, 184, 0.2)",
         },
         timeScale: {
-          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderColor: "rgba(148, 163, 184, 0.2)",
           timeVisible: true,
         },
         width: drawdownChartRef.current.clientWidth,
@@ -139,9 +147,9 @@ function BacktestVisualizer({ backtestData }) {
       });
 
       const drawdownSeries = drawdownChart.current.addAreaSeries({
-        topColor: 'rgba(239, 68, 68, 0.56)',
-        bottomColor: 'rgba(239, 68, 68, 0.04)',
-        lineColor: 'rgba(239, 68, 68, 1)',
+        topColor: "rgba(239, 68, 68, 0.56)",
+        bottomColor: "rgba(239, 68, 68, 0.04)",
+        lineColor: "rgba(239, 68, 68, 1)",
         lineWidth: 2,
       });
 
@@ -149,12 +157,12 @@ function BacktestVisualizer({ backtestData }) {
       const drawdownData = [];
       let peak = chartData.equityCurve[0].capital;
 
-      chartData.equityCurve.forEach(point => {
+      chartData.equityCurve.forEach((point) => {
         if (point.capital > peak) peak = point.capital;
         const drawdown = ((peak - point.capital) / peak) * 100;
         drawdownData.push({
           time: new Date(point.date).getTime() / 1000,
-          value: -drawdown // Negative for visual
+          value: -drawdown, // Negative for visual
         });
       });
 
@@ -163,16 +171,16 @@ function BacktestVisualizer({ backtestData }) {
   };
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
   };
 
   const formatPercent = (value) => {
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
   };
 
   if (!backtestData) {
@@ -199,7 +207,9 @@ function BacktestVisualizer({ backtestData }) {
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right">
-              <div className={`text-2xl font-bold ${analytics.totalReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div
+                className={`text-2xl font-bold ${analytics.totalReturn >= 0 ? "text-green-400" : "text-red-400"}`}
+              >
                 {formatPercent(analytics.totalReturn)}
               </div>
               <div className="text-sm text-slate-400">Total Return</div>
@@ -225,7 +235,9 @@ function BacktestVisualizer({ backtestData }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-sm">Profit Factor</p>
-                <p className="text-white font-semibold">{analytics.profitFactor}</p>
+                <p className="text-white font-semibold">
+                  {analytics.profitFactor}
+                </p>
               </div>
               <TrendingUp className="w-8 h-8 text-green-400" />
             </div>
@@ -235,7 +247,9 @@ function BacktestVisualizer({ backtestData }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-sm">Max Drawdown</p>
-                <p className="text-red-400 font-semibold">-{riskMetrics.maxDrawdown}%</p>
+                <p className="text-red-400 font-semibold">
+                  -{riskMetrics.maxDrawdown}%
+                </p>
               </div>
               <AlertTriangle className="w-8 h-8 text-red-400" />
             </div>
@@ -245,7 +259,9 @@ function BacktestVisualizer({ backtestData }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-sm">Sharpe Ratio</p>
-                <p className="text-white font-semibold">{riskMetrics.sharpeRatio}</p>
+                <p className="text-white font-semibold">
+                  {riskMetrics.sharpeRatio}
+                </p>
               </div>
               <Activity className="w-8 h-8 text-purple-400" />
             </div>
@@ -257,17 +273,17 @@ function BacktestVisualizer({ backtestData }) {
       <div className="p-6">
         <div className="flex space-x-1 mb-4">
           {[
-            { id: 'equity', label: 'Equity Curve', icon: TrendingUp },
-            { id: 'price', label: 'Price & Trades', icon: BarChart3 },
-            { id: 'drawdown', label: 'Drawdown', icon: TrendingDown }
-          ].map(tab => (
+            { id: "equity", label: "Equity Curve", icon: TrendingUp },
+            { id: "price", label: "Price & Trades", icon: BarChart3 },
+            { id: "drawdown", label: "Drawdown", icon: TrendingDown },
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  ? "bg-purple-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -278,24 +294,28 @@ function BacktestVisualizer({ backtestData }) {
 
         {/* Charts */}
         <div className="space-y-4">
-          {activeTab === 'equity' && (
+          {activeTab === "equity" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-slate-800/30 rounded-lg p-4"
             >
-              <h4 className="text-white font-semibold mb-4">Portfolio Equity Curve</h4>
+              <h4 className="text-white font-semibold mb-4">
+                Portfolio Equity Curve
+              </h4>
               <div ref={equityChartRef} className="w-full h-64" />
             </motion.div>
           )}
 
-          {activeTab === 'price' && (
+          {activeTab === "price" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-slate-800/30 rounded-lg p-4"
             >
-              <h4 className="text-white font-semibold mb-4">Price Chart with Trade Signals</h4>
+              <h4 className="text-white font-semibold mb-4">
+                Price Chart with Trade Signals
+              </h4>
               <div ref={priceChartRef} className="w-full h-64" />
               <div className="mt-4 flex items-center space-x-4 text-sm">
                 <div className="flex items-center space-x-2">
@@ -310,13 +330,15 @@ function BacktestVisualizer({ backtestData }) {
             </motion.div>
           )}
 
-          {activeTab === 'drawdown' && (
+          {activeTab === "drawdown" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-slate-800/30 rounded-lg p-4"
             >
-              <h4 className="text-white font-semibold mb-4">Portfolio Drawdown</h4>
+              <h4 className="text-white font-semibold mb-4">
+                Portfolio Drawdown
+              </h4>
               <div ref={drawdownChartRef} className="w-full h-48" />
             </motion.div>
           )}
@@ -333,7 +355,9 @@ function BacktestVisualizer({ backtestData }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Winning Trades:</span>
-                <span className="text-green-400">{analytics.winningTrades}</span>
+                <span className="text-green-400">
+                  {analytics.winningTrades}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Losing Trades:</span>
@@ -341,11 +365,15 @@ function BacktestVisualizer({ backtestData }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Avg Win:</span>
-                <span className="text-green-400">{formatCurrency(analytics.avgWin)}</span>
+                <span className="text-green-400">
+                  {formatCurrency(analytics.avgWin)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Avg Loss:</span>
-                <span className="text-red-400">{formatCurrency(analytics.avgLoss)}</span>
+                <span className="text-red-400">
+                  {formatCurrency(analytics.avgLoss)}
+                </span>
               </div>
             </div>
           </div>
@@ -367,28 +395,40 @@ function BacktestVisualizer({ backtestData }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Expectancy:</span>
-                <span className="text-white">{formatCurrency(riskMetrics.expectancy)}</span>
+                <span className="text-white">
+                  {formatCurrency(riskMetrics.expectancy)}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="bg-slate-800/30 rounded-lg p-4">
-            <h5 className="text-white font-semibold mb-2">Performance vs Benchmark</h5>
+            <h5 className="text-white font-semibold mb-2">
+              Performance vs Benchmark
+            </h5>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-400">Strategy Return:</span>
-                <span className={`font-semibold ${analytics.totalReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span
+                  className={`font-semibold ${analytics.totalReturn >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
                   {formatPercent(analytics.totalReturn)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Buy & Hold:</span>
-                <span className="text-blue-400">{formatPercent(analytics.buyAndHoldReturn)}</span>
+                <span className="text-blue-400">
+                  {formatPercent(analytics.buyAndHoldReturn)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Outperformance:</span>
-                <span className={`font-semibold ${(analytics.totalReturn - analytics.buyAndHoldReturn) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatPercent(analytics.totalReturn - analytics.buyAndHoldReturn)}
+                <span
+                  className={`font-semibold ${analytics.totalReturn - analytics.buyAndHoldReturn >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
+                  {formatPercent(
+                    analytics.totalReturn - analytics.buyAndHoldReturn,
+                  )}
                 </span>
               </div>
             </div>

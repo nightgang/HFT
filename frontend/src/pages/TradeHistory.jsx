@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Copy, Filter, Download, Clock, DollarSign } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  Copy,
+  Filter,
+  Download,
+  Clock,
+  DollarSign,
+} from "lucide-react";
+import axios from "axios";
 
 const TradeHistory = () => {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, buy, sell
-  const [timeRange, setTimeRange] = useState('7d'); // 1d, 7d, 30d, all
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState("all"); // all, buy, sell
+  const [timeRange, setTimeRange] = useState("7d"); // 1d, 7d, 30d, all
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedTrade, setSelectedTrade] = useState(null);
 
   useEffect(() => {
@@ -16,16 +24,19 @@ const TradeHistory = () => {
 
   const fetchTradeHistory = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/trade-history', {
-        params: {
-          type: filter,
-          timeRange: timeRange
-        }
-      });
+      const response = await axios.get(
+        "http://localhost:3001/api/trade-history",
+        {
+          params: {
+            type: filter,
+            timeRange: timeRange,
+          },
+        },
+      );
       setTrades(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch trade history:', error);
+      console.error("Failed to fetch trade history:", error);
       setLoading(false);
     }
   };
@@ -36,17 +47,27 @@ const TradeHistory = () => {
 
   const handleExport = () => {
     const csv = convertToCSV(filteredTrades);
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `trade-history-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `trade-history-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
 
   const convertToCSV = (trades) => {
-    const headers = ['Date', 'Token', 'Type', 'Amount', 'Price', 'Total', 'Fee', 'PnL', 'Status'];
-    const rows = trades.map(trade => [
+    const headers = [
+      "Date",
+      "Token",
+      "Type",
+      "Amount",
+      "Price",
+      "Total",
+      "Fee",
+      "PnL",
+      "Status",
+    ];
+    const rows = trades.map((trade) => [
       new Date(trade.timestamp).toLocaleString(),
       trade.tokenSymbol,
       trade.type,
@@ -55,15 +76,16 @@ const TradeHistory = () => {
       trade.totalValue,
       trade.fee,
       trade.pnl,
-      trade.status
+      trade.status,
     ]);
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
+    return [headers, ...rows].map((row) => row.join(",")).join("\n");
   };
 
-  const filteredTrades = trades.filter(trade =>
-    trade.tokenSymbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    trade.tokenName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    trade.txHash?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTrades = trades.filter(
+    (trade) =>
+      trade.tokenSymbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trade.tokenName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trade.txHash?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading) {
@@ -107,7 +129,9 @@ const TradeHistory = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Time Range</label>
+            <label className="block text-sm text-gray-400 mb-2">
+              Time Range
+            </label>
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
@@ -136,24 +160,33 @@ const TradeHistory = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-1">Total Trades</p>
-          <p className="text-2xl font-bold text-white">{filteredTrades.length}</p>
+          <p className="text-2xl font-bold text-white">
+            {filteredTrades.length}
+          </p>
         </div>
         <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-1">Buys / Sells</p>
           <p className="text-2xl font-bold text-white">
-            {filteredTrades.filter(t => t.type === 'buy').length} / {filteredTrades.filter(t => t.type === 'sell').length}
+            {filteredTrades.filter((t) => t.type === "buy").length} /{" "}
+            {filteredTrades.filter((t) => t.type === "sell").length}
           </p>
         </div>
         <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-1">Total Volume</p>
           <p className="text-2xl font-bold text-white">
-            ${filteredTrades.reduce((sum, t) => sum + (t.totalValue || 0), 0).toFixed(2)}
+            $
+            {filteredTrades
+              .reduce((sum, t) => sum + (t.totalValue || 0), 0)
+              .toFixed(2)}
           </p>
         </div>
         <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-1">Total Fees</p>
           <p className="text-2xl font-bold text-white">
-            ${filteredTrades.reduce((sum, t) => sum + (t.fee || 0), 0).toFixed(2)}
+            $
+            {filteredTrades
+              .reduce((sum, t) => sum + (t.fee || 0), 0)
+              .toFixed(2)}
           </p>
         </div>
       </div>
@@ -167,27 +200,48 @@ const TradeHistory = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-purple-500/10">
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Time</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Token</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Type</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Amount</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Price</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Total</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Fee</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">PnL</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">TX</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Time
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Token
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  Fee
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  PnL
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                  TX
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredTrades.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center text-gray-400">
+                  <td
+                    colSpan="9"
+                    className="px-6 py-12 text-center text-gray-400"
+                  >
                     No trades found
                   </td>
                 </tr>
               ) : (
                 filteredTrades.map((trade, idx) => (
-                  <tr 
+                  <tr
                     key={idx}
                     onClick={() => setSelectedTrade(trade)}
                     className="border-b border-purple-500/10 hover:bg-purple-500/10 cursor-pointer transition-colors"
@@ -200,21 +254,40 @@ const TradeHistory = () => {
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-xs font-bold flex items-center justify-center">
                           {trade.tokenSymbol?.substring(0, 1).toUpperCase()}
                         </div>
-                        <span className="text-white font-semibold">{trade.tokenSymbol}</span>
+                        <span className="text-white font-semibold">
+                          {trade.tokenSymbol}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`flex items-center gap-1 font-semibold ${trade.type === 'buy' ? 'text-green-400' : 'text-red-400'}`}>
-                        {trade.type === 'buy' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                      <span
+                        className={`flex items-center gap-1 font-semibold ${trade.type === "buy" ? "text-green-400" : "text-red-400"}`}
+                      >
+                        {trade.type === "buy" ? (
+                          <ArrowDownLeft className="w-4 h-4" />
+                        ) : (
+                          <ArrowUpRight className="w-4 h-4" />
+                        )}
                         {trade.type.toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-white">{trade.amount?.toFixed(6)}</td>
-                    <td className="px-6 py-4 text-white">${trade.price?.toFixed(8)}</td>
-                    <td className="px-6 py-4 text-white">${trade.totalValue?.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-gray-300">${trade.fee?.toFixed(2)}</td>
-                    <td className={`px-6 py-4 font-semibold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {trade.pnl >= 0 ? '+' : ''}{trade.pnl?.toFixed(2)}
+                    <td className="px-6 py-4 text-white">
+                      {trade.amount?.toFixed(6)}
+                    </td>
+                    <td className="px-6 py-4 text-white">
+                      ${trade.price?.toFixed(8)}
+                    </td>
+                    <td className="px-6 py-4 text-white">
+                      ${trade.totalValue?.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300">
+                      ${trade.fee?.toFixed(2)}
+                    </td>
+                    <td
+                      className={`px-6 py-4 font-semibold ${trade.pnl >= 0 ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {trade.pnl >= 0 ? "+" : ""}
+                      {trade.pnl?.toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
                       <button
@@ -251,34 +324,48 @@ const TradeHistory = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-400">Token</p>
-                <p className="text-lg font-semibold text-white">{selectedTrade.tokenSymbol}</p>
+                <p className="text-lg font-semibold text-white">
+                  {selectedTrade.tokenSymbol}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Type</p>
-                <p className={`text-lg font-semibold ${selectedTrade.type === 'buy' ? 'text-green-400' : 'text-red-400'}`}>
+                <p
+                  className={`text-lg font-semibold ${selectedTrade.type === "buy" ? "text-green-400" : "text-red-400"}`}
+                >
                   {selectedTrade.type.toUpperCase()}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Amount</p>
-                <p className="text-lg font-semibold text-white">{selectedTrade.amount?.toFixed(6)}</p>
+                <p className="text-lg font-semibold text-white">
+                  {selectedTrade.amount?.toFixed(6)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Price</p>
-                <p className="text-lg font-semibold text-white">${selectedTrade.price?.toFixed(8)}</p>
+                <p className="text-lg font-semibold text-white">
+                  ${selectedTrade.price?.toFixed(8)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Total Value</p>
-                <p className="text-lg font-semibold text-white">${selectedTrade.totalValue?.toFixed(2)}</p>
+                <p className="text-lg font-semibold text-white">
+                  ${selectedTrade.totalValue?.toFixed(2)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Fee</p>
-                <p className="text-lg font-semibold text-white">${selectedTrade.fee?.toFixed(2)}</p>
+                <p className="text-lg font-semibold text-white">
+                  ${selectedTrade.fee?.toFixed(2)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">TX Hash</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-xs font-mono text-purple-400 truncate">{selectedTrade.txHash}</p>
+                  <p className="text-xs font-mono text-purple-400 truncate">
+                    {selectedTrade.txHash}
+                  </p>
                   <button
                     onClick={() => copyToClipboard(selectedTrade.txHash)}
                     className="p-1 hover:bg-purple-600/50 rounded transition-colors"

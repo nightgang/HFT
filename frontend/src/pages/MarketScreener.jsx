@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Search, TrendingUp, TrendingDown, Zap, RefreshCw, Filter, Star, ArrowRight } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  TrendingUp,
+  TrendingDown,
+  Zap,
+  RefreshCw,
+  Filter,
+  Star,
+  ArrowRight,
+} from "lucide-react";
+import axios from "axios";
 
 const MarketScreener = () => {
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('volume');
-  const [filterVolatility, setFilterVolatility] = useState('all'); // low, medium, high
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("volume");
+  const [filterVolatility, setFilterVolatility] = useState("all"); // low, medium, high
   const [favorites, setFavorites] = useState([]);
   const [selectedToken, setSelectedToken] = useState(null);
 
@@ -19,44 +28,48 @@ const MarketScreener = () => {
 
   const fetchTokens = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/market-screener', {
-        params: {
-          sortBy: sortBy,
-          volatility: filterVolatility
-        }
-      });
+      const response = await axios.get(
+        "http://localhost:3001/api/market-screener",
+        {
+          params: {
+            sortBy: sortBy,
+            volatility: filterVolatility,
+          },
+        },
+      );
       setTokens(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch tokens:', error);
+      console.error("Failed to fetch tokens:", error);
       setLoading(false);
     }
   };
 
   const toggleFavorite = (tokenAddress) => {
     if (favorites.includes(tokenAddress)) {
-      setFavorites(favorites.filter(addr => addr !== tokenAddress));
+      setFavorites(favorites.filter((addr) => addr !== tokenAddress));
     } else {
       setFavorites([...favorites, tokenAddress]);
     }
   };
 
-  const filteredTokens = tokens.filter(token =>
-    token.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    token.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    token.address?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTokens = tokens.filter(
+    (token) =>
+      token.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      token.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      token.address?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getVolatilityColor = (volatility) => {
-    if (volatility < 5) return 'text-green-400 bg-green-400/10';
-    if (volatility < 15) return 'text-yellow-400 bg-yellow-400/10';
-    return 'text-red-400 bg-red-400/10';
+    if (volatility < 5) return "text-green-400 bg-green-400/10";
+    if (volatility < 15) return "text-yellow-400 bg-yellow-400/10";
+    return "text-red-400 bg-red-400/10";
   };
 
   const getVolatilityLabel = (volatility) => {
-    if (volatility < 5) return 'Low';
-    if (volatility < 15) return 'Medium';
-    return 'High';
+    if (volatility < 5) return "Low";
+    if (volatility < 15) return "Medium";
+    return "High";
   };
 
   if (loading) {
@@ -72,7 +85,9 @@ const MarketScreener = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Market Screener</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Market Screener
+          </h1>
           <p className="text-gray-400">Find and track emerging opportunities</p>
         </div>
         <button
@@ -118,7 +133,9 @@ const MarketScreener = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Volatility</label>
+            <label className="block text-sm text-gray-400 mb-2">
+              Volatility
+            </label>
             <select
               value={filterVolatility}
               onChange={(e) => setFilterVolatility(e.target.value)}
@@ -174,8 +191,8 @@ const MarketScreener = () => {
                   }}
                   className={`p-2 rounded transition-colors ${
                     favorites.includes(token.address)
-                      ? 'bg-yellow-400/20 text-yellow-400'
-                      : 'hover:bg-purple-500/20'
+                      ? "bg-yellow-400/20 text-yellow-400"
+                      : "hover:bg-purple-500/20"
                   }`}
                 >
                   <Star className="w-4 h-4 fill-current" />
@@ -185,19 +202,26 @@ const MarketScreener = () => {
               <div className="space-y-3 mb-4">
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Price</p>
-                  <p className="text-lg font-bold text-white">${token.price?.toFixed(8)}</p>
+                  <p className="text-lg font-bold text-white">
+                    ${token.price?.toFixed(8)}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-gray-400 mb-1">24h Change</p>
-                    <p className={`font-semibold ${token.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {token.change24h >= 0 ? '+' : ''}{token.change24h?.toFixed(2)}%
+                    <p
+                      className={`font-semibold ${token.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {token.change24h >= 0 ? "+" : ""}
+                      {token.change24h?.toFixed(2)}%
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 mb-1">Volatility</p>
-                    <p className={`font-semibold px-2 py-1 rounded text-xs w-fit ${getVolatilityColor(token.volatility)}`}>
+                    <p
+                      className={`font-semibold px-2 py-1 rounded text-xs w-fit ${getVolatilityColor(token.volatility)}`}
+                    >
                       {getVolatilityLabel(token.volatility)}
                     </p>
                   </div>
@@ -205,12 +229,16 @@ const MarketScreener = () => {
 
                 <div>
                   <p className="text-xs text-gray-400 mb-1">24h Volume</p>
-                  <p className="text-white font-semibold">${(token.volume24h / 1e6).toFixed(2)}M</p>
+                  <p className="text-white font-semibold">
+                    ${(token.volume24h / 1e6).toFixed(2)}M
+                  </p>
                 </div>
 
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Liquidity</p>
-                  <p className="text-white font-semibold">${(token.liquidity / 1e6).toFixed(2)}M</p>
+                  <p className="text-white font-semibold">
+                    ${(token.liquidity / 1e6).toFixed(2)}M
+                  </p>
                 </div>
               </div>
 
@@ -239,7 +267,9 @@ const MarketScreener = () => {
                   {selectedToken.symbol?.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-white">{selectedToken.symbol}</h3>
+                  <h3 className="text-2xl font-bold text-white">
+                    {selectedToken.symbol}
+                  </h3>
                   <p className="text-sm text-gray-400">{selectedToken.name}</p>
                 </div>
               </div>
@@ -254,19 +284,26 @@ const MarketScreener = () => {
             <div className="space-y-4 mb-6">
               <div>
                 <p className="text-sm text-gray-400">Price</p>
-                <p className="text-3xl font-bold text-white">${selectedToken.price?.toFixed(8)}</p>
+                <p className="text-3xl font-bold text-white">
+                  ${selectedToken.price?.toFixed(8)}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-400">24h Change</p>
-                  <p className={`text-2xl font-bold ${selectedToken.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {selectedToken.change24h >= 0 ? '+' : ''}{selectedToken.change24h?.toFixed(2)}%
+                  <p
+                    className={`text-2xl font-bold ${selectedToken.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
+                  >
+                    {selectedToken.change24h >= 0 ? "+" : ""}
+                    {selectedToken.change24h?.toFixed(2)}%
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Volatility</p>
-                  <p className={`text-2xl font-bold ${getVolatilityColor(selectedToken.volatility).split(' ')[0]}`}>
+                  <p
+                    className={`text-2xl font-bold ${getVolatilityColor(selectedToken.volatility).split(" ")[0]}`}
+                  >
                     {selectedToken.volatility?.toFixed(1)}%
                   </p>
                 </div>
@@ -275,37 +312,41 @@ const MarketScreener = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-400">24h Volume</p>
-                  <p className="text-xl font-bold text-white">${(selectedToken.volume24h / 1e9).toFixed(2)}B</p>
+                  <p className="text-xl font-bold text-white">
+                    ${(selectedToken.volume24h / 1e9).toFixed(2)}B
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Market Cap</p>
-                  <p className="text-xl font-bold text-white">${(selectedToken.marketCap / 1e9).toFixed(2)}B</p>
+                  <p className="text-xl font-bold text-white">
+                    ${(selectedToken.marketCap / 1e9).toFixed(2)}B
+                  </p>
                 </div>
               </div>
 
               <div>
                 <p className="text-sm text-gray-400">Liquidity</p>
-                <p className="text-xl font-bold text-white">${(selectedToken.liquidity / 1e6).toFixed(2)}M</p>
+                <p className="text-xl font-bold text-white">
+                  ${(selectedToken.liquidity / 1e6).toFixed(2)}M
+                </p>
               </div>
 
               <div>
                 <p className="text-sm text-gray-400 mb-2">Contract Address</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-xs font-mono text-purple-400 break-all">{selectedToken.address}</p>
+                  <p className="text-xs font-mono text-purple-400 break-all">
+                    {selectedToken.address}
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className="flex gap-3">
-              <button
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors font-semibold flex items-center justify-center gap-2"
-              >
+              <button className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white transition-colors font-semibold flex items-center justify-center gap-2">
                 <ArrowDownLeft className="w-5 h-5" />
                 Buy
               </button>
-              <button
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-colors font-semibold flex items-center justify-center gap-2"
-              >
+              <button className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-colors font-semibold flex items-center justify-center gap-2">
                 <ArrowUpRight className="w-5 h-5" />
                 Sell
               </button>

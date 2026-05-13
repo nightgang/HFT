@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Zap, TrendingUp, Layers, Plus, Trash2 } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { Zap, TrendingUp, Layers, Plus, Trash2 } from "lucide-react";
+import axios from "axios";
 
 const LiquidityPools = () => {
   const [pools, setPools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPoolForm, setShowPoolForm] = useState(false);
   const [formData, setFormData] = useState({
-    poolAddress: '',
-    tokenAMint: '',
-    tokenBMint: '',
-    liquidity: '',
-    feeRate: '',
-    protocol: 'raydium',
+    poolAddress: "",
+    tokenAMint: "",
+    tokenBMint: "",
+    liquidity: "",
+    feeRate: "",
+    protocol: "raydium",
   });
 
   useEffect(() => {
@@ -23,11 +23,13 @@ const LiquidityPools = () => {
 
   const fetchPools = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/liquidity-pools');
+      const response = await axios.get(
+        "http://localhost:3001/api/liquidity-pools",
+      );
       setPools(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch pools:', error);
+      console.error("Failed to fetch pools:", error);
       setLoading(false);
     }
   };
@@ -35,19 +37,19 @@ const LiquidityPools = () => {
   const handleCreatePool = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/api/liquidity-pools', formData);
+      await axios.post("http://localhost:3001/api/liquidity-pools", formData);
       setFormData({
-        poolAddress: '',
-        tokenAMint: '',
-        tokenBMint: '',
-        liquidity: '',
-        feeRate: '',
-        protocol: 'raydium',
+        poolAddress: "",
+        tokenAMint: "",
+        tokenBMint: "",
+        liquidity: "",
+        feeRate: "",
+        protocol: "raydium",
       });
       setShowPoolForm(false);
       fetchPools();
     } catch (error) {
-      console.error('Failed to create pool:', error);
+      console.error("Failed to create pool:", error);
     }
   };
 
@@ -56,7 +58,7 @@ const LiquidityPools = () => {
       await axios.delete(`http://localhost:3001/api/liquidity-pools/${poolId}`);
       fetchPools();
     } catch (error) {
-      console.error('Failed to delete pool:', error);
+      console.error("Failed to delete pool:", error);
     }
   };
 
@@ -65,9 +67,13 @@ const LiquidityPools = () => {
   }
 
   const totalLiquidity = pools.reduce((sum, p) => sum + (p.liquidity || 0), 0);
-  const averageFeeRate = pools.length > 0 
-    ? (pools.reduce((sum, p) => sum + (p.feeRate || 0), 0) / pools.length * 100).toFixed(3)
-    : 0;
+  const averageFeeRate =
+    pools.length > 0
+      ? (
+          (pools.reduce((sum, p) => sum + (p.feeRate || 0), 0) / pools.length) *
+          100
+        ).toFixed(3)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -88,8 +94,12 @@ const LiquidityPools = () => {
             <span className="text-gray-400 text-sm">Total Liquidity</span>
             <Layers className="w-5 h-5 text-blue-400" />
           </div>
-          <div className="text-3xl font-bold text-blue-400">${(totalLiquidity / 1e6).toFixed(2)}M</div>
-          <p className="text-xs text-gray-500 mt-2">Across {pools.length} pools</p>
+          <div className="text-3xl font-bold text-blue-400">
+            ${(totalLiquidity / 1e6).toFixed(2)}M
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Across {pools.length} pools
+          </p>
         </div>
 
         <div className="bg-gradient-to-br from-purple-900/20 to-purple-900/5 border border-purple-500/30 rounded-lg p-6">
@@ -97,7 +107,9 @@ const LiquidityPools = () => {
             <span className="text-gray-400 text-sm">Avg Fee Rate</span>
             <TrendingUp className="w-5 h-5 text-purple-400" />
           </div>
-          <div className="text-3xl font-bold text-purple-400">{averageFeeRate}%</div>
+          <div className="text-3xl font-bold text-purple-400">
+            {averageFeeRate}%
+          </div>
           <p className="text-xs text-gray-500 mt-2">Trading fees</p>
         </div>
 
@@ -106,7 +118,9 @@ const LiquidityPools = () => {
             <span className="text-gray-400 text-sm">Active Pools</span>
             <Zap className="w-5 h-5 text-green-400" />
           </div>
-          <div className="text-3xl font-bold text-green-400">{pools.length}</div>
+          <div className="text-3xl font-bold text-green-400">
+            {pools.length}
+          </div>
           <p className="text-xs text-gray-500 mt-2">Being monitored</p>
         </div>
       </div>
@@ -117,61 +131,85 @@ const LiquidityPools = () => {
           <form onSubmit={handleCreatePool} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-sm text-gray-400 mb-2">Pool Address</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Pool Address
+                </label>
                 <input
                   type="text"
                   value={formData.poolAddress}
-                  onChange={(e) => setFormData({ ...formData, poolAddress: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, poolAddress: e.target.value })
+                  }
                   placeholder="Enter pool address"
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white placeholder-gray-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Token A Mint</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Token A Mint
+                </label>
                 <input
                   type="text"
                   value={formData.tokenAMint}
-                  onChange={(e) => setFormData({ ...formData, tokenAMint: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tokenAMint: e.target.value })
+                  }
                   placeholder="Token A mint"
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white placeholder-gray-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Token B Mint</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Token B Mint
+                </label>
                 <input
                   type="text"
                   value={formData.tokenBMint}
-                  onChange={(e) => setFormData({ ...formData, tokenBMint: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tokenBMint: e.target.value })
+                  }
                   placeholder="Token B mint"
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white placeholder-gray-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Liquidity</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Liquidity
+                </label>
                 <input
                   type="number"
                   value={formData.liquidity}
-                  onChange={(e) => setFormData({ ...formData, liquidity: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, liquidity: e.target.value })
+                  }
                   placeholder="Enter liquidity"
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white placeholder-gray-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Fee Rate (%)</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Fee Rate (%)
+                </label>
                 <input
                   type="number"
                   step="0.001"
                   value={formData.feeRate}
-                  onChange={(e) => setFormData({ ...formData, feeRate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, feeRate: e.target.value })
+                  }
                   placeholder="Enter fee rate"
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white placeholder-gray-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Protocol</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Protocol
+                </label>
                 <select
                   value={formData.protocol}
-                  onChange={(e) => setFormData({ ...formData, protocol: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, protocol: e.target.value })
+                  }
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white"
                 >
                   <option value="raydium">Raydium</option>
@@ -201,25 +239,35 @@ const LiquidityPools = () => {
 
       <div className="space-y-3">
         {pools.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No liquidity pools being tracked</div>
+          <div className="text-center py-12 text-gray-500">
+            No liquidity pools being tracked
+          </div>
         ) : (
           pools.map((pool) => (
-            <div key={pool.id} className="bg-slate-900/50 border border-purple-500/20 rounded-lg p-4 hover:border-purple-500/40 transition-colors">
+            <div
+              key={pool.id}
+              className="bg-slate-900/50 border border-purple-500/20 rounded-lg p-4 hover:border-purple-500/40 transition-colors"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="text-white font-semibold">{pool.protocol}</h3>
                   <p className="text-sm text-gray-500">{pool.poolAddress}</p>
                   <div className="mt-2 text-xs text-gray-600">
-                    Pair: {pool.tokenAMint?.substring(0, 6)}... / {pool.tokenBMint?.substring(0, 6)}...
+                    Pair: {pool.tokenAMint?.substring(0, 6)}... /{" "}
+                    {pool.tokenBMint?.substring(0, 6)}...
                   </div>
                 </div>
                 <div className="text-right space-y-2">
                   <div>
-                    <div className="text-white font-semibold">${(pool.liquidity / 1e6).toFixed(2)}M</div>
+                    <div className="text-white font-semibold">
+                      ${(pool.liquidity / 1e6).toFixed(2)}M
+                    </div>
                     <div className="text-xs text-gray-500">Liquidity</div>
                   </div>
                   <div>
-                    <div className="text-purple-400 font-semibold">{(pool.feeRate * 100).toFixed(3)}%</div>
+                    <div className="text-purple-400 font-semibold">
+                      {(pool.feeRate * 100).toFixed(3)}%
+                    </div>
                     <div className="text-xs text-gray-500">Fee</div>
                   </div>
                 </div>

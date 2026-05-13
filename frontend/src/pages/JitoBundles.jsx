@@ -1,16 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Package, Plus, Trash2, Clock, CheckCircle, AlertCircle, Zap } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import {
+  Package,
+  Plus,
+  Trash2,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Zap,
+} from "lucide-react";
+import axios from "axios";
 
 const JitoBundles = () => {
   const [bundles, setBundles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    transactions: '',
+    transactions: "",
     tipAmount: 1,
-    priority: 'high',
-    maxBlockHeight: '',
+    priority: "high",
+    maxBlockHeight: "",
   });
 
   useEffect(() => {
@@ -21,11 +29,13 @@ const JitoBundles = () => {
 
   const fetchBundles = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/jito-bundles');
+      const response = await axios.get(
+        "http://localhost:3001/api/jito-bundles",
+      );
       setBundles(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch bundles:', error);
+      console.error("Failed to fetch bundles:", error);
       setLoading(false);
     }
   };
@@ -33,22 +43,22 @@ const JitoBundles = () => {
   const handleSubmitBundle = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/api/jito-bundles', {
-        transactions: formData.transactions.split(',').map(t => t.trim()),
+      await axios.post("http://localhost:3001/api/jito-bundles", {
+        transactions: formData.transactions.split(",").map((t) => t.trim()),
         tipAmount: parseFloat(formData.tipAmount),
         priority: formData.priority,
         maxBlockHeight: parseInt(formData.maxBlockHeight),
       });
       setFormData({
-        transactions: '',
+        transactions: "",
         tipAmount: 1,
-        priority: 'high',
-        maxBlockHeight: '',
+        priority: "high",
+        maxBlockHeight: "",
       });
       setShowForm(false);
       fetchBundles();
     } catch (error) {
-      console.error('Failed to submit bundle:', error);
+      console.error("Failed to submit bundle:", error);
     }
   };
 
@@ -57,30 +67,30 @@ const JitoBundles = () => {
       await axios.delete(`http://localhost:3001/api/jito-bundles/${bundleId}`);
       fetchBundles();
     } catch (error) {
-      console.error('Failed to delete bundle:', error);
+      console.error("Failed to delete bundle:", error);
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'success':
-        return 'text-green-400';
-      case 'failed':
-        return 'text-red-400';
-      case 'pending':
-        return 'text-yellow-400';
+      case "success":
+        return "text-green-400";
+      case "failed":
+        return "text-red-400";
+      case "pending":
+        return "text-yellow-400";
       default:
-        return 'text-gray-400';
+        return "text-gray-400";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'success':
+      case "success":
         return <CheckCircle className="w-4 h-4" />;
-      case 'failed':
+      case "failed":
         return <AlertCircle className="w-4 h-4" />;
-      case 'pending':
+      case "pending":
         return <Clock className="w-4 h-4" />;
       default:
         return <Package className="w-4 h-4" />;
@@ -88,7 +98,9 @@ const JitoBundles = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-400">Loading bundles...</div>;
+    return (
+      <div className="text-center py-12 text-gray-400">Loading bundles...</div>
+    );
   }
 
   return (
@@ -107,13 +119,19 @@ const JitoBundles = () => {
       {/* Create Bundle Form */}
       {showForm && (
         <div className="bg-slate-900/50 border border-purple-500/20 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Create MEV Protection Bundle</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            Create MEV Protection Bundle
+          </h2>
           <form onSubmit={handleSubmitBundle} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Transaction Signatures (comma-separated)</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Transaction Signatures (comma-separated)
+              </label>
               <textarea
                 value={formData.transactions}
-                onChange={(e) => setFormData({ ...formData, transactions: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, transactions: e.target.value })
+                }
                 placeholder="tx1, tx2, tx3..."
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white h-24"
               />
@@ -121,21 +139,32 @@ const JitoBundles = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Tip Amount (SOL)</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Tip Amount (SOL)
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   value={formData.tipAmount}
-                  onChange={(e) => setFormData({ ...formData, tipAmount: parseFloat(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      tipAmount: parseFloat(e.target.value),
+                    })
+                  }
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Priority</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Priority
+                </label>
                 <select
                   value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, priority: e.target.value })
+                  }
                   className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
                 >
                   <option value="low">Low</option>
@@ -147,11 +176,15 @@ const JitoBundles = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Max Block Height (optional)</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Max Block Height (optional)
+              </label>
               <input
                 type="number"
                 value={formData.maxBlockHeight}
-                onChange={(e) => setFormData({ ...formData, maxBlockHeight: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, maxBlockHeight: e.target.value })
+                }
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
               />
             </div>
@@ -191,17 +224,25 @@ const JitoBundles = () => {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`flex items-center gap-1 ${getStatusColor(bundle.status)}`}>
+                    <div
+                      className={`flex items-center gap-1 ${getStatusColor(bundle.status)}`}
+                    >
                       {getStatusIcon(bundle.status)}
-                      <span className="font-semibold capitalize">{bundle.status}</span>
+                      <span className="font-semibold capitalize">
+                        {bundle.status}
+                      </span>
                     </div>
-                    <span className="text-sm text-gray-500">Bundle #{bundle.id}</span>
+                    <span className="text-sm text-gray-500">
+                      Bundle #{bundle.id}
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">Transactions</p>
-                      <p className="text-white font-mono text-xs">{bundle.transactionCount || 0}</p>
+                      <p className="text-white font-mono text-xs">
+                        {bundle.transactionCount || 0}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Tip</p>
@@ -209,32 +250,42 @@ const JitoBundles = () => {
                     </div>
                     <div>
                       <p className="text-gray-500">Priority</p>
-                      <p className="text-white capitalize">{bundle.priority || 'N/A'}</p>
+                      <p className="text-white capitalize">
+                        {bundle.priority || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Created</p>
                       <p className="text-white text-xs">
-                        {bundle.createdAt ? new Date(bundle.createdAt).toLocaleTimeString() : 'N/A'}
+                        {bundle.createdAt
+                          ? new Date(bundle.createdAt).toLocaleTimeString()
+                          : "N/A"}
                       </p>
                     </div>
                   </div>
 
                   {bundle.blockHeight && (
                     <div className="mt-3 bg-slate-800/50 rounded px-3 py-2">
-                      <p className="text-xs text-gray-500">Block Height: {bundle.blockHeight}</p>
+                      <p className="text-xs text-gray-500">
+                        Block Height: {bundle.blockHeight}
+                      </p>
                     </div>
                   )}
 
                   {bundle.bundleId && (
                     <div className="mt-2">
                       <p className="text-xs text-gray-500">Jito Bundle ID:</p>
-                      <p className="text-xs text-purple-400 font-mono break-all">{bundle.bundleId}</p>
+                      <p className="text-xs text-purple-400 font-mono break-all">
+                        {bundle.bundleId}
+                      </p>
                     </div>
                   )}
 
                   {bundle.failureReason && (
                     <div className="mt-2 bg-red-500/10 border border-red-500/30 rounded px-3 py-2">
-                      <p className="text-xs text-red-400">Failure: {bundle.failureReason}</p>
+                      <p className="text-xs text-red-400">
+                        Failure: {bundle.failureReason}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -258,13 +309,18 @@ const JitoBundles = () => {
           <div>
             <h3 className="font-bold text-white mb-2">MEV Protection</h3>
             <p className="text-sm text-gray-400 mb-2">
-              Jito Bundles provide MEV protection by bundling your transactions with others,
-              ensuring they execute at a fair price without front-running or sandwich attacks.
+              Jito Bundles provide MEV protection by bundling your transactions
+              with others, ensuring they execute at a fair price without
+              front-running or sandwich attacks.
             </p>
             <ul className="text-xs text-gray-500 space-y-1">
               <li>• Higher tip amounts increase bundle inclusion priority</li>
-              <li>• Bundle status updates in real-time as blocks are produced</li>
-              <li>• Failed bundles can be resubmitted with adjusted parameters</li>
+              <li>
+                • Bundle status updates in real-time as blocks are produced
+              </li>
+              <li>
+                • Failed bundles can be resubmitted with adjusted parameters
+              </li>
             </ul>
           </div>
         </div>

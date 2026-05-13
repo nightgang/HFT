@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 
 /**
  * AutoTradeToggle Component
@@ -22,15 +22,15 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get('/api/system/autotrade', {
-          headers: { Authorization: `Bearer ${token}` }
+        const token = localStorage.getItem("authToken");
+        const response = await axios.get("/api/system/autotrade", {
+          headers: { Authorization: `Bearer ${token}` },
         });
         setIsEnabled(response.data.AUTO_TRADE);
         setLastUpdated(new Date(response.data.timestamp));
       } catch (err) {
-        console.error('Failed to fetch auto-trade status:', err);
-        setError('Failed to load status');
+        console.error("Failed to fetch auto-trade status:", err);
+        setError("Failed to load status");
       }
     };
 
@@ -44,7 +44,7 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
     const handleMessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        if (message.type === 'autotrade-status') {
+        if (message.type === "autotrade-status") {
           setIsEnabled(message.AUTO_TRADE);
           setLastUpdated(new Date(message.timestamp));
           if (onStatusChange) {
@@ -52,12 +52,12 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
           }
         }
       } catch (err) {
-        console.error('Error parsing WebSocket message:', err);
+        console.error("Error parsing WebSocket message:", err);
       }
     };
 
-    ws.addEventListener('message', handleMessage);
-    return () => ws.removeEventListener('message', handleMessage);
+    ws.addEventListener("message", handleMessage);
+    return () => ws.removeEventListener("message", handleMessage);
   }, [ws, onStatusChange]);
 
   const handleToggle = async () => {
@@ -65,15 +65,15 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem("authToken");
       const response = await axios.post(
-        '/api/system/autotrade',
-        { 
-          action: 'toggle'
+        "/api/system/autotrade",
+        {
+          action: "toggle",
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
 
       // Status update will come via WebSocket, but also update immediately for UX
@@ -83,8 +83,8 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
         onStatusChange(response.data.AUTO_TRADE);
       }
     } catch (err) {
-      console.error('Failed to toggle auto-trade:', err);
-      setError('Failed to toggle - please try again');
+      console.error("Failed to toggle auto-trade:", err);
+      setError("Failed to toggle - please try again");
     } finally {
       setIsLoading(false);
     }
@@ -105,16 +105,16 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
         disabled={isLoading || isEmpty}
         className={`relative px-6 py-3 font-bold text-sm rounded-lg overflow-hidden transition-all duration-300 ${
           isEnabled
-            ? 'bg-green-500/20 border border-green-400 text-green-300 hover:bg-green-500/30'
-            : 'bg-red-500/20 border border-red-400 text-red-300 hover:bg-red-500/30'
-        } ${isEmpty || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? "bg-green-500/20 border border-green-400 text-green-300 hover:bg-green-500/30"
+            : "bg-red-500/20 border border-red-400 text-red-300 hover:bg-red-500/30"
+        } ${isEmpty || isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
         whileHover={!isLoading && !isEmpty ? { scale: 1.05 } : {}}
         whileTap={!isLoading && !isEmpty ? { scale: 0.95 } : {}}
       >
         {/* Animated glow background */}
         <motion.div
           className={`absolute inset-0 rounded-lg blur-xl ${
-            isEnabled ? 'bg-green-500/40' : 'bg-red-500/40'
+            isEnabled ? "bg-green-500/40" : "bg-red-500/40"
           }`}
           animate={{
             opacity: isLoading ? [0.5, 0.8, 0.5] : [0.3, 0.6, 0.3],
@@ -122,14 +122,14 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
           transition={{
             duration: 2,
             repeat: Infinity,
-            ease: 'easeInOut',
+            ease: "easeInOut",
           }}
         />
 
         {/* Button inner glow */}
         <motion.div
           className={`absolute inset-0 rounded-lg ${
-            isEnabled ? 'bg-green-400/10' : 'bg-red-400/10'
+            isEnabled ? "bg-green-400/10" : "bg-red-400/10"
           }`}
           animate={{
             opacity: [0.2, 0.4, 0.2],
@@ -137,7 +137,7 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
           transition={{
             duration: 1.5,
             repeat: Infinity,
-            ease: 'easeInOut',
+            ease: "easeInOut",
           }}
         />
 
@@ -158,9 +158,9 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
                 animate={{ rotate: isEnabled ? 0 : 180 }}
                 transition={{ duration: 0.3 }}
               >
-                {isEnabled ? '🟢' : '🔴'}
+                {isEnabled ? "🟢" : "🔴"}
               </motion.span>
-              <span>AUTO TRADE {isEnabled ? 'ON' : 'OFF'}</span>
+              <span>AUTO TRADE {isEnabled ? "ON" : "OFF"}</span>
             </>
           )}
         </div>
@@ -169,12 +169,20 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
       {/* Status indicator line */}
       <motion.div
         className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-full ${
-          isEnabled ? 'bg-green-400' : 'bg-red-400'
+          isEnabled ? "bg-green-400" : "bg-red-400"
         }`}
         animate={{
           boxShadow: isEnabled
-            ? ['0 0 5px rgba(74, 222, 128, 0.5)', '0 0 15px rgba(74, 222, 128, 0.8)', '0 0 5px rgba(74, 222, 128, 0.5)']
-            : ['0 0 5px rgba(248, 113, 113, 0.5)', '0 0 15px rgba(248, 113, 113, 0.8)', '0 0 5px rgba(248, 113, 113, 0.5)'],
+            ? [
+                "0 0 5px rgba(74, 222, 128, 0.5)",
+                "0 0 15px rgba(74, 222, 128, 0.8)",
+                "0 0 5px rgba(74, 222, 128, 0.5)",
+              ]
+            : [
+                "0 0 5px rgba(248, 113, 113, 0.5)",
+                "0 0 15px rgba(248, 113, 113, 0.8)",
+                "0 0 5px rgba(248, 113, 113, 0.5)",
+              ],
         }}
         transition={{ duration: 2, repeat: Infinity }}
       />

@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, AlertCircle, CheckCircle, Sliders } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import {
+  Settings as SettingsIcon,
+  Save,
+  AlertCircle,
+  CheckCircle,
+  Sliders,
+} from "lucide-react";
+import axios from "axios";
 
 const Settings = () => {
   const [settings, setSettings] = useState({
@@ -8,7 +14,7 @@ const Settings = () => {
     maxPositionSize: 10000,
     maxTradeFrequency: 20,
     minTradeInterval: 60,
-    riskTolerance: 'medium',
+    riskTolerance: "medium",
     autoTradeEnabled: false,
     sentimentWeighting: 0.3,
     technicalWeighting: 0.5,
@@ -25,11 +31,11 @@ const Settings = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/settings');
+      const response = await axios.get("http://localhost:3001/api/settings");
       setSettings(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch settings:', error);
+      console.error("Failed to fetch settings:", error);
       setLoading(false);
     }
   };
@@ -37,12 +43,12 @@ const Settings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put('http://localhost:3001/api/settings', settings);
+      await axios.put("http://localhost:3001/api/settings", settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       setSaving(false);
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      console.error("Failed to save settings:", error);
       setSaving(false);
     }
   };
@@ -61,7 +67,7 @@ const Settings = () => {
           className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save Settings'}
+          {saving ? "Saving..." : "Save Settings"}
         </button>
       </div>
 
@@ -81,32 +87,54 @@ const Settings = () => {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Max Daily Loss ($)</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Max Daily Loss ($)
+              </label>
               <input
                 type="number"
                 value={settings.maxDailyLoss}
-                onChange={(e) => setSettings({ ...settings, maxDailyLoss: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    maxDailyLoss: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">Maximum loss allowed per day</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Maximum loss allowed per day
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Max Position Size ($)</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Max Position Size ($)
+              </label>
               <input
                 type="number"
                 value={settings.maxPositionSize}
-                onChange={(e) => setSettings({ ...settings, maxPositionSize: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    maxPositionSize: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">Maximum position size for single trade</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Maximum position size for single trade
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Risk Tolerance</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Risk Tolerance
+              </label>
               <select
                 value={settings.riskTolerance}
-                onChange={(e) => setSettings({ ...settings, riskTolerance: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, riskTolerance: e.target.value })
+                }
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
               >
                 <option value="low">Low</option>
@@ -125,25 +153,43 @@ const Settings = () => {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Max Trade Frequency (per hour)</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Max Trade Frequency (per hour)
+              </label>
               <input
                 type="number"
                 value={settings.maxTradeFrequency}
-                onChange={(e) => setSettings({ ...settings, maxTradeFrequency: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    maxTradeFrequency: parseInt(e.target.value),
+                  })
+                }
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">Maximum number of trades per hour</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Maximum number of trades per hour
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Min Trade Interval (seconds)</label>
+              <label className="block text-sm text-gray-400 mb-2">
+                Min Trade Interval (seconds)
+              </label>
               <input
                 type="number"
                 value={settings.minTradeInterval}
-                onChange={(e) => setSettings({ ...settings, minTradeInterval: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    minTradeInterval: parseInt(e.target.value),
+                  })
+                }
                 className="w-full bg-slate-800 border border-purple-500/30 rounded px-4 py-2 text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">Minimum time between trades</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Minimum time between trades
+              </p>
             </div>
 
             <div>
@@ -151,12 +197,19 @@ const Settings = () => {
                 <input
                   type="checkbox"
                   checked={settings.autoTradeEnabled}
-                  onChange={(e) => setSettings({ ...settings, autoTradeEnabled: e.target.checked })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      autoTradeEnabled: e.target.checked,
+                    })
+                  }
                   className="w-4 h-4 rounded bg-slate-800 border-purple-500/30"
                 />
                 Enable Auto Trading
               </label>
-              <p className="text-xs text-gray-500 mt-1">Allow system to execute trades automatically</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Allow system to execute trades automatically
+              </p>
             </div>
           </div>
         </div>
@@ -170,8 +223,12 @@ const Settings = () => {
           <div className="space-y-4">
             <div>
               <div className="flex justify-between mb-2">
-                <label className="text-sm text-gray-400">Sentiment Weight</label>
-                <span className="text-purple-400 font-semibold">{(settings.sentimentWeighting * 100).toFixed(0)}%</span>
+                <label className="text-sm text-gray-400">
+                  Sentiment Weight
+                </label>
+                <span className="text-purple-400 font-semibold">
+                  {(settings.sentimentWeighting * 100).toFixed(0)}%
+                </span>
               </div>
               <input
                 type="range"
@@ -179,15 +236,24 @@ const Settings = () => {
                 max="1"
                 step="0.1"
                 value={settings.sentimentWeighting}
-                onChange={(e) => setSettings({ ...settings, sentimentWeighting: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    sentimentWeighting: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full accent-purple-600"
               />
             </div>
 
             <div>
               <div className="flex justify-between mb-2">
-                <label className="text-sm text-gray-400">Technical Weight</label>
-                <span className="text-purple-400 font-semibold">{(settings.technicalWeighting * 100).toFixed(0)}%</span>
+                <label className="text-sm text-gray-400">
+                  Technical Weight
+                </label>
+                <span className="text-purple-400 font-semibold">
+                  {(settings.technicalWeighting * 100).toFixed(0)}%
+                </span>
               </div>
               <input
                 type="range"
@@ -195,7 +261,12 @@ const Settings = () => {
                 max="1"
                 step="0.1"
                 value={settings.technicalWeighting}
-                onChange={(e) => setSettings({ ...settings, technicalWeighting: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    technicalWeighting: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full accent-purple-600"
               />
             </div>
@@ -203,7 +274,9 @@ const Settings = () => {
             <div>
               <div className="flex justify-between mb-2">
                 <label className="text-sm text-gray-400">Risk Weight</label>
-                <span className="text-purple-400 font-semibold">{(settings.riskWeighting * 100).toFixed(0)}%</span>
+                <span className="text-purple-400 font-semibold">
+                  {(settings.riskWeighting * 100).toFixed(0)}%
+                </span>
               </div>
               <input
                 type="range"
@@ -211,13 +284,25 @@ const Settings = () => {
                 max="1"
                 step="0.1"
                 value={settings.riskWeighting}
-                onChange={(e) => setSettings({ ...settings, riskWeighting: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    riskWeighting: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full accent-purple-600"
               />
             </div>
 
             <p className="text-xs text-gray-500 border-t border-purple-500/20 pt-3">
-              Total Weight: {((settings.sentimentWeighting + settings.technicalWeighting + settings.riskWeighting) * 100).toFixed(0)}%
+              Total Weight:{" "}
+              {(
+                (settings.sentimentWeighting +
+                  settings.technicalWeighting +
+                  settings.riskWeighting) *
+                100
+              ).toFixed(0)}
+              %
             </p>
           </div>
         </div>
