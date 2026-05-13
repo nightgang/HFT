@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Wallet,
   TrendingUp,
@@ -9,40 +9,22 @@ import {
   Download,
   PieChart,
 } from "lucide-react";
-import axios from "axios";
+import { usePortfolio } from "../hooks";
+import { DataTable, LoadingSpinner, ErrorMessage, Button, Modal } from "../components/ui";
+import { createPortfolioColumns } from "../hooks/useTable";
 
 const PortfolioDashboard = () => {
-  const [portfolio, setPortfolio] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showValues, setShowValues] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [selectedToken, setSelectedToken] = useState(null);
 
-  useEffect(() => {
-    fetchPortfolio();
-    const interval = setInterval(fetchPortfolio, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchPortfolio = async () => {
-    try {
-      const response = await axios.get("http://localhost:3001/api/portfolio");
-      setPortfolio(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Failed to fetch portfolio:", error);
-      setLoading(false);
-    }
-  };
+  const { data: portfolio, isLoading, error, refetch } = usePortfolio();
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchPortfolio();
-    setTimeout(() => setRefreshing(false), 1000);
+    await refetch();
   };
 
   const handleExport = () => {
-    if (!portfolio) return;
+    if (!portfolio?.assets?.length) return;
     const csv = convertToCSV(portfolio.assets);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -72,11 +54,21 @@ const PortfolioDashboard = () => {
     return [headers, ...rows].map((row) => row.join(",")).join("\n");
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-400">Loading portfolio...</div>
+      <div className="flex justify-center items-center py-12">
+        <LoadingSpinner size="lg" />
+        <span className="ml-3 text-gray-600 dark:text-gray-400">Loading portfolio...</span>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <ErrorMessage
+        error={error}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -88,239 +80,210 @@ const PortfolioDashboard = () => {
     );
   }
 
+  const portfolioColumns = createPortfolioColumns();
+
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Portfolio Dashboard
-          </h1>
-          <p className="text-gray-400">Manage and monitor your assets</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Portfolio Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage and monitor your assets</p>
         </div>
-        <div className="flex gap-3">
-          <button
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50"
+            disabled={isLoading}
           >
-            <RefreshCw
-              className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setShowValues(!showValues)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600/50 hover:bg-purple-600 rounded-lg transition-colors"
           >
             {showValues ? (
-              <Eye className="w-5 h-5" />
+              <Eye className="w-4 h-4 mr-2" />
             ) : (
-              <EyeOff className="w-5 h-5" />
+              <EyeOff className="w-4 h-4 mr-2" />
             )}
-          </button>
-          <button
+            {showValues ? 'Hide' : 'Show'} Values
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600/50 hover:bg-purple-600 rounded-lg transition-colors"
+            disabled={!portfolio.assets?.length}
           >
-            <Download className="w-5 h-5" />
-          </button>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-6">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm mb-2">Total Value</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">Total Value</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {showValues
                   ? `$${portfolio.totalValue?.toFixed(2) || "0.00"}`
                   : "••••••"}
               </p>
             </div>
-            <Wallet className="w-12 h-12 text-purple-400 opacity-20" />
+            <Wallet className="w-12 h-12 text-blue-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-6">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm mb-2">24h Change</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">24h Change</p>
               <p
-                className={`text-2xl font-bold ${portfolio.change24hPercent >= 0 ? "text-green-400" : "text-red-400"}`}
+                className={`text-2xl font-bold ${portfolio.change24hPercent >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
               >
                 {portfolio.change24hPercent >= 0 ? "+" : ""}
                 {portfolio.change24hPercent?.toFixed(2) || "0.00"}%
               </p>
             </div>
             {portfolio.change24hPercent >= 0 ? (
-              <TrendingUp className="w-12 h-12 text-green-400 opacity-20" />
+              <TrendingUp className="w-12 h-12 text-green-500 opacity-20" />
             ) : (
-              <TrendingDown className="w-12 h-12 text-red-400 opacity-20" />
+              <TrendingDown className="w-12 h-12 text-red-500 opacity-20" />
             )}
           </div>
         </div>
 
-        <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-6">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm mb-2">Assets</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">Assets</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {portfolio.assets?.length || 0}
               </p>
             </div>
-            <PieChart className="w-12 h-12 text-blue-400 opacity-20" />
+            <PieChart className="w-12 h-12 text-purple-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-slate-800/50 border border-purple-500/20 rounded-lg p-6">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm mb-2">Win Rate</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">Win Rate</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {portfolio.winRate?.toFixed(1) || "0.0"}%
               </p>
             </div>
-            <TrendingUp className="w-12 h-12 text-purple-400 opacity-20" />
+            <TrendingUp className="w-12 h-12 text-blue-500 opacity-20" />
           </div>
         </div>
       </div>
 
       {/* Asset List */}
-      <div className="bg-slate-800/30 border border-purple-500/20 rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-purple-500/20">
-          <h2 className="text-xl font-bold text-white">Assets</h2>
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Assets</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-purple-500/10">
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Token
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Total Value
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  24h Change
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Allocation
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {portfolio.assets?.map((asset, idx) => (
-                <tr
-                  key={idx}
-                  onClick={() => setSelectedToken(asset)}
-                  className="border-b border-purple-500/10 hover:bg-purple-500/10 cursor-pointer transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-xs font-bold">
-                        {asset.symbol?.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white">{asset.name}</p>
-                        <p className="text-xs text-gray-400">{asset.symbol}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-white">
-                    {asset.amount?.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 text-white">
-                    {showValues ? `$${asset.price?.toFixed(2)}` : "••••"}
-                  </td>
-                  <td className="px-6 py-4 text-white">
-                    {showValues ? `$${asset.totalValue?.toFixed(2)}` : "••••"}
-                  </td>
-                  <td
-                    className={`px-6 py-4 ${asset.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
-                  >
-                    {asset.change24h >= 0 ? "+" : ""}
-                    {asset.change24h?.toFixed(2)}%
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-purple-600 to-pink-600"
-                        style={{ width: `${asset.allocation || 0}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {asset.allocation?.toFixed(1)}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={portfolio.assets || []}
+          columns={portfolioColumns}
+          loading={isLoading}
+          searchPlaceholder="Search assets..."
+          pageSize={10}
+          enableSorting={true}
+          enableFiltering={true}
+          enablePagination={true}
+        />
       </div>
 
-      {/* Asset Detail Modal */}
-      {selectedToken && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 border border-purple-500/20 rounded-lg p-8 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                {selectedToken.name}
-              </h3>
-              <button
-                onClick={() => setSelectedToken(null)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
+      {/* Asset Details Modal */}
+      <Modal
+        isOpen={!!selectedToken}
+        onClose={() => setSelectedToken(null)}
+        title="Asset Details"
+      >
+        {selectedToken && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-lg font-bold text-white">
+                {selectedToken.symbol?.substring(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {selectedToken.name}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {selectedToken.symbol}
+                </p>
+              </div>
             </div>
-            <div className="space-y-4">
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-400">Amount</p>
-                <p className="text-lg font-semibold text-white">
-                  {selectedToken.amount?.toFixed(6)}
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Amount
+                </label>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                  {selectedToken.amount?.toFixed(4)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Current Price</p>
-                <p className="text-lg font-semibold text-white">
-                  ${selectedToken.price?.toFixed(8)}
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Price
+                </label>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                  {showValues ? `$${selectedToken.price?.toFixed(4)}` : "••••"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Total Value</p>
-                <p className="text-lg font-semibold text-white">
-                  ${selectedToken.totalValue?.toFixed(2)}
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Total Value
+                </label>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                  {showValues ? `$${selectedToken.totalValue?.toFixed(2)}` : "••••"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">24h Change</p>
-                <p
-                  className={`text-lg font-semibold ${selectedToken.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
-                >
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  24h Change
+                </label>
+                <p className={`text-lg font-semibold mt-1 ${
+                  selectedToken.change24h >= 0
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}>
                   {selectedToken.change24h >= 0 ? "+" : ""}
                   {selectedToken.change24h?.toFixed(2)}%
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setSelectedToken(null)}
-              className="w-full mt-6 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-colors"
-            >
-              Close
-            </button>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Allocation
+              </label>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full"
+                    style={{
+                      width: `${Math.min((selectedToken.allocation || 0) * 100, 100)}%`
+                    }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {selectedToken.allocation?.toFixed(1)}% of portfolio
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

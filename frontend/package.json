@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-table": "^8.11.2",
     "axios": "^1.6.0",
     "framer-motion": "^12.38.0",
@@ -16,6 +17,7 @@
     "lucide-react": "^1.14.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.15.0",
     "reconnecting-websocket": "^4.4.0"
   },
   "devDependencies": {

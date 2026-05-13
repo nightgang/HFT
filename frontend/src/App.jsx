@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, NavLink, Routes, Route } from "react-router-dom";
 import {
   Menu,
   X,
@@ -40,7 +41,6 @@ import APIKeysManager from "./pages/APIKeysManager";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState("trading");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
 
@@ -67,72 +67,35 @@ function App() {
     );
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case "trading":
-        return (
-          <HFTDashboard
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkMode((prev) => !prev)}
-          />
-        );
-      case "portfolio":
-        return <PortfolioDashboard />;
-      case "history":
-        return <TradeHistory />;
-      case "screener":
-        return <MarketScreener />;
-      case "analytics":
-        return <PerformanceAnalytics />;
-      case "notifications":
-        return <NotificationsHub />;
-      case "api-keys":
-        return <APIKeysManager />;
-      case "advanced-orders":
-        return <AdvancedOrders />;
-      case "pnl":
-        return <PnLDashboard />;
-      case "risk":
-        return <RiskHeatmap />;
-      case "alerts":
-        return <PredictiveAlerts />;
-      case "sentiment":
-        return <SentimentAnalysis />;
-      case "bridge":
-        return <CrossChainBridge />;
-      case "liquidity":
-        return <LiquidityPools />;
-      case "bundles":
-        return <JitoBundles />;
-      case "settings":
-        return <Settings />;
-      default:
-        return <HFTDashboard />;
-    }
-  };
-
-  const navItems = [
-    { id: "trading", label: "Trading", icon: Home },
-    { id: "portfolio", label: "Portfolio", icon: Wallet },
-    { id: "history", label: "Trade History", icon: History },
-    { id: "screener", label: "Market Screener", icon: Search },
-    { id: "analytics", label: "Analytics", icon: AreaChart },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "api-keys", label: "API Keys", icon: Key },
-    { id: "advanced-orders", label: "Advanced Orders", icon: Zap },
-    { id: "pnl", label: "P&L Dashboard", icon: TrendingUp },
-    { id: "risk", label: "Risk Heatmap", icon: AlertTriangle },
-    { id: "alerts", label: "Alerts", icon: BarChart3 },
-    { id: "sentiment", label: "Sentiment", icon: MessageCircle },
-    { id: "bridge", label: "Cross-Chain", icon: LinkIcon },
-    { id: "liquidity", label: "Liquidity Pools", icon: Layers },
-    { id: "bundles", label: "Jito Bundles", icon: Package },
-    { id: "settings", label: "Settings", icon: SettingsIcon },
+  const routes = [
+    { path: "/", label: "Trading", icon: Home, element: <HFTDashboard darkMode={darkMode} onToggleDarkMode={() => setDarkMode((prev) => !prev)} /> },
+    { path: "/portfolio", label: "Portfolio", icon: Wallet, element: <PortfolioDashboard /> },
+    { path: "/history", label: "Trade History", icon: History, element: <TradeHistory /> },
+    { path: "/screener", label: "Market Screener", icon: Search, element: <MarketScreener /> },
+    { path: "/analytics", label: "Analytics", icon: AreaChart, element: <PerformanceAnalytics /> },
+    { path: "/notifications", label: "Notifications", icon: Bell, element: <NotificationsHub /> },
+    { path: "/api-keys", label: "API Keys", icon: Key, element: <APIKeysManager /> },
+    { path: "/advanced-orders", label: "Advanced Orders", icon: Zap, element: <AdvancedOrders /> },
+    { path: "/pnl", label: "P&L Dashboard", icon: TrendingUp, element: <PnLDashboard /> },
+    { path: "/risk", label: "Risk Heatmap", icon: AlertTriangle, element: <RiskHeatmap /> },
+    { path: "/alerts", label: "Alerts", icon: BarChart3, element: <PredictiveAlerts /> },
+    { path: "/sentiment", label: "Sentiment", icon: MessageCircle, element: <SentimentAnalysis /> },
+    { path: "/bridge", label: "Cross-Chain", icon: LinkIcon, element: <CrossChainBridge /> },
+    { path: "/liquidity", label: "Liquidity Pools", icon: Layers, element: <LiquidityPools /> },
+    { path: "/bundles", label: "Jito Bundles", icon: Package, element: <JitoBundles /> },
+    { path: "/settings", label: "Settings", icon: SettingsIcon, element: <Settings /> },
   ];
 
+  const navItems = routes.map((route) => ({
+    path: route.path,
+    label: route.label,
+    icon: route.icon,
+  }));
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex">
-      {/* Sidebar */}
+    <Router>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex">
+        {/* Sidebar */}
       <div
         className={`${
           sidebarOpen ? "w-64" : "w-20"
@@ -158,18 +121,21 @@ function App() {
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button
-                key={item.id}
-                onClick={() => setCurrentPage(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  currentPage === item.id
-                    ? "bg-purple-600 text-white"
-                    : "text-gray-400 hover:bg-purple-500/20"
-                }`}
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === "/"}
+                className={({ isActive }) =>
+                  `w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-purple-600 text-white"
+                      : "text-gray-400 hover:bg-purple-500/20"
+                  }`
+                }
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {sidebarOpen && <span>{item.label}</span>}
-              </button>
+              </NavLink>
             );
           })}
         </nav>
@@ -181,9 +147,17 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-8">{renderPage()}</div>
+        <div className="p-8">
+          <Routes>
+            {routes.map((route) => (
+              <Route key={route.path} path={route.path} element={route.element} />
+            ))}
+            <Route path="*" element={<HFTDashboard darkMode={darkMode} onToggleDarkMode={() => setDarkMode((prev) => !prev)} />} />
+          </Routes>
+        </div>
       </div>
     </div>
+  </Router>
   );
 }
 
