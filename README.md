@@ -44,22 +44,44 @@ HFT/
 │   ├── middleware/         # Auth, monitoring, error handling
 │   ├── integrations/       # Solana, Jupiter, Helius
 │   ├── db/                 # Database migrations
+│   ├── logs/               # Backend log files
 │   └── tests/              # Jest test suite
 ├── frontend/               # React/Vite frontend app
-│   ├── src/
-│   ├── components/         # React components
-│   ├── pages/              # Route pages
-│   └── styles/             # Tailwind CSS
-├── cli/                    # Katana Terminal CLI
+│   ├── src/                # Source code
+│   ├── dist/               # Build output
+│   └── package.json        # Frontend dependencies
+├── ai-service/             # Python AI/ML service
+│   ├── main.py            # AI service entry point
+│   ├── models/            # ML models
+│   └── requirements.txt   # Python dependencies
+├── cli/                    # Command-line trading interface
 │   └── katana-terminal.js  # Interactive trading terminal
-├── ai-service/             # Python AI/ML service (optional)
-├── db/                     # Database schema and migrations
-├── k8s/                    # Kubernetes deployment manifests
-├── monitoring/             # Prometheus & Grafana config
-└── docker-compose.yml      # Local development environment
+├── db/                     # Database initialization scripts
+│   ├── init.sql           # Initial schema
+│   ├── schema.sql         # Database schema
+│   └── migrations/        # Migration scripts
+├── docs/                   # Documentation files
+│   ├── ARCHITECTURE.md     # System architecture
+│   ├── DEPLOYMENT.md       # Deployment guides
+│   └── TRADING_GUIDE.md    # Trading strategies
+├── logs/                   # Application log files
+│   ├── combined.log        # Combined logs
+│   └── error.log          # Error logs
+├── scripts/                # Setup and utility scripts
+│   └── setup.sh           # Main setup script
+├── k8s/                    # Kubernetes manifests
+├── monitoring/             # Prometheus/Grafana configs
+├── exports/                # Exported data files
+├── .env                    # Environment variables (copy from .env.example)
+├── .env.example            # Environment template
+├── docker-compose.yml      # Docker services
+├── package.json            # Root dependencies
+└── README.md               # This file
 ```
 
 ---
+
+## 🚀 Quick Start
 
 ## 🚀 Quick Start
 
