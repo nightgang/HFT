@@ -14,295 +14,95 @@ const riskService = require('../risk/risk.service');
 const autoTradeService = require('../auto-trade.service');
 const TradeModel = require('../../models/trade.model');
 const WalletModel = require('../../models/wallet.model');
+const solanaWalletService = require('../solana-wallet.service');
 
 class TradingEngine {
   constructor() {
-    this.wallets = new Map(); // Store wallets by public key
     this.activeWallet = null;
     this.tradeHistory = []; // Store trade history
-    this.dataDir = path.resolve(__dirname, '../../data');
-    this.storePath = path.join(this.dataDir, 'wallets.json');
-    this.loadWalletStore();
   }
 
-  loadWalletStore() {
+  // Wallet management using Solana Wallet Service
+  async setActiveWallet(walletAddress) {
     try {
-      if (!fs.existsSync(this.storePath)) {
-        return;
+      const wallet = await solanaWalletService.getWalletInfo(walletAddress);
+      if (!wallet) {
+        throw new Error('Wallet not found');
       }
-      const raw = fs.readFileSync(this.storePath, 'utf-8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.wallets)) {
-        parsed.wallets.forEach((wallet) => {
-          if (wallet.secretKey) {
-            try {
-              // Decrypt the secret key
-              const decryptedKey = decrypt(wallet.secretKey);
-              const keypair = Keypair.fromSecretKey(Buffer.from(decryptedKey, 'base64'));
-              wallet.keypair = keypair;
-              wallet.publicKey = keypair.publicKey;
-            } catch (decryptError) {
-              logger.error(`Failed to decrypt wallet ${wallet.name}:`, decryptError.message);
-              // Skip this wallet if decryption fails
-              return;
-            }
-          } else {
-            wallet.publicKey = new PublicKey(wallet.publicKey);
-          }
-          this.wallets.set(wallet.publicKey.toString(), wallet);
-        });
-      }
-      if (parsed.tradeHistory && Array.isArray(parsed.tradeHistory)) {
-        this.tradeHistory = parsed.tradeHistory;
-      }
-      if (parsed.activeWallet) {
-        this.activeWallet = this.wallets.get(parsed.activeWallet) || null;
-      }
-      logger.info('Loaded wallet store from disk (decrypted)');
-    } catch (error) {
-      logger.warn('Failed to load wallet store:', error.message);
-    }
-  }
-
-  saveWalletStore() {
-    try {
-      if (!fs.existsSync(this.dataDir)) {
-        fs.mkdirSync(this.dataDir, { recursive: true });
-      }
-      const wallets = Array.from(this.wallets.values()).map((wallet) => {
-        const payload = {
-          name: wallet.name,
-          publicKey: wallet.publicKey.toString(),
-          external: wallet.external || false,
-          created: wallet.created,
-          connected: wallet.connected || null,
-        };
-        if (wallet.keypair && !wallet.external) {
-          // Encrypt the secret key before storing
-          payload.secretKey = encrypt(Buffer.from(wallet.keypair.secretKey).toString('base64'));
-        }
-        return payload;
-      });
-      const payload = {
-        wallets,
-        activeWallet: this.activeWallet ? this.activeWallet.publicKey.toString() : null,
-        tradeHistory: this.tradeHistory,
+      this.activeWallet = {
+        address: wallet.address,
+        name: wallet.name,
+        wallet_id: wallet.wallet_id
       };
-      fs.writeFileSync(this.storePath, JSON.stringify(payload, null, 2), 'utf-8');
-      logger.info('Wallet store persisted to disk (encrypted)');
+      logger.info(`Active wallet set to: ${walletAddress}`);
+      return this.activeWallet;
     } catch (error) {
-      logger.error('Failed to save wallet store:', error.message);
+      logger.error('Failed to set active wallet:', error);
+      throw error;
     }
-  }
-
-  // Wallet management
-  createWallet(name, deterministic = false) {
-    let keypair;
-    if (deterministic) {
-      // For testing - deterministic keypair
-      keypair = Keypair.fromSeed(new Uint8Array(32).fill(1));
-    } else {
-      keypair = Keypair.generate();
-    }
-
-    const wallet = {
-      name,
-      publicKey: keypair.publicKey,
-      keypair, // In production, this should be encrypted
-      created: Date.now(),
-    };
-
-    this.wallets.set(keypair.publicKey.toString(), wallet);
-    this.saveWalletStore();
-    logger.info(`Created wallet: ${keypair.publicKey.toString()}`);
-    return wallet;
-  }
-
-  connectExternalWallet(publicKey, name = 'external') {
-    const wallet = {
-      name,
-      publicKey: new PublicKey(publicKey),
-      external: true,
-      connected: Date.now(),
-    };
-
-    this.wallets.set(publicKey, wallet);
-    this.saveWalletStore();
-    logger.info(`Connected external wallet: ${publicKey}`);
-    return wallet;
-  }
-
-  async createMultisigWallet(name, signers = [], threshold = 2, multisigAddress = null, notes = null) {
-    if (!Array.isArray(signers) || signers.length < 2) {
-      throw new Error('Multisig wallet requires at least 2 signers');
-    }
-    if (!threshold || threshold > signers.length) {
-      throw new Error('Multisig threshold must be a positive number and less than or equal to signer count');
-    }
-
-    const walletAddress = multisigAddress || `multisig-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const walletRecord = await WalletModel.createMultisigWallet({
-      wallet_address: walletAddress,
-      wallet_name: name,
-      multisig_signers: signers,
-      multisig_threshold: threshold,
-      multisig_address: multisigAddress,
-      notes,
-      metadata: { createdBy: 'trading-engine' }
-    });
-
-    const wallet = {
-      ...walletRecord,
-      walletName: walletRecord.wallet_name,
-      publicKey: {
-        toString: () => walletRecord.wallet_address
-      },
-      multisig: true,
-      signers,
-      threshold,
-      multisigAddress: walletRecord.multisig_address || multisigAddress,
-      created: walletRecord.created_at
-    };
-
-    this.wallets.set(walletAddress, wallet);
-    this.saveWalletStore();
-
-    logger.info(`Created multisig wallet: ${walletAddress}`);
-    return wallet;
-  }
-
-  async getMultisigWallets() {
-    const wallets = await WalletModel.getMultisigWallets();
-    return wallets.map(wallet => ({
-      walletId: wallet.wallet_id,
-      walletName: wallet.wallet_name,
-      walletAddress: wallet.wallet_address,
-      multisigSigners: wallet.multisig_signers,
-      multisigThreshold: wallet.multisig_threshold,
-      multisigAddress: wallet.multisig_address,
-      createdAt: wallet.created_at,
-      updatedAt: wallet.updated_at,
-      isActive: wallet.is_active,
-      notes: wallet.notes,
-    }));
-  }
-
-  setActiveWallet(publicKey) {
-    const wallet = this.wallets.get(publicKey);
-    if (!wallet) {
-      throw new Error('Wallet not found');
-    }
-    this.activeWallet = wallet;
-    this.saveWalletStore();
-    logger.info(`Active wallet set to: ${publicKey}`);
-  }
-
-  getWallets() {
-    return Array.from(this.wallets.values()).map(w => ({
-      name: w.name,
-      publicKey: w.publicKey.toString(),
-      external: w.external || false,
-    }));
-  }
-
-  getWallet(publicKey) {
-    const wallet = this.wallets.get(publicKey);
-    if (!wallet) return null;
-    return {
-      name: wallet.name,
-      publicKey: wallet.publicKey.toString(),
-      external: wallet.external || false,
-      created: wallet.created,
-      connected: wallet.connected || null,
-    };
   }
 
   getActiveWallet() {
-    if (!this.activeWallet) {
-      return null;
+    return this.activeWallet;
+  }
+
+  async getWallets() {
+    try {
+      return await solanaWalletService.listWallets();
+    } catch (error) {
+      logger.error('Failed to get wallets:', error);
+      throw error;
     }
-
-    return {
-      name: this.activeWallet.name,
-      publicKey: this.activeWallet.publicKey.toString(),
-      external: this.activeWallet.external || false,
-    };
   }
 
-  // Trade history management
-  recordTrade(tradeData) {
-    const trade = {
-      id: Date.now().toString(),
-      timestamp: Date.now(),
-      ...tradeData,
-    };
-    this.tradeHistory.unshift(trade); // Add to beginning
-    // Keep only last 1000 trades
-    if (this.tradeHistory.length > 1000) {
-      this.tradeHistory = this.tradeHistory.slice(0, 1000);
+  async getWallet(walletAddress) {
+    try {
+      return await solanaWalletService.getWalletInfo(walletAddress);
+    } catch (error) {
+      logger.error('Failed to get wallet:', error);
+      throw error;
     }
-    this.saveWalletStore();
-    logger.info(`Recorded trade: ${trade.id}`);
-    return trade;
   }
 
-  getTradeHistory(limit = 50) {
-    return this.tradeHistory.slice(0, limit);
-  }
+  async getPortfolioSummary(walletAddress) {
+    try {
+      const wallet = await solanaWalletService.getWalletInfo(walletAddress);
+      if (!wallet) {
+        throw new Error('Wallet not found');
+      }
 
-  getTradesByWallet(walletPublicKey, limit = 50) {
-    return this.tradeHistory
-      .filter(trade => trade.walletPublicKey === walletPublicKey)
-      .slice(0, limit);
-  }
+      // Get recent trades from database
+      const recentTrades = await TradeModel.getRecentTrades(wallet.wallet_id, 20);
 
-  async getPortfolioSummary(walletPublicKey) {
-    const wallet = this.wallets.get(walletPublicKey);
-    if (!wallet) {
-      throw new Error('Wallet not found');
+      // Get balance
+      const balance = await solanaWalletService.getBalance(walletAddress);
+
+      return {
+        wallet: {
+          name: wallet.name,
+          address: wallet.address,
+          wallet_id: wallet.wallet_id
+        },
+        solBalance: balance.balance,
+        lamports: balance.lamports,
+        tradeStats: {
+          totalTrades: recentTrades.length,
+          // Additional stats can be calculated from trades
+        },
+        recentTrades: recentTrades.map(trade => ({
+          id: trade.trade_id,
+          timestamp: trade.executed_at,
+          type: trade.direction,
+          tokenMint: trade.output_token_mint,
+          amount: trade.input_amount,
+          price: trade.actual_price,
+          status: trade.status
+        }))
+      };
+    } catch (error) {
+      logger.error('Failed to get portfolio summary:', error);
+      throw error;
     }
-
-    const accountInfo = await heliusService.getAccountInfo(walletPublicKey);
-    const solBalance = (accountInfo?.nativeBalance || 0) / 1e9;
-    const tokens = Array.isArray(accountInfo?.tokens) ? accountInfo.tokens : [];
-    const trades = this.getTradesByWallet(walletPublicKey, 1000);
-
-    const buyTrades = trades.filter(t => t.type === 'buy' && t.status === 'success');
-    const sellTrades = trades.filter(t => t.type === 'sell' && t.status === 'success');
-
-    const totalBought = buyTrades.reduce((sum, trade) => sum + (trade.amount || 0), 0);
-    const totalSold = sellTrades.reduce((sum, trade) => sum + (trade.amount || 0), 0);
-    const profitEstimate = totalSold - totalBought;
-    const smartMoneyProfile = await smartMoneyEngine.analyzeWallet(walletPublicKey);
-
-    return {
-      wallet: {
-        name: wallet.name,
-        publicKey: wallet.publicKey.toString(),
-        external: wallet.external || false,
-      },
-      solBalance,
-      tokenCount: tokens.length,
-      holdings: tokens.map(token => ({
-        mint: token.mint,
-        amount: token.amount,
-        symbol: token.symbol || token.name || 'UNKNOWN',
-        decimals: token.decimals,
-      })),
-      tradeStats: {
-        totalTrades: trades.length,
-        successfulTrades: trades.filter(t => t.status === 'success').length,
-        buyCount: buyTrades.length,
-        sellCount: sellTrades.length,
-      },
-      pnlEstimate: profitEstimate,
-      smartMoney: {
-        score: smartMoneyProfile.score,
-        recommendation: smartMoneyProfile.recommendation,
-        signals: smartMoneyProfile.signals,
-      },
-      recentTrades: trades.slice(0, 20),
-    };
   }
 
   async executeBuy(tradeRequest) {
@@ -325,14 +125,21 @@ class TradingEngine {
         throw new Error('No active wallet set');
       }
 
-      if (this.activeWallet.external) {
+      // Get wallet from database
+      const walletRecord = await WalletModel.getByAddress(this.activeWallet.address);
+      if (!walletRecord) {
+        throw new Error('Wallet not found in database');
+      }
+
+      // Check if wallet is external (read-only)
+      if (walletRecord.is_external) {
         throw new Error('Cannot execute trades with external wallets - use manual signing');
       }
 
-      // Get wallet from database
-      const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
-      if (!walletRecord) {
-        throw new Error('Wallet not found in database');
+      // Get keypair for signing
+      const keypair = await solanaWalletService.getKeypair(this.activeWallet.address);
+      if (!keypair) {
+        throw new Error('Failed to retrieve wallet keypair');
       }
 
       // Risk check before execution
@@ -408,8 +215,8 @@ class TradingEngine {
       const result = await multiExchangeService.executeBestSwap(
         quote,
         {
-          publicKey: this.activeWallet.publicKey,
-          keypair: this.activeWallet.keypair
+          publicKey: keypair.publicKey,
+          keypair: keypair
         }
       );
 
@@ -469,7 +276,7 @@ class TradingEngine {
           },
           wallet: {
             name: this.activeWallet.name,
-            publicKey: this.activeWallet.publicKey.toString(),
+            address: this.activeWallet.address,
           },
         },
       });
@@ -489,7 +296,7 @@ class TradingEngine {
       // Record failed trade
       if (this.activeWallet) {
         try {
-          const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
+          const walletRecord = await WalletModel.getByAddress(this.activeWallet.address);
           if (walletRecord) {
             await TradeModel.create({
               wallet_id: walletRecord.wallet_id,
@@ -542,14 +349,21 @@ class TradingEngine {
         throw new Error('No active wallet set');
       }
 
-      if (this.activeWallet.external) {
+      // Get wallet from database
+      const walletRecord = await WalletModel.getByAddress(this.activeWallet.address);
+      if (!walletRecord) {
+        throw new Error('Wallet not found in database');
+      }
+
+      // Check if wallet is external (read-only)
+      if (walletRecord.is_external) {
         throw new Error('Cannot execute trades with external wallets - use manual signing');
       }
 
-      // Get wallet from database
-      const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
-      if (!walletRecord) {
-        throw new Error('Wallet not found in database');
+      // Get keypair for signing
+      const keypair = await solanaWalletService.getKeypair(this.activeWallet.address);
+      if (!keypair) {
+        throw new Error('Failed to retrieve wallet keypair');
       }
 
       // Risk check before execution
@@ -574,13 +388,23 @@ class TradingEngine {
       // Note: amount here is in token units, need to handle decimals properly
       const amountTokens = Math.floor(validated.amount * Math.pow(10, 6)); // Assume 6 decimals
 
-      // Get quote from Jupiter
-      const quote = await jupiterService.getQuote(
-        validated.tokenMint,
-        wsolMint,
-        amountTokens,
-        validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
-      );
+      // Get best quote across all exchanges
+      const quoteResult = await multiExchangeService.getBestQuote({
+        inputMint: validated.tokenMint,
+        outputMint: wsolMint,
+        amount: amountTokens,
+        slippageBps: validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
+      });
+
+      const quote = {
+        inAmount: quoteResult.inAmount,
+        outAmount: quoteResult.outAmount,
+        priceImpactPct: quoteResult.priceImpactPct,
+        route: quoteResult.route,
+        swapTransaction: quoteResult.swapTransaction,
+        exchange: quoteResult.exchange,
+        exchangeName: quoteResult.exchangeName
+      };
 
       // MEV protection: Simulate slippage
       const slippageSim = await mevService.simulateSlippage(
@@ -610,17 +434,16 @@ class TradingEngine {
         };
       }
 
-      // Execute trade
-      const result = await jupiterService.executeSwap(
+      // Execute trade with best exchange
+      const result = await multiExchangeService.executeBestSwap(
         quote,
-        this.activeWallet.publicKey,
-        async (transaction) => {
-          transaction.sign(this.activeWallet.keypair);
-          return transaction;
+        {
+          publicKey: keypair.publicKey,
+          keypair: keypair
         }
       );
 
-      logger.info(`Sell executed successfully: ${result.signature}`);
+      logger.info(`Sell executed successfully on ${quote.exchangeName}: ${result.txId}`);
 
       // Record trade in database
       const tradeData = {
@@ -676,7 +499,7 @@ class TradingEngine {
           },
           wallet: {
             name: this.activeWallet.name,
-            publicKey: this.activeWallet.publicKey.toString(),
+            address: this.activeWallet.address,
           },
         },
       });
@@ -696,7 +519,7 @@ class TradingEngine {
       // Record failed trade
       if (this.activeWallet) {
         try {
-          const walletRecord = await WalletModel.getByAddress(this.activeWallet.publicKey.toString());
+          const walletRecord = await WalletModel.getByAddress(this.activeWallet.address);
           if (walletRecord) {
             await TradeModel.create({
               wallet_id: walletRecord.wallet_id,
@@ -756,7 +579,7 @@ class TradingEngine {
       validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
     );
 
-    const response = await jupiterService.getUnsignedSwapTransaction(quote, this.activeWallet.publicKey);
+    const response = await jupiterService.getUnsignedSwapTransaction(quote, this.activeWallet.address);
     return response.swapTransaction;
   }
 }

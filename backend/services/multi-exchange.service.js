@@ -321,14 +321,36 @@ class MultiExchangeService {
    * Execute Jupiter swap
    */
   async executeJupiterSwap(quote, wallet) {
-    // Implementation for Jupiter swap execution
-    // This would use Jupiter's swap API
-    return {
-      success: true,
-      txId: 'mock_jupiter_tx',
-      exchange: 'jupiter',
-      ...quote
-    };
+    const jupiterService = require('../integrations/jupiter.service');
+    const solanaWalletService = require('./solana-wallet.service');
+
+    try {
+      // Get the keypair for signing
+      const keypair = wallet.keypair || await solanaWalletService.getKeypair(wallet.publicKey.toString());
+
+      // Create signTransaction function
+      const signTransaction = async (transaction) => {
+        transaction.sign(keypair);
+        return transaction;
+      };
+
+      // Execute the swap using Jupiter service
+      const result = await jupiterService.executeSwap(quote.swapTransaction, wallet.publicKey, signTransaction);
+
+      return {
+        success: true,
+        txId: result.signature,
+        signature: result.signature,
+        exchange: 'jupiter',
+        status: result.status,
+        outputAmount: quote.outAmount,
+        fee: 0, // Will be calculated from transaction
+        priorityFee: 0
+      };
+    } catch (error) {
+      logger.error('Jupiter swap execution failed:', error);
+      throw error;
+    }
   }
 
   /**

@@ -2,6 +2,8 @@ const sodium = require('libsodium-wrappers');
 const crypto = require('crypto');
 const bip39 = require('bip39');
 const hdkey = require('hdkey');
+const { Keypair } = require('@solana/web3.js');
+const { derivePath } = require('ed25519-hd-key');
 const logger = require('../../utils/logger');
 const { query } = require('../../db/connection');
 
@@ -73,12 +75,13 @@ class KeyService {
   async generateWallet(derivationPath = "m/44'/501'/0'/0'") {
     const mnemonic = bip39.generateMnemonic();
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = hdkey.fromMasterSeed(seed);
-    const addrNode = root.derive(derivationPath);
-    const privateKey = addrNode.privateKey.toString('hex');
 
-    // Generate Solana public key (simplified - in real implementation use @solana/web3.js)
-    const publicKey = this.derivePublicKeyFromPrivate(privateKey);
+    // Use ed25519-hd-key for proper Solana key derivation
+    const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
+    const keypair = Keypair.fromSeed(derivedSeed);
+
+    const privateKey = Buffer.from(keypair.secretKey).toString('hex');
+    const publicKey = keypair.publicKey.toBase58();
 
     return {
       mnemonic,
@@ -86,16 +89,6 @@ class KeyService {
       publicKey,
       derivationPath
     };
-  }
-
-  // Derive public key from private key (placeholder - use proper Solana keypair)
-  derivePublicKeyFromPrivate(privateKey) {
-    // This is a placeholder. In real implementation:
-    // const keypair = Keypair.fromSecretKey(Uint8Array.from(Buffer.from(privateKey, 'hex')));
-    // return keypair.publicKey.toBase58();
-
-    // For now, return a mock public key
-    return 'MockPublicKey' + privateKey.substring(0, 8);
   }
 
   // Validate derivation path

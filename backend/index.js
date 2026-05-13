@@ -37,6 +37,7 @@ const arbitrageRoutes = require('./routes/arbitrageRoutes');
 const katanaRoutes = require('./routes/katanaRoutes');
 const systemRoutes = require('./routes/systemRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const walletRoutes = require('./routes/wallet.routes');
 const backupService = require('./services/backup.service');
 const executionAnalyticsService = require('./services/execution-analytics.service');
 const emailScheduler = require('./services/email-scheduler.service');
@@ -353,6 +354,7 @@ app.use(['/api/arbitrage', '/arbitrage'], arbitrageRoutes);
 app.use(['/api/katana', '/katana'], katanaRoutes);
 app.use(['/api/system', '/system'], systemRoutes);
 app.use(['/api/ai', '/ai'], aiRoutes);
+app.use('/api/wallets', walletRoutes);
 // User management routes
 const userRoutes = require('./routes/user.routes');
 app.use('/api/users', userRoutes);

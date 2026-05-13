@@ -12,8 +12,6 @@ class WalletModel {
       parent_wallet_id = null,
       spending_limit_usd = 0,
       daily_spending_usd = 0,
-      address_whitelist = null,
-      address_blacklist = null,
       multisig_signers = null,
       multisig_threshold = null,
       multisig_address = null,
@@ -33,12 +31,11 @@ class WalletModel {
       INSERT INTO wallets (
         wallet_address, wallet_name, wallet_type,
         parent_wallet_id, spending_limit_usd, daily_spending_usd,
-        address_whitelist, address_blacklist,
         multisig_signers, multisig_threshold,
         multisig_address, metadata,
         encrypted_private_key, key_derivation_path, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
@@ -50,8 +47,6 @@ class WalletModel {
         parent_wallet_id,
         spending_limit_usd,
         daily_spending_usd,
-        address_whitelist,
-        address_blacklist,
         multisig_signers,
         multisig_threshold,
         multisig_address,
