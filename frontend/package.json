@@ -11,6 +11,8 @@
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-table": "^8.11.2",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
     "axios": "^1.6.0",
     "framer-motion": "^12.38.0",
     "lightweight-charts": "^4.0.0",

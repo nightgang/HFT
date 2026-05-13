@@ -1,785 +1,521 @@
-import React, { useRef, useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { createChart } from "lightweight-charts";
+import TerminalConsole from "../components/TerminalConsole";
 import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import {
-  Activity,
-  ArrowUpRight,
-  ArrowDownRight,
-  Sparkles,
+  // Navigation Icons
+  LayoutDashboard,
+  Terminal,
+  Zap,
   Wallet,
-  Signal,
-  TrendingUp,
-  Clock8,
-  Bell,
-  Cpu,
+  Target,
+  Briefcase,
+  FileText,
+  History,
   BarChart3,
-  ShieldCheck,
-  ArrowRight,
-  ArrowLeft,
-  Layers,
-  Sun,
-  Moon,
+  Brain,
+  Settings,
+  Puzzle,
+
+  // Trading Icons
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Activity,
+  Shield,
+  Zap as ZapIcon,
+  Play,
+  Pause,
+  RotateCcw,
+
+  // Status Icons
+  Wifi,
+  WifiOff,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Cpu,
+
+  // UI Icons
+  ChevronRight,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
-const metricCards = [
-  {
-    label: "Total PNL",
-    value: "$18,742.60",
-    change: "+7.8%",
-    icon: TrendingUp,
-    accent: "text-emerald-400",
-  },
-  {
-    label: "Win Rate",
-    value: "86.3%",
-    change: "+4.2%",
-    icon: Activity,
-    accent: "text-emerald-400",
-  },
-  {
-    label: "Active Trades",
-    value: "14",
-    change: "Realtime",
-    icon: Sparkles,
-    accent: "text-cyan-400",
-  },
-  {
-    label: "Balance",
-    value: "$92,150.24",
-    change: "+3.1%",
-    icon: Wallet,
-    accent: "text-emerald-400",
-  },
-  {
-    label: "Priority Fee",
-    value: "LOW",
-    change: "Optimized",
-    icon: ShieldCheck,
-    accent: "text-sky-400",
-  },
+// Mock data for demonstration
+const mockTrades = [
+  { id: 1, token: "KAT", type: "BUY", amount: "1000", entry: "0.000842", current: "0.000956", pnl: "+$114", pnlPercent: "+13.5%", status: "ACTIVE" },
+  { id: 2, token: "SOL", type: "SELL", amount: "50", entry: "142.50", current: "138.20", pnl: "+$215", pnlPercent: "+3.0%", status: "ACTIVE" },
+  { id: 3, token: "RAY", type: "BUY", amount: "200", entry: "2.145", current: "2.312", pnl: "+$334", pnlPercent: "+7.8%", status: "ACTIVE" },
 ];
 
-const liveEvents = [
-  { time: "09:52:04", event: "BTC swap executed", status: "success" },
-  { time: "09:51:12", event: "Limit order placed", status: "info" },
-  { time: "09:50:30", event: "Slippage monitored", status: "success" },
-  { time: "09:49:58", event: "Fee tier auto-adjusted", status: "info" },
+const mockLiveFeed = [
+  { id: 1, type: "LAUNCH", message: "New token $NEON launched on Raydium", time: "2s ago", color: "text-purple-400" },
+  { id: 2, type: "TRADE", message: "Smart wallet bought 500K $KAT", time: "5s ago", color: "text-green-400" },
+  { id: 3, type: "LIQUIDITY", message: "Raydium pool added $50K liquidity", time: "12s ago", color: "text-cyan-400" },
+  { id: 4, type: "PRICE", message: "$KAT price: $0.000956 (+211%)", time: "18s ago", color: "text-emerald-400" },
 ];
 
-const walletRows = [
-  { label: "Spot Balance", value: "$48,720", icon: Wallet },
-  { label: "Margin Used", value: "$8,900", icon: Layers },
-  { label: "Available", value: "$22,300", icon: Signal },
-  { label: "PnL Today", value: "+$1,180", icon: TrendingUp },
+const mockWallets = [
+  { address: "7xKX...9mL2", pnl: "+$2,450", balance: "$15,230", status: "PROFIT" },
+  { address: "3pQ8...4nR9", pnl: "+$890", balance: "$8,120", status: "PROFIT" },
+  { address: "9wL5...2kT7", pnl: "-$320", balance: "$4,890", status: "LOSS" },
 ];
 
-const activeTrades = [
-  {
-    market: "ETH/USDC",
-    side: "BUY",
-    size: "5.2 ETH",
-    entry: 2845,
-    current: 2870,
-    pnl: 3.2,
-  },
-  {
-    market: "SOL/USDC",
-    side: "SELL",
-    size: "380 SOL",
-    entry: 160,
-    current: 155,
-    pnl: -3.1,
-  },
-  {
-    market: "BTC/USDC",
-    side: "BUY",
-    size: "0.18 BTC",
-    entry: 71200,
-    current: 72450,
-    pnl: 1.7,
-  },
-];
-
-const logEntries = [
-  "09:52:48  ·  Signal engine updated parameters for BTC leg.",
-  "09:52:20  ·  Order book depth monitor triggered safety throttle.",
-  "09:51:40  ·  Wallet balance sync completed across 3 chains.",
-  "09:50:58  ·  Adaptive fee model reduced gas by 18%.",
-];
-
-const candleData = [
-  { time: "2026-05-05", open: 148.2, high: 153.4, low: 146.8, close: 151.6 },
-  { time: "2026-05-06", open: 151.6, high: 156.1, low: 150.7, close: 154.8 },
-  { time: "2026-05-07", open: 154.8, high: 158.2, low: 153.5, close: 155.7 },
-  { time: "2026-05-08", open: 155.7, high: 160.4, low: 154.9, close: 159.0 },
-  { time: "2026-05-09", open: 159.0, high: 162.9, low: 157.8, close: 160.4 },
-  { time: "2026-05-10", open: 160.4, high: 164.2, low: 159.3, close: 163.1 },
-  { time: "2026-05-11", open: 163.1, high: 166.0, low: 161.7, close: 165.8 },
-  { time: "2026-05-12", open: 165.8, high: 169.5, low: 164.6, close: 168.2 },
-  { time: "2026-05-13", open: 168.2, high: 170.1, low: 166.9, close: 169.7 },
-];
-
-const volumeData = [
-  { time: "2026-05-05", value: 120000 },
-  { time: "2026-05-06", value: 128000 },
-  { time: "2026-05-07", value: 112000 },
-  { time: "2026-05-08", value: 140000 },
-  { time: "2026-05-09", value: 148000 },
-  { time: "2026-05-10", value: 132000 },
-  { time: "2026-05-11", value: 156000 },
-  { time: "2026-05-12", value: 172000 },
-  { time: "2026-05-13", value: 180000 },
-];
-
-const navItems = [
-  { label: "Dashboard", icon: Activity },
-  { label: "Markets", icon: BarChart3 },
-  { label: "Orders", icon: ArrowRight },
-  { label: "Wallets", icon: Wallet },
-  { label: "Settings", icon: Cpu },
-];
-
-const HFTDashboard = ({ darkMode, onToggleDarkMode }) => {
+const HFTDashboard = () => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [isOnline, setIsOnline] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const chartContainerRef = useRef(null);
-  const [sorting, setSorting] = useState([]);
-  const columnHelper = createColumnHelper();
+  const chartRef = useRef(null);
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor("market", {
-        header: "Market",
-        cell: (info) => (
-          <span className="font-semibold">{info.getValue()}</span>
-        ),
-      }),
-      columnHelper.accessor("side", {
-        header: "Side",
-        cell: (info) => {
-          const side = info.getValue();
-          return (
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                side === "BUY"
-                  ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
-                  : "bg-rose-500/10 text-rose-300 border border-rose-500/20"
-              }`}
-            >
-              {side}
-            </span>
-          );
-        },
-      }),
-      columnHelper.accessor("size", {
-        header: "Size",
-        cell: (info) => info.getValue(),
-      }),
-      columnHelper.accessor("entry", {
-        header: "Entry",
-        cell: (info) => `$${info.getValue().toLocaleString()}`,
-      }),
-      columnHelper.accessor("current", {
-        header: "Current",
-        cell: (info) => `$${info.getValue().toLocaleString()}`,
-      }),
-      columnHelper.accessor("pnl", {
-        header: "PNL",
-        cell: (info) => {
-          const value = info.getValue();
-          return (
-            <span
-              className={`font-semibold ${value >= 0 ? "text-emerald-300" : "text-rose-300"}`}
-            >
-              {value >= 0 ? "+" : ""}
-              {value.toFixed(1)}%
-            </span>
-          );
-        },
-      }),
-    ],
-    [columnHelper],
-  );
-
-  const table = useReactTable({
-    data: activeTrades,
-    columns,
-    state: {
-      sorting,
-    },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
+  // Update time every second
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 360,
-      layout: {
-        background: { color: darkMode ? "#06080f" : "#f8fafc" },
-        textColor: darkMode ? "#e2e8f0" : "#0f172a",
-      },
-      grid: {
-        vertLines: { color: "rgba(148, 163, 184, 0.08)" },
-        horzLines: { color: "rgba(148, 163, 184, 0.08)" },
-      },
-      rightPriceScale: {
-        borderColor: "rgba(148, 163, 184, 0.18)",
-      },
-      timeScale: {
-        borderColor: "rgba(148, 163, 184, 0.18)",
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      crosshair: {
-        mode: 1,
-      },
-    });
+  // Initialize chart
+  useEffect(() => {
+    if (chartContainerRef.current && !chartRef.current) {
+      const chart = createChart(chartContainerRef.current, {
+        layout: {
+          background: { color: 'transparent' },
+          textColor: '#a855f7',
+        },
+        grid: {
+          vertLines: { color: '#1a1a2e' },
+          horzLines: { color: '#1a1a2e' },
+        },
+        crosshair: {
+          mode: 1,
+        },
+        rightPriceScale: {
+          borderColor: '#a855f7',
+        },
+        timeScale: {
+          borderColor: '#a855f7',
+          timeVisible: true,
+        },
+      });
 
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: "#22c55e",
-      downColor: "#ef4444",
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
-      borderVisible: false,
-      wickWidth: 2,
-    });
+      const candlestickSeries = chart.addCandlestickSeries({
+        upColor: '#00ff88',
+        downColor: '#a855f7',
+        borderVisible: false,
+        wickUpColor: '#00ff88',
+        wickDownColor: '#a855f7',
+      });
 
-    candleSeries.setData(candleData);
+      // Mock candlestick data
+      const data = [
+        { time: '2024-01-01', open: 0.0008, high: 0.0009, low: 0.0007, close: 0.00085 },
+        { time: '2024-01-02', open: 0.00085, high: 0.00095, low: 0.0008, close: 0.0009 },
+        { time: '2024-01-03', open: 0.0009, high: 0.0010, low: 0.00085, close: 0.00095 },
+        { time: '2024-01-04', open: 0.00095, high: 0.0011, low: 0.0009, close: 0.00098 },
+        { time: '2024-01-05', open: 0.00098, high: 0.0012, low: 0.00095, close: 0.0011 },
+      ];
 
-    const histogramSeries = chart.addHistogramSeries({
-      color: "#22c55e",
-      priceFormat: { type: "volume" },
-      priceScaleId: "volume",
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
-    });
+      candlestickSeries.setData(data);
+      chartRef.current = chart;
 
-    histogramSeries.setData(volumeData);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chartContainerRef.current) {
+      // Handle resize
+      const handleResize = () => {
         chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
-    });
+      };
 
-    resizeObserver.observe(chartContainerRef.current);
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        chart.remove();
+      };
+    }
+  }, [sidebarCollapsed]);
 
-    return () => {
-      resizeObserver.disconnect();
-      chart.remove();
-    };
-  }, [darkMode]);
+  const sidebarItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "terminal", label: "Terminal", icon: Terminal },
+    { id: "trade", label: "Trade", icon: Zap },
+    { id: "wallets", label: "Wallets", icon: Wallet },
+    { id: "sniper", label: "Sniper", icon: Target },
+    { id: "positions", label: "Positions", icon: Briefcase },
+    { id: "orders", label: "Orders", icon: FileText },
+    { id: "history", label: "History", icon: History },
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "strategies", label: "Strategies", icon: Brain },
+    { id: "settings", label: "Settings", icon: Settings },
+    { id: "plugins", label: "Plugins", icon: Puzzle },
+  ];
 
-  const theme = {
-    root: darkMode
-      ? "min-h-screen bg-[#0a0a0c] text-slate-100"
-      : "min-h-screen bg-slate-100 text-slate-950",
-    page: darkMode
-      ? "bg-slate-900/80 border border-slate-800 text-slate-100 shadow-[0_0_60px_rgba(16,185,129,0.08)]"
-      : "bg-white/95 border border-slate-200 text-slate-950 shadow-[0_0_40px_rgba(16,185,129,0.08)]",
-    panel: darkMode
-      ? "bg-slate-900/80 border border-slate-800 text-slate-100"
-      : "bg-white/95 border border-slate-200 text-slate-950",
-    card: darkMode
-      ? "bg-slate-950/80 border border-slate-800 text-slate-100"
-      : "bg-slate-50 border border-slate-200 text-slate-950",
-    chartSurface: darkMode
-      ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900"
-      : "bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100",
-    sidebar: darkMode
-      ? "hidden lg:flex flex-col w-20 bg-slate-950 border-r border-slate-800 p-4 gap-4"
-      : "hidden lg:flex flex-col w-20 bg-slate-50 border-r border-slate-200 p-4 gap-4",
-    sidebarButton: darkMode
-      ? "group flex h-12 w-full items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-emerald-400/40 hover:text-emerald-300"
-      : "group flex h-12 w-full items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-400/40 hover:text-emerald-700",
-    badge: darkMode
-      ? "rounded-full bg-emerald-500/10 px-3 py-2 text-xs uppercase tracking-[0.25em] text-emerald-300 border border-emerald-500/20"
-      : "rounded-full bg-emerald-500/10 px-3 py-2 text-xs uppercase tracking-[0.25em] text-emerald-700 border border-emerald-200",
-  };
+  const statsCards = [
+    { label: "Total PNL", value: "$18,742.60", change: "+7.8%", icon: TrendingUp, color: "text-emerald-400" },
+    { label: "Win Rate", value: "86.3%", change: "+4.2%", icon: Activity, color: "text-emerald-400" },
+    { label: "Total Volume", value: "$127.4K", change: "+12.5%", icon: DollarSign, color: "text-cyan-400" },
+    { label: "Active Trades", value: "14", change: "Realtime", icon: ZapIcon, color: "text-purple-400" },
+    { label: "Balance", value: "$45,230", change: "+2.1%", icon: Wallet, color: "text-emerald-400" },
+    { label: "Priority Fee", value: "0.000005", change: "Optimal", icon: Shield, color: "text-orange-400" },
+  ];
 
   return (
-    <div className={theme.root}>
-      <div className="flex min-h-screen">
-        <aside className={theme.sidebar}>
-          <div
-            className={
-              darkMode
-                ? "h-12 w-full flex items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-slate-100 text-sm font-semibold tracking-widest"
-                : "h-12 w-full flex items-center justify-center rounded-2xl bg-slate-200 border border-slate-200 text-slate-950 text-sm font-semibold tracking-widest"
-            }
-          >
-            HFT
-          </div>
-          <nav className="flex flex-col gap-3 mt-6">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button key={item.label} className={theme.sidebarButton}>
-                  <Icon className="w-5 h-5" />
-                </button>
-              );
-            })}
-          </nav>
-          <div className="mt-auto text-center text-[10px] uppercase tracking-[0.35em] text-slate-500">
-            neon terminal
-          </div>
-        </aside>
+    <div className="min-h-screen bg-gradient-to-br from-[#050510] via-[#0a0a1a] to-[#050510] text-white overflow-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.05),transparent_50%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(0,255,136,0.03),transparent_50%)] pointer-events-none" />
 
-        <main className="flex-1 p-6 lg:p-8">
-          <div className="flex flex-col gap-6">
-            <header className={`rounded-3xl p-5 ${theme.page}`}>
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                  <p
-                    className={
-                      darkMode
-                        ? "text-sm uppercase tracking-[0.3em] text-slate-500"
-                        : "text-sm uppercase tracking-[0.3em] text-slate-500"
-                    }
-                  >
-                    High-Frequency Trading
-                  </p>
-                  <h1
-                    className={
-                      darkMode
-                        ? "mt-2 text-3xl font-semibold text-white"
-                        : "mt-2 text-3xl font-semibold text-slate-950"
-                    }
-                  >
-                    Terminal Dashboard
-                  </h1>
+      {/* Sidebar */}
+      <motion.div
+        initial={{ x: 0 }}
+        animate={{ x: sidebarCollapsed ? -280 : 0 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="fixed left-0 top-0 h-full w-70 bg-black/80 backdrop-blur-xl border-r border-purple-500/20 z-50"
+      >
+        {/* Logo */}
+        <div className="p-6 border-b border-purple-500/20">
+          <motion.h1
+            className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent"
+            whileHover={{ scale: 1.02 }}
+          >
+            HFT-SYSTEM
+          </motion.h1>
+          <div className="text-xs text-purple-400 mt-1 font-mono">KATANA MODE</div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="p-4 space-y-2">
+          {sidebarItems.map((item) => (
+            <motion.button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                activeTab === item.id
+                  ? "bg-purple-500/20 border border-purple-500/40 shadow-lg shadow-purple-500/20"
+                  : "hover:bg-purple-500/10 border border-transparent"
+              }`}
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <item.icon className={`w-5 h-5 ${activeTab === item.id ? "text-purple-400" : "text-gray-400"}`} />
+              <span className={`text-sm ${activeTab === item.id ? "text-white" : "text-gray-300"}`}>
+                {item.label}
+              </span>
+            </motion.button>
+          ))}
+        </nav>
+
+        {/* Katana Mode Button */}
+        <div className="absolute bottom-6 left-4 right-4">
+          <motion.button
+            className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-purple-500/30 border border-purple-400/30"
+            whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(168, 85, 247, 0.4)" }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Zap className="w-4 h-4" />
+              <span className="text-sm font-mono">KATANA MODE</span>
+            </div>
+          </motion.button>
+        </div>
+
+        {/* Collapse Button */}
+        <motion.button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="absolute -right-4 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-purple-500/20 backdrop-blur-xl border border-purple-500/30 rounded-full flex items-center justify-center hover:bg-purple-500/30 transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          {sidebarCollapsed ? <ChevronRight className="w-4 h-4 text-purple-400" /> : <ChevronLeft className="w-4 h-4 text-purple-400" />}
+        </motion.button>
+      </motion.div>
+
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-0' : 'ml-70'}`}>
+        {/* Header */}
+        <header className="bg-black/40 backdrop-blur-xl border-b border-purple-500/20 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+                HFT-SYSTEM – KATANA MODE
+              </h1>
+              <p className="text-gray-400 text-sm mt-1">Ultra-fast Solana trading terminal</p>
+            </div>
+
+            {/* Status Indicators */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                {isOnline ? (
+                  <Wifi className="w-4 h-4 text-green-400 animate-pulse" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                )}
+                <span className="text-sm text-gray-300">RPC</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
+                <span className="text-sm text-gray-300">WS</span>
+              </div>
+              <div className="text-sm text-gray-400 font-mono">
+                {currentTime.toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+            {statsCards.map((card, index) => (
+              <motion.div
+                key={card.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4 hover:border-purple-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/10"
+                whileHover={{ scale: 1.02 }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <card.icon className={`w-5 h-5 ${card.color}`} />
+                  <span className={`text-xs ${card.change.startsWith('+') ? 'text-green-400' : card.change.startsWith('-') ? 'text-red-400' : 'text-cyan-400'}`}>
+                    {card.change}
+                  </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span
-                    className={
-                      darkMode
-                        ? "inline-flex items-center gap-2 rounded-full border border-slate-800 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300"
-                        : "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700"
-                    }
-                  >
-                    Live mode
-                  </span>
-                  <span
-                    className={
-                      darkMode
-                        ? "inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-300"
-                        : "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-                    }
-                  >
-                    UTC 14:52
-                  </span>
-                  <button
-                    onClick={onToggleDarkMode}
-                    className={
-                      darkMode
-                        ? "inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 hover:bg-slate-900 transition"
-                        : "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 transition"
-                    }
-                  >
-                    {darkMode ? (
-                      <Moon className="w-4 h-4" />
-                    ) : (
-                      <Sun className="w-4 h-4" />
-                    )}
-                    {darkMode ? "Dark Mode" : "Light Mode"}
-                  </button>
+                <div className="text-2xl font-bold text-white mb-1">{card.value}</div>
+                <div className="text-xs text-gray-400">{card.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </header>
+
+        {/* Main Grid Layout */}
+        <div className="p-6 grid grid-cols-12 gap-6 min-h-[calc(100vh-200px)]">
+          {/* Main Chart - 60% width */}
+          <motion.div
+            className="col-span-12 lg:col-span-7 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="p-4 border-b border-purple-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">$KAT – Katana Token</h2>
+                  <div className="text-sm text-gray-400">Current: $0.000956 <span className="text-green-400">+211%</span></div>
+                </div>
+                <div className="flex gap-2">
+                  {['1s', '5s', '15s', '1m', '5m', '15m', '1h', '4h'].map((tf) => (
+                    <button
+                      key={tf}
+                      className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded transition-colors"
+                    >
+                      {tf}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </header>
+            </div>
+            <div ref={chartContainerRef} className="h-96 w-full" />
+          </motion.div>
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-              {metricCards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <article
-                    key={card.label}
-                    className={`rounded-3xl p-5 ${theme.panel} shadow-[0_0_30px_rgba(16,185,129,0.08)]`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                          {card.label}
-                        </p>
-                        <p className="mt-3 text-2xl font-semibold text-white">
-                          {card.value}
-                        </p>
-                      </div>
-                      <div
-                        className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-slate-200 ${card.accent}`}
-                      >
-                        <Icon className="w-5 h-5" />
-                      </div>
-                    </div>
-                    <p className={`mt-4 text-sm font-medium ${card.accent}`}>
-                      {card.change}
-                    </p>
-                  </article>
-                );
-              })}
-            </section>
+          {/* Trade Panel - 20% width */}
+          <motion.div
+            className="col-span-12 lg:col-span-2 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
+              KATANA TRADE PANEL
+            </h3>
 
-            <section className="grid grid-cols-1 xl:grid-cols-[1.8fr_0.95fr_0.95fr] gap-6">
-              <article
-                className={`order-2 xl:order-1 rounded-[32px] p-5 ${theme.page}`}
+            {/* Buy/Sell Tabs */}
+            <div className="flex mb-4">
+              <button className="flex-1 bg-green-500/20 text-green-400 py-2 px-4 rounded-l-lg border border-green-500/30">
+                BUY
+              </button>
+              <button className="flex-1 bg-red-500/20 text-red-400 py-2 px-4 rounded-r-lg border border-red-500/30">
+                SELL
+              </button>
+            </div>
+
+            {/* Trade Form */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Strategy</label>
+                <select className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm">
+                  <option>Market Order</option>
+                  <option>Limit Order</option>
+                  <option>Stop Loss</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Amount (SOL)</label>
+                <input
+                  type="number"
+                  placeholder="0.1"
+                  className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Slippage (%)</label>
+                <select className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm">
+                  <option>0.5%</option>
+                  <option>1%</option>
+                  <option>2%</option>
+                </select>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-2">
+                <label className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Jito Bundle</span>
+                  <div className="w-10 h-5 bg-green-500/20 rounded-full relative">
+                    <div className="w-4 h-4 bg-green-400 rounded-full absolute right-0.5 top-0.5"></div>
+                  </div>
+                </label>
+                <label className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">MEV Protection</span>
+                  <div className="w-10 h-5 bg-green-500/20 rounded-full relative">
+                    <div className="w-4 h-4 bg-green-400 rounded-full absolute right-0.5 top-0.5"></div>
+                  </div>
+                </label>
+                <label className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Auto Buy</span>
+                  <div className="w-10 h-5 bg-purple-500/20 rounded-full relative">
+                    <div className="w-4 h-4 bg-purple-400 rounded-full absolute left-0.5 top-0.5"></div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Execute Button */}
+              <motion.button
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-500/30 border border-green-400/30"
+                whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(0, 255, 136, 0.4)" }}
+                whileTap={{ scale: 0.98 }}
               >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-500">
-                      Token Price Chart
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">
-                      SOL / USDC
-                    </h2>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full bg-slate-950 px-3 py-2 text-sm text-slate-300 border border-slate-800">
-                      24h +4.2%
-                    </span>
-                    <span className="rounded-full bg-slate-950 px-3 py-2 text-sm text-slate-300 border border-slate-800">
-                      Vol 12.4M
-                    </span>
-                  </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  <span>EXECUTE BUY</span>
                 </div>
+              </motion.button>
+            </div>
+          </motion.div>
 
-                <div className="mt-6 h-[360px] rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 p-6 shadow-inner shadow-slate-950/50">
-                  <div
-                    ref={chartContainerRef}
-                    className="h-full w-full rounded-[28px] bg-slate-900/70"
-                  />
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-slate-400">
-                  <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Current
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
-                      $160.42
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Market Depth
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
-                      Stable
-                    </p>
-                  </div>
-                </div>
-              </article>
-
-              <article
-                className={`order-1 xl:order-2 rounded-[32px] p-5 ${theme.page}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-500">
-                      Trade Panel
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">
-                      Market Execution
-                    </h2>
-                  </div>
-                  <div className="rounded-2xl bg-emerald-500/10 px-3 py-2 text-xs uppercase tracking-[0.25em] text-emerald-300 border border-emerald-500/20">
-                    Fast Lane
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                      Token Pair
-                    </label>
-                    <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-white">
-                      SOL / USDC
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                      Order Type
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button className="rounded-full border border-slate-800 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                        Market
-                      </button>
-                      <button className="rounded-full border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-300">
-                        Limit
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                      Amount
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="5.2"
-                      className="w-full rounded-3xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                      Price
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="$160.42"
-                      className="w-full rounded-3xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                      Leverage
-                    </label>
-                    <div className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-white">
-                      3.5x
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button className="inline-flex items-center justify-center gap-2 rounded-3xl bg-emerald-500 px-4 py-4 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
-                      <ArrowUpRight className="w-4 h-4" /> Buy
-                    </button>
-                    <button className="inline-flex items-center justify-center gap-2 rounded-3xl bg-slate-800 border border-slate-700 px-4 py-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-700">
-                      <ArrowDownRight className="w-4 h-4" /> Sell
-                    </button>
-                  </div>
-                </div>
-              </article>
-
-              <aside className={`order-3 rounded-[32px] p-5 ${theme.page}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-500">
-                      Live Feed
-                    </p>
-                    <h2 className="mt-1 text-xl font-semibold text-white">
-                      Market Events
-                    </h2>
-                  </div>
-                  <Bell className="w-5 h-5 text-emerald-400" />
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {liveEvents.map((item) => (
-                    <div
-                      key={item.time}
-                      className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4"
+          {/* Right Analytics Panel - 20% width */}
+          <motion.div
+            className="col-span-12 lg:col-span-3 space-y-6"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            {/* Live Feed */}
+            <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
+                LIVE FEED
+              </h3>
+              <div className="space-y-3 max-h-48 overflow-y-auto">
+                <AnimatePresence>
+                  {mockLiveFeed.map((feed) => (
+                    <motion.div
+                      key={feed.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="flex items-center gap-3 p-2 bg-slate-800/50 rounded border border-purple-500/10"
                     >
-                      <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-slate-500">
-                        <span>{item.time}</span>
-                        <span
-                          className={
-                            item.status === "success"
-                              ? "text-emerald-300"
-                              : "text-sky-300"
-                          }
-                        >
-                          {item.status}
+                      <div className={`w-2 h-2 rounded-full ${feed.color.replace('text-', 'bg-')}`}></div>
+                      <div className="flex-1">
+                        <div className={`text-sm ${feed.color}`}>{feed.message}</div>
+                        <div className="text-xs text-gray-500">{feed.time}</div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Wallet Tracker */}
+            <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
+                WALLET TRACKER
+              </h3>
+              <div className="space-y-3">
+                {mockWallets.map((wallet) => (
+                  <div key={wallet.address} className="p-3 bg-slate-800/50 rounded border border-purple-500/10">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-gray-400">{wallet.address}</span>
+                      <span className={`text-xs ${wallet.pnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                        {wallet.pnl}
+                      </span>
+                    </div>
+                    <div className="text-sm text-white">{wallet.balance}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Active Trades Table - Full width bottom */}
+          <motion.div
+            className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="p-4 border-b border-purple-500/20">
+              <h3 className="text-lg font-bold text-white">ACTIVE TRADES</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-purple-500/10">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Token</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Entry</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Current</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL %</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mockTrades.map((trade) => (
+                    <motion.tr
+                      key={trade.id}
+                      className="border-b border-purple-500/5 hover:bg-purple-500/5 transition-colors"
+                      whileHover={{ backgroundColor: 'rgba(168, 85, 247, 0.05)' }}
+                    >
+                      <td className="px-4 py-3 text-sm text-white font-medium">{trade.token}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          trade.type === 'BUY' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {trade.type}
                         </span>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-100">
-                        {item.event}
-                      </p>
-                    </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{trade.amount}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">${trade.entry}</td>
+                      <td className="px-4 py-3 text-sm text-white">${trade.current}</td>
+                      <td className="px-4 py-3 text-sm text-green-400 font-medium">{trade.pnl}</td>
+                      <td className="px-4 py-3 text-sm text-green-400 font-medium">{trade.pnlPercent}</td>
+                      <td className="px-4 py-3">
+                        <button className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs transition-colors">
+                          Close
+                        </button>
+                      </td>
+                    </motion.tr>
                   ))}
-                </div>
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        </div>
 
-                <div className={`mt-8 rounded-3xl p-4 ${theme.card}`}>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                    Wallet Tracker
-                  </p>
-                  <div className="mt-4 space-y-3">
-                    {walletRows.map((row) => {
-                      const Icon = row.icon;
-                      return (
-                        <div
-                          key={row.label}
-                          className="flex items-center justify-between gap-3 rounded-3xl border border-slate-800 bg-slate-900/80 p-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-slate-200">
-                              <Icon className="w-4 h-4" />
-                            </span>
-                            <div>
-                              <p className="text-sm text-slate-400">
-                                {row.label}
-                              </p>
-                              <p className="text-sm font-semibold text-white">
-                                {row.value}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </aside>
-            </section>
-
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <article className={`rounded-[32px] p-5 ${theme.page}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p
-                      className={
-                        darkMode
-                          ? "text-sm uppercase tracking-[0.25em] text-slate-500"
-                          : "text-sm uppercase tracking-[0.25em] text-slate-600"
-                      }
-                    >
-                      Active Trades
-                    </p>
-                    <h2
-                      className={
-                        darkMode
-                          ? "mt-1 text-xl font-semibold text-white"
-                          : "mt-1 text-xl font-semibold text-slate-950"
-                      }
-                    >
-                      Positions
-                    </h2>
-                  </div>
-                  <div
-                    className={
-                      darkMode
-                        ? "rounded-full bg-emerald-500/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-300 border border-emerald-500/20"
-                        : "rounded-full bg-emerald-500/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-700 border border-emerald-200"
-                    }
-                  >
-                    Live
-                  </div>
-                </div>
-
-                <div
-                  className={`mt-5 overflow-hidden rounded-3xl ${darkMode ? "border border-slate-800 bg-slate-950/90" : "border border-slate-200 bg-slate-50"}`}
-                >
-                  <table className="w-full border-collapse text-left text-sm">
-                    <thead
-                      className={
-                        darkMode
-                          ? "bg-slate-900/90 text-slate-400 uppercase tracking-[0.2em] text-xs"
-                          : "bg-slate-100 text-slate-600 uppercase tracking-[0.2em] text-xs"
-                      }
-                    >
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <tr key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <th key={header.id} className="px-4 py-4">
-                              {header.isPlaceholder ? null : (
-                                <div
-                                  className="flex items-center justify-between gap-2 cursor-pointer select-none"
-                                  onClick={header.column.getToggleSortingHandler()}
-                                >
-                                  <span>
-                                    {flexRender(
-                                      header.column.columnDef.header,
-                                      header.getContext(),
-                                    )}
-                                  </span>
-                                  <span className="text-xs text-slate-400">
-                                    {header.column.getIsSorted() === "asc"
-                                      ? "▲"
-                                      : header.column.getIsSorted() === "desc"
-                                        ? "▼"
-                                        : ""}
-                                  </span>
-                                </div>
-                              )}
-                            </th>
-                          ))}
-                        </tr>
-                      ))}
-                    </thead>
-                    <tbody>
-                      {table.getRowModel().rows.map((row) => (
-                        <tr
-                          key={row.id}
-                          className={
-                            darkMode
-                              ? "border-t border-slate-800 hover:bg-slate-900/80"
-                              : "border-t border-slate-200 hover:bg-slate-100"
-                          }
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <td
-                              key={cell.id}
-                              className={
-                                darkMode
-                                  ? "px-4 py-4 text-slate-100"
-                                  : "px-4 py-4 text-slate-950"
-                              }
-                            >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </article>
-
-              <article className={`rounded-[32px] p-5 ${theme.page}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p
-                      className={
-                        darkMode
-                          ? "text-sm uppercase tracking-[0.25em] text-slate-500"
-                          : "text-sm uppercase tracking-[0.25em] text-slate-600"
-                      }
-                    >
-                      System Logs
-                    </p>
-                    <h2
-                      className={
-                        darkMode
-                          ? "mt-1 text-xl font-semibold text-white"
-                          : "mt-1 text-xl font-semibold text-slate-950"
-                      }
-                    >
-                      Audit Trail
-                    </h2>
-                  </div>
-                  <div
-                    className={
-                      darkMode
-                        ? "rounded-full bg-slate-950 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-300 border border-slate-800"
-                        : "rounded-full bg-slate-50 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-700 border border-slate-200"
-                    }
-                  >
-                    Realtime
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-3 text-sm text-slate-300">
-                  {logEntries.map((entry, index) => (
-                    <div
-                      key={index}
-                      className={`rounded-3xl px-4 py-4 ${theme.card}`}
-                    >
-                      <p>{entry}</p>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
-          </div>
-        </main>
+        {/* KATANA TERMINAL */}
+        <TerminalConsole />
       </div>
     </div>
   );
