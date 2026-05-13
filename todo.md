@@ -2,8 +2,7 @@
 
 **Status**: 🚀 Project Created (10 days old)  
 **Type**: High-Frequency Trading System for Solana  
-**Language**: JavaScript (88.6%), PLpgSQL (7.8%), Python (1.9%)  
-**Current Owner**: @nightgang
+**Language**: JavaScript (88.6%), PLpgSQL (7.8%), Python (1.9%)
 
 ---
 
@@ -29,7 +28,6 @@
 - [ ] Test Kubernetes manifests (k8s/ directory)
 - [ ] Validate database migrations work properly
 - [ ] Test Redis connection and caching
-- [ ] Set up CI/CD pipeline (.github/workflows)
 
 ### Security Review
 - [ ] Audit .env.example for all required secrets
@@ -236,11 +234,10 @@
 ## 📝 Active Issues to Track
 
 Create GitHub Issues for:
-- [ ] Issue #1: Setup CI/CD Pipeline
-- [ ] Issue #2: Complete API Documentation
-- [ ] Issue #3: Frontend Dashboard MVP
-- [ ] Issue #4: Solana Integration Testing
-- [ ] Issue #5: Database Schema Migration
+- [ ] Issue #1: Complete API Documentation
+- [ ] Issue #2: Frontend Dashboard MVP
+- [ ] Issue #3: Solana Integration Testing
+- [ ] Issue #4: Database Schema Migration
 
 ---
 
@@ -301,9 +298,8 @@ npm run katana         # Launch Katana terminal
 2. **Verify local setup** - ensure `npm run dev` works
 3. **Test docker-compose** - validate all services start
 4. **Create GitHub Issues** for each phase
-5. **Set up CI/CD** with GitHub Actions
-6. **Document API** with Swagger (already configured)
-7. **Add initial tests** for backend endpoints
+5. **Document API** with Swagger (already configured)
+6. **Add initial tests** for backend endpoints
 
 ---
 
@@ -322,18 +318,4 @@ npm run katana         # Launch Katana terminal
 
 **Total Estimated Time**: 8-12 weeks
 
----
-
-## 🤝 Contributing
-
-- [ ] Create feature branches (`git checkout -b feature/name`)
-- [ ] Follow commit message convention
-- [ ] Submit PR for review before merging
-- [ ] Ensure all tests pass
-- [ ] Update documentation
-
----
-
-**Last Updated**: 2026-05-13  
-**Owner**: @nightgang  
-**Status**: 🟡 In Planning Phase
+----------
