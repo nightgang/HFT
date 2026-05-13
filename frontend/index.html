@@ -148,8 +148,13 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-    
+    <noscript>
+      <div style="color:#f8fafc;background:#0f172a;padding:1rem;font-family:ui-monospace,monospace;">
+        JavaScript is required to run the HFT dashboard.
+      </div>
+    </noscript>
+    <script type="module" src="./src/main.jsx"></script>
+
     <!-- Performance Monitoring -->
     <script>
       if ('PerformanceObserver' in window) {
