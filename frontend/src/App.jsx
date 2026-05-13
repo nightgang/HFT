@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Menu, X, Home, Zap, TrendingUp, BarChart3, AlertTriangle, MessageCircle, Link as LinkIcon, Layers, Package, Settings as SettingsIcon, Wallet, History, Search, AreaChart, Bell, Key } from 'lucide-react';
-import KatanaLayout from './components/KatanaLayout';
+import { Menu, X, Home, Zap, TrendingUp, BarChart3, AlertTriangle, MessageCircle, Link as LinkIcon, Layers, Package, Settings as SettingsIcon, Wallet, History, Search, AreaChart, Bell, Key, Sun, Moon } from 'lucide-react';
+import HFTDashboard from './pages/HFTDashboard';
 import AdvancedOrders from './pages/AdvancedOrders';
 import PnLDashboard from './pages/PnLDashboard';
 import RiskHeatmap from './pages/RiskHeatmap';
@@ -21,6 +21,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState('trading');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -46,7 +47,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'trading':
-        return <KatanaLayout />;
+        return <HFTDashboard darkMode={darkMode} onToggleDarkMode={() => setDarkMode(prev => !prev)} />;
       case 'portfolio':
         return <PortfolioDashboard />;
       case 'history':
@@ -78,7 +79,7 @@ function App() {
       case 'settings':
         return <Settings />;
       default:
-        return <KatanaLayout />;
+        return <HFTDashboard />;
     }
   };
 
