@@ -4,9 +4,50 @@ const readline = require('readline');
 const WebSocket = require('ws');
 const axios = require('axios');
 
+// Constants
 const API_BASE = 'http://localhost:3001';
 const KATANA_WS_URL = 'ws://localhost:3003';
+const MAX_LOGIN_RETRIES = 3;
+const WS_CONNECTION_TIMEOUT = 5000;
+const AVAILABLE_COMMANDS = [
+  'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
+  'predict', 'positions', 'tokens', 'help', 'exit', 'toggle', 'autotrade'
+];
 
+// Emojis and symbols
+const EMOJIS = {
+  SWORD: '⚔️',
+  GREEN_CIRCLE: '🟢',
+  RED_CIRCLE: '🔴',
+  CROSS_MARK: '❌',
+  CHECK_MARK: '✅',
+  STOP_SIGN: '🛑',
+  CHART_UP: '📈',
+  TARGET: '🎯',
+  LOCK: '🔐',
+  ROBOT: '🤖',
+  WARNING: '🚨',
+  GEAR: '⚙️'
+};
+
+// Messages
+const MESSAGES = {
+  AUTH_SUCCESS: '✅ Authentication successful',
+  AUTH_FAILED: '❌ Authentication failed',
+  CONNECTION_FAILED: '❌ Cannot connect to backend server. Is it running?',
+  DEMO_MODE: '🎭 DEMO MODE - No backend required',
+  KATANA_STARTED: '✅ Katana Mode started',
+  KATANA_STOPPED: '🛑 Katana Mode stopped',
+  TRADE_SUBMITTED: '✅ Trade order submitted',
+  NO_TOKEN_SELECTED: '❌ No token selected. Use "select <mint>" first.',
+  INVALID_AMOUNT: '❌ Invalid amount. Usage: buy/sell <amount>',
+  UNKNOWN_COMMAND: '❌ Unknown command. Type "help" for available commands.',
+  EXITING: '⚔️ Exiting Katana Terminal...'
+};
+
+/**
+ * Katana Terminal CLI for HFT Solana Trading System
+ */
 class KatanaTerminal {
   constructor(options = {}) {
     this.demoMode = options.demo || false;
@@ -27,10 +68,7 @@ class KatanaTerminal {
     this.selectedToken = null;
     this.selectedWallet = null;
     this.commandHistory = [];
-    this.availableCommands = [
-      'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
-      'predict', 'positions', 'tokens', 'help', 'exit', 'toggle', 'autotrade'
-    ];
+    this.availableCommands = AVAILABLE_COMMANDS;
   }
 
   completer(line) {
@@ -38,13 +76,16 @@ class KatanaTerminal {
     return [commands.length ? commands : this.availableCommands, line];
   }
 
+  /**
+   * Start the Katana terminal
+   */
   async start() {
     console.clear();
     console.log('⚔️  KATANA MODE TERMINAL');
     console.log('========================');
 
     if (this.demoMode) {
-      console.log('🎭 DEMO MODE - No backend required');
+      console.log(MESSAGES.DEMO_MODE);
       console.log('');
       this.authToken = 'demo-token';
       this.isConnected = true;
@@ -71,11 +112,13 @@ class KatanaTerminal {
     this.rl.on('SIGINT', () => this.handleExit());
   }
 
+  /**
+   * Authenticate user with backend
+   */
   async login() {
-    const maxRetries = 3;
     let retryCount = 0;
 
-    while (retryCount < maxRetries) {
+    while (retryCount < MAX_LOGIN_RETRIES) {
       try {
         const username = await this.question('Username: ');
         const password = await this.question('Password: ');
@@ -87,19 +130,19 @@ class KatanaTerminal {
 
         if (response.data.success) {
           this.authToken = response.data.token;
-          console.log('✅ Authentication successful');
+          console.log(MESSAGES.AUTH_SUCCESS);
           axios.defaults.headers.common['Authorization'] = `Bearer ${this.authToken}`;
           return;
         } else {
-          console.log('❌ Authentication failed:', response.data.error || 'Invalid credentials');
+          console.log(`${MESSAGES.AUTH_FAILED}:`, response.data.error || 'Invalid credentials');
           retryCount++;
-          if (retryCount < maxRetries) {
-            console.log(`Retrying... (${retryCount}/${maxRetries})`);
+          if (retryCount < MAX_LOGIN_RETRIES) {
+            console.log(`Retrying... (${retryCount}/${MAX_LOGIN_RETRIES})`);
           }
         }
       } catch (error) {
         if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-          console.log('❌ Cannot connect to backend server. Is it running?');
+          console.log(MESSAGES.CONNECTION_FAILED);
           console.log('💡 Try running in demo mode: node katana-terminal.js --demo');
           process.exit(1);
         } else if (error.response) {
@@ -108,8 +151,8 @@ class KatanaTerminal {
           console.log('❌ Network error:', error.message);
         }
         retryCount++;
-        if (retryCount < maxRetries) {
-          console.log(`Retrying... (${retryCount}/${maxRetries})`);
+        if (retryCount < MAX_LOGIN_RETRIES) {
+          console.log(`Retrying... (${retryCount}/${MAX_LOGIN_RETRIES})`);
         }
       }
     }
@@ -118,6 +161,9 @@ class KatanaTerminal {
     process.exit(1);
   }
 
+  /**
+   * Establish WebSocket connection to Katana engine
+   */
   async connectWebSocket() {
     if (this.demoMode) return;
 
@@ -161,7 +207,7 @@ class KatanaTerminal {
           if (!this.isConnected) {
             reject(new Error('WebSocket connection timeout'));
           }
-        }, 5000);
+        }, WS_CONNECTION_TIMEOUT);
 
         this.ws.on('open', () => {
           clearTimeout(timeout);
@@ -233,11 +279,14 @@ class KatanaTerminal {
 
   updateStatusBar() {
     // Update terminal title/status if possible
-    const pnl = this.pnlData.totalPnL >= 0 ? `+$${this.pnlData.totalPnL.toFixed(2)}` : `-$${Math.abs(this.pnlData.totalPnL).toFixed(2)}`;
-    const percent = `${this.pnlData.pnlPercentage >= 0 ? '+' : ''}${this.pnlData.pnlPercentage.toFixed(2)}%`;
+    const pnl = this.formatPnL(this.pnlData.totalPnL);
+    const percent = this.formatPercentage(this.pnlData.pnlPercentage);
     process.title = `Katana Terminal | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades}`;
   }
 
+  /**
+   * Display welcome message and available commands
+   */
   showWelcome() {
     console.log('\n================================');
     console.log('      HFT SYSTEM - KATANA MODE');
@@ -265,6 +314,10 @@ class KatanaTerminal {
     console.log('  [Q]            - Quick exit\n');
   }
 
+  /**
+   * Process user command input
+   * @param {string} line - The command line input
+   */
   async handleCommand(line) {
     const parts = line.split(' ');
     const command = parts[0].toLowerCase();
@@ -321,7 +374,7 @@ class KatanaTerminal {
           this.handleExit();
           return;
         default:
-          console.log('❌ Unknown command. Type "help" for available commands.');
+          console.log(MESSAGES.UNKNOWN_COMMAND);
       }
     } catch (error) {
       console.log(`❌ Error: ${error.message}`);
@@ -333,14 +386,14 @@ class KatanaTerminal {
   async startKatana() {
     if (this.demoMode) {
       this.katanaActive = true;
-      console.log('✅ Katana Mode started (DEMO)');
+      console.log(`${MESSAGES.KATANA_STARTED} (DEMO)`);
       return;
     }
 
     try {
       const response = await axios.post(`${API_BASE}/api/katana/start`);
       if (response.data.success) {
-        console.log('✅ Katana Mode started');
+        console.log(MESSAGES.KATANA_STARTED);
         this.katanaActive = true;
       }
     } catch (error) {
@@ -351,14 +404,14 @@ class KatanaTerminal {
   async stopKatana() {
     if (this.demoMode) {
       this.katanaActive = false;
-      console.log('🛑 Katana Mode stopped (DEMO)');
+      console.log(`${MESSAGES.KATANA_STOPPED} (DEMO)`);
       return;
     }
 
     try {
       const response = await axios.post(`${API_BASE}/api/katana/stop`);
       if (response.data.success) {
-        console.log('🛑 Katana Mode stopped');
+        console.log(MESSAGES.KATANA_STOPPED);
         this.katanaActive = false;
       }
     } catch (error) {
@@ -372,8 +425,8 @@ class KatanaTerminal {
       console.log(`   Active: ${this.katanaActive ? '✅' : '❌'}`);
       console.log(`   Active Trades: ${Math.floor(Math.random() * 5)}`);
       console.log(`   Watched Tokens: ${Math.floor(Math.random() * 20)}`);
-      console.log(`   Total PnL: ${this.pnlData.totalPnL >= 0 ? '+' : ''}$${this.pnlData.totalPnL.toFixed(2)}`);
-      console.log(`   PnL %: ${this.pnlData.pnlPercentage >= 0 ? '+' : ''}${this.pnlData.pnlPercentage.toFixed(2)}%`);
+      console.log(`   Total PnL: ${this.formatPnL(this.pnlData.totalPnL)}`);
+      console.log(`   PnL %: ${this.formatPercentage(this.pnlData.pnlPercentage)}%`);
       return;
     }
 
@@ -385,8 +438,8 @@ class KatanaTerminal {
       console.log(`   Active: ${status.isActive ? '✅' : '❌'}`);
       console.log(`   Active Trades: ${status.activeTrades}`);
       console.log(`   Watched Tokens: ${status.watchedTokens}`);
-      console.log(`   Total PnL: ${this.pnlData.totalPnL >= 0 ? '+' : ''}$${this.pnlData.totalPnL.toFixed(2)}`);
-      console.log(`   PnL %: ${this.pnlData.pnlPercentage >= 0 ? '+' : ''}${this.pnlData.pnlPercentage.toFixed(2)}%`);
+      console.log(`   Total PnL: ${this.formatPnL(this.pnlData.totalPnL)}`);
+      console.log(`   PnL %: ${this.formatPercentage(this.pnlData.pnlPercentage)}%`);
 
     } catch (error) {
       console.log('❌ Failed to get status:', error.response?.data?.error || error.message);
@@ -396,20 +449,20 @@ class KatanaTerminal {
   async executeTrade(side, amount) {
     if (this.demoMode) {
       if (!this.selectedToken) {
-        console.log('❌ No token selected. Use "select <mint>" first.');
+        console.log(MESSAGES.NO_TOKEN_SELECTED);
         return;
       }
-      console.log(`✅ ${side.toUpperCase()} order submitted (DEMO) - ${amount} ${this.selectedToken.slice(0, 8)}...`);
+      console.log(`${MESSAGES.TRADE_SUBMITTED} (DEMO) - ${amount} ${this.selectedToken.slice(0, 8)}...`);
       return;
     }
 
     if (!this.selectedToken) {
-      console.log('❌ No token selected. Use "select <mint>" first.');
+      console.log(MESSAGES.NO_TOKEN_SELECTED);
       return;
     }
 
     if (!amount || isNaN(parseFloat(amount))) {
-      console.log('❌ Invalid amount. Usage: buy/sell <amount>');
+      console.log(MESSAGES.INVALID_AMOUNT);
       return;
     }
 
@@ -424,7 +477,7 @@ class KatanaTerminal {
       });
 
       if (response.data.success) {
-        console.log(`✅ ${side.toUpperCase()} order submitted`);
+        console.log(MESSAGES.TRADE_SUBMITTED);
       }
     } catch (error) {
       console.log(`❌ Trade failed:`, error.response?.data?.error || error.message);
@@ -530,7 +583,7 @@ class KatanaTerminal {
         { tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', amount: 100, pnl: -5.20 }
       ];
       demoPositions.forEach((pos, index) => {
-        const pnl = pos.pnl >= 0 ? `+$${pos.pnl.toFixed(2)}` : `-$${Math.abs(pos.pnl).toFixed(2)}`;
+        const pnl = this.formatPnL(pos.pnl);
         console.log(`   ${index + 1}. ${pos.tokenMint.slice(0, 8)}... | ${pos.amount} | ${pnl}`);
       });
       return;
@@ -545,7 +598,7 @@ class KatanaTerminal {
         console.log('   No active positions');
       } else {
         positions.forEach((pos, index) => {
-          const pnl = pos.pnl >= 0 ? `+$${pos.pnl.toFixed(2)}` : `-$${Math.abs(pos.pnl).toFixed(2)}`;
+          const pnl = this.formatPnL(pos.pnl);
           console.log(`   ${index + 1}. ${pos.tokenMint.slice(0, 8)}... | ${pos.amount.toFixed(4)} | ${pnl}`);
         });
       }
@@ -665,14 +718,28 @@ class KatanaTerminal {
     }
   }
 
-  question(prompt) {
-    return new Promise((resolve) => {
-      this.rl.question(prompt, resolve);
-    });
+  /**
+   * Format PnL value with sign and color
+   * @param {number} pnl - The PnL value
+   * @returns {string} Formatted PnL string
+   */
+  formatPnL(pnl) {
+    const sign = pnl >= 0 ? '+' : '';
+    return `${sign}$${Math.abs(pnl).toFixed(2)}`;
+  }
+
+  /**
+   * Format percentage with sign
+   * @param {number} percent - The percentage value
+   * @returns {string} Formatted percentage string
+   */
+  formatPercentage(percent) {
+    const sign = percent >= 0 ? '+' : '';
+    return `${sign}${percent.toFixed(2)}%`;
   }
 
   handleExit() {
-    console.log('\n⚔️ Exiting Katana Terminal...');
+    console.log(`\n${MESSAGES.EXITING}`);
     if (this.ws) {
       this.ws.close();
     }

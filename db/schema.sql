@@ -1,10 +1,18 @@
--- Core Schema for HFT Trading System
--- Persistence Layer: Trade History, Wallet State, Risk Logs, Audit Trail
+-- ============================================================================
+-- HFT TRADING SYSTEM DATABASE SCHEMA
+-- ============================================================================
+-- This file contains the complete database schema for the HFT Trading System.
+-- It defines all tables, types, indexes, and constraints.
+--
+-- WARNING: This is a reference schema. Use migrations for incremental changes.
+-- ============================================================================
 
+-- Required PostgreSQL extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Audit schema for logging
 CREATE SCHEMA IF NOT EXISTS audit;
 
 DO $$ BEGIN

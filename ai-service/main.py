@@ -1,3 +1,8 @@
+"""
+Solana Trading AI Service
+FastAPI service for AI-powered trading predictions and risk assessment.
+"""
+
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -17,8 +22,26 @@ import aiohttp
 from datetime import datetime, timedelta
 import json
 
+# Constants
+SERVICE_NAME = "Solana Trading AI Service"
+SERVICE_VERSION = "2.0.0"
+MODEL_DIR = "models"
+JUPITER_API = "https://price.jup.ag/v4/price"
+
+# Model versions
+MODEL_VERSIONS = {
+    'rf_v2': '2.0.0',
+    'gb_v2': '2.0.0'
+}
+
+# Common token symbols for training data
+TOKEN_SYMBOLS = ["BONK", "WIF", "ORCA", "MNDE", "RAY", "MAGIC", "COPE", "DUST", "GST", "STEP"]
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -54,22 +77,18 @@ class RiskAssessment(BaseModel):
     recommendation: str
 
 # Global models and encoders
-models = {}
-scalers = {}
-encoders = {}
-model_versions = {
-    'rf_v2': '2.0.0',
-    'gb_v2': '2.0.0'
-}
+models: Dict[str, Any] = {}
+scalers: Dict[str, Any] = {}
+encoders: Dict[str, Any] = {}
 
 # Jupiter API for real market data
-JUPITER_API = "https://price.jup.ag/v4/price"
+JUPITER_API_URL = "https://price.jup.ag/v4/price"
 
 async def fetch_real_market_data(token_mint: str) -> Dict[str, Any]:
     """Fetch real market data from Jupiter API"""
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{JUPITER_API}?ids={token_mint}") as response:
+            async with session.get(f"{JUPITER_API_URL}?ids={token_mint}") as response:
                 if response.status == 200:
                     data = await response.json()
                     if token_mint in data.get('data', {}):
@@ -97,15 +116,9 @@ def create_enhanced_training_data(num_samples: int = 2000) -> pd.DataFrame:
     data = []
 
     # Expanded token categories
-    token_categories = {
-        'meme': ["BONK", "WIF", "PEPE", "SHIB", "FLOKI", "CUMMIES", "HARAMBE"],
-        'defi': ["ORCA", "MARINADE", "RAYDIUM", "COPE", "STEP", "SLRS"],
-        'gaming': ["DUST", "GST", "ATLAS", "POLIS"],
-        'utility': ["USDC", "USDT", "SOL", "PYTH", "HGEN"],
-        'nft': ["SMB", "BLOCK", "TULIP"]
-    }
+    token_categories = TOKEN_CATEGORIES
 
-    symbols = ["BONK", "WIF", "ORCA", "MNDE", "RAY", "MAGIC", "COPE", "DUST", "GST", "STEP"]
+    symbols = TOKEN_SYMBOLS
 
     for _ in range(num_samples):
         # Select category and token

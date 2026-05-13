@@ -98,6 +98,57 @@ temp/
 *.sw?
 
 # OS generated files
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets.json
+config.local.json
+config.production.json
+
+# Docker overrides (may contain sensitive data)
+docker-compose.override.yml
+
+# Database backups
+backups/
+*.dump
+*.sql
+
+# Export files (may contain sensitive data)
+exports/
+
+# Backend data (sensitive wallet information)
+backend/data/
+
+# Kubernetes secrets
+k8s/secret.yml
+k8s/*secret*.yml
+
+# Log files (specific ones)
+combined.log
+error.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Docker volumes
+volumes/
+
+# Environment files (additional patterns)
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# IDE files
+.vscode/settings.json
+.idea/
 Thumbs.db
 ehthumbs.db
 Desktop.ini

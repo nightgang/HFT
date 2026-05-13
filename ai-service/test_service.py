@@ -7,12 +7,46 @@ import requests
 import json
 import time
 
+# Configuration
 BASE_URL = "http://localhost:8000"
+TEST_TIMEOUT = 10  # seconds
+
+# Test data
+USDC_TOKEN_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+TEST_PAYLOAD = {
+    "tokenMint": USDC_TOKEN_MINT,
+    "metadata": {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "description": "USD Coin",
+        "website": "https://www.centre.io/usdc",
+        "age_days": 365,
+        "holder_count": 100000
+    },
+    "marketData": {
+        "price": 1.0,
+        "liquidity": 5000000,
+        "volume_24h": 1000000,
+        "price_change_24h": 0.1
+    }
+}
+
+RISK_TEST_PAYLOAD = {
+    "tokenMint": USDC_TOKEN_MINT,
+    "metadata": {
+        "holder_count": 100000,
+        "age_days": 365
+    },
+    "marketData": {
+        "liquidity": 5000000,
+        "price_change_24h": 0.1
+    }
+}
 
 def test_health():
     """Test health endpoint"""
     print("Testing /health endpoint...")
-    response = requests.get(f"{BASE_URL}/health")
+    response = requests.get(f"{BASE_URL}/health", timeout=TEST_TIMEOUT)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
@@ -22,7 +56,7 @@ def test_health():
 def test_root():
     """Test root endpoint"""
     print("Testing / endpoint...")
-    response = requests.get(f"{BASE_URL}/")
+    response = requests.get(f"{BASE_URL}/", timeout=TEST_TIMEOUT)
     assert response.status_code == 200
     data = response.json()
     assert "service" in data
@@ -33,25 +67,9 @@ def test_root():
 def test_predict():
     """Test predict endpoint"""
     print("Testing /predict endpoint...")
-    payload = {
-        "tokenMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        "metadata": {
-            "name": "USD Coin",
-            "symbol": "USDC",
-            "description": "USD Coin",
-            "website": "https://www.centre.io/usdc",
-            "age_days": 365,
-            "holder_count": 100000
-        },
-        "marketData": {
-            "price": 1.0,
-            "liquidity": 5000000,
-            "volume_24h": 1000000,
-            "price_change_24h": 0.1
-        }
-    }
+    payload = TEST_PAYLOAD
 
-    response = requests.post(f"{BASE_URL}/predict", json=payload)
+    response = requests.post(f"{BASE_URL}/predict", json=payload, timeout=TEST_TIMEOUT)
     assert response.status_code == 200
     data = response.json()
 
@@ -68,19 +86,9 @@ def test_predict():
 def test_risk_assessment():
     """Test risk assessment endpoint"""
     print("Testing /risk-assessment endpoint...")
-    payload = {
-        "tokenMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        "metadata": {
-            "holder_count": 100000,
-            "age_days": 365
-        },
-        "marketData": {
-            "liquidity": 5000000,
-            "price_change_24h": 0.1
-        }
-    }
+    payload = RISK_TEST_PAYLOAD
 
-    response = requests.post(f"{BASE_URL}/risk-assessment", json=payload)
+    response = requests.post(f"{BASE_URL}/risk-assessment", json=payload, timeout=TEST_TIMEOUT)
     assert response.status_code == 200
     data = response.json()
 

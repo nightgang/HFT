@@ -1,41 +1,34 @@
 -- Initial setup for HFT Trading System Database
--- Role: Create database extensions, audit schema, and bootstrap full schema
+-- This file is used for Docker container initialization
+-- It sets up extensions, roles, and permissions
 
 -- Create required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Create audit schema used by the core schema
+-- Create audit schema
 CREATE SCHEMA IF NOT EXISTS audit;
 
--- Load the core schema definitions from schema.sql
-\set ON_ERROR_STOP on
-\i /docker-entrypoint-initdb.d/schema.sql
+-- Note: The full schema is loaded via migrations in the application
+-- This file only provides the minimal setup for the database to be ready
 
--- Migration bookkeeping table used by backend migration runner
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    migration_id SERIAL PRIMARY KEY,
-    migration_name TEXT UNIQUE NOT NULL,
-    success BOOLEAN NOT NULL,
-    error_message TEXT,
-    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create application role and permissions for the HFT app
+-- Create application role with minimal permissions
+-- Password should be changed in production via environment variables
 DO $$
 BEGIN
-    CREATE ROLE hft_app_role WITH LOGIN PASSWORD 'change_in_production';
-EXCEPTION WHEN DUPLICATE_OBJECT THEN NULL;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'hft_app_role') THEN
+        CREATE ROLE hft_app_role WITH LOGIN PASSWORD 'change_in_production';
+    END IF;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Role hft_app_role may already exist';
 END
 $$;
 
+-- Grant basic permissions
 GRANT CONNECT ON DATABASE hft_trading TO hft_app_role;
 GRANT USAGE ON SCHEMA public TO hft_app_role;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO hft_app_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO hft_app_role;
-REVOKE INSERT, UPDATE, DELETE ON audit.key_access_logs FROM hft_app_role;
+GRANT USAGE ON SCHEMA audit TO hft_app_role;
 
--- Configure database-level session ownership if supported
+-- Configure database-level settings
 ALTER DATABASE hft_trading SET "app.current_user" TO 'hft_system';

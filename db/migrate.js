@@ -5,8 +5,8 @@ const path = require('path');
 const { Pool } = require('pg');
 const logger = require('../backend/utils/logger');
 
-// Database configuration (same as backend)
-const dbConfig = {
+// Database configuration constants
+const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'hft_trading',
@@ -17,14 +17,23 @@ const dbConfig = {
   connectionTimeoutMillis: 2000,
 };
 
-const pool = new Pool(dbConfig);
+const MIGRATION_COMMANDS = ['up', 'migrate', 'status', 'create', 'reset'];
 
+const pool = new Pool(DB_CONFIG);
+
+/**
+ * Database Migration Manager for HFT Trading System
+ */
 class DatabaseMigrator {
   constructor() {
     this.migrations = [];
     this.migrationDir = path.join(__dirname, 'migrations');
   }
 
+  /**
+   * Establish database connection
+   * @returns {Promise<boolean>} Connection success status
+   */
   async connect() {
     try {
       await pool.connect();
@@ -36,11 +45,17 @@ class DatabaseMigrator {
     }
   }
 
+  /**
+   * Close database connection
+   */
   async disconnect() {
     await pool.end();
     logger.info('Disconnected from database');
   }
 
+  /**
+   * Create schema_migrations table if it doesn't exist
+   */
   async createMigrationsTable() {
     const query = `
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -258,6 +273,7 @@ async function main() {
         console.log('  status      - Show migration status');
         console.log('  create      - Create new migration file');
         console.log('  reset       - Reset database (WARNING: drops all data)');
+        console.log(`\nAvailable commands: ${MIGRATION_COMMANDS.join(', ')}`);
         break;
     }
   } finally {
