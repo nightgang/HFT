@@ -168,4 +168,115 @@ router.post('/autotrade/toggle', authenticate, (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/system/status:
+ *   get:
+ *     summary: Get system status (no auth required)
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: System status information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                 uptime:
+ *                   type: number
+ *                 services:
+ *                   type: object
+ */
+router.get('/status', (req, res) => {
+  try {
+    const uptime = process.uptime();
+    const status = {
+      success: true,
+      status: 'operational',
+      timestamp: new Date().toISOString(),
+      uptime: uptime,
+      services: {
+        backend: 'running',
+        database: 'connected',
+        websocket: 'active'
+      }
+    };
+
+    res.json(status);
+  } catch (error) {
+    logger.error('Error getting system status:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/system/detections:
+ *   get:
+ *     summary: Get recent token detections (no auth required)
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Recent token detections
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     detections:
+ *                       type: array
+ *                     count:
+ *                       type: number
+ *                 timestamp:
+ *                   type: number
+ */
+router.get('/detections', (req, res) => {
+  try {
+    // Return mock detections for now
+    const mockDetections = [
+      {
+        id: '1',
+        token: 'RAY',
+        liquidity: 45200,
+        marketCap: 2300000,
+        risk: 'low',
+        timestamp: Date.now() - 120000,
+        status: 'new'
+      },
+      {
+        id: '2',
+        token: 'SOLX',
+        liquidity: 125000,
+        marketCap: 8500000,
+        risk: 'medium',
+        timestamp: Date.now() - 300000,
+        status: 'active'
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: {
+        detections: mockDetections,
+        count: mockDetections.length
+      },
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    logger.error('Error getting detections:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

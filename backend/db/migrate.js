@@ -77,7 +77,10 @@ class DatabaseMigrator {
 
       // Record successful migration
       await query(
-        'INSERT INTO schema_migrations (migration_name, success) VALUES ($1, $2)',
+        `INSERT INTO schema_migrations (migration_name, success)
+         VALUES ($1, $2)
+         ON CONFLICT (migration_name)
+         DO UPDATE SET success = EXCLUDED.success, error_message = NULL, executed_at = NOW()`,
         [migrationName, true]
       );
 
@@ -89,7 +92,10 @@ class DatabaseMigrator {
       // Record failed migration
       try {
         await query(
-          'INSERT INTO schema_migrations (migration_name, success, error_message) VALUES ($1, $2, $3)',
+          `INSERT INTO schema_migrations (migration_name, success, error_message)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (migration_name)
+           DO UPDATE SET success = EXCLUDED.success, error_message = EXCLUDED.error_message, executed_at = NOW()`,
           [migrationName, false, error.message]
         );
       } catch (recordError) {
@@ -114,7 +120,10 @@ class DatabaseMigrator {
   async markMigrationExecuted(migrationName) {
     try {
       await query(
-        'INSERT INTO schema_migrations (migration_name, success) VALUES ($1, $2)',
+        `INSERT INTO schema_migrations (migration_name, success)
+         VALUES ($1, $2)
+         ON CONFLICT (migration_name)
+         DO UPDATE SET success = EXCLUDED.success, error_message = NULL, executed_at = NOW()`,
         [migrationName, true]
       );
     } catch (error) {

@@ -138,5 +138,4 @@ EXECUTE FUNCTION update_realtime_alerts_timestamp();
 -- Record migration
 INSERT INTO schema_migrations (migration_name, success)
 VALUES ('008_add_pnl_dashboard_tables', true)
-ON CONFLICT DO NOTHING;</content>
-<parameter name="filePath">/workspaces/HFT/backend/db/migrations/008_add_pnl_dashboard_tables.sql
+ON CONFLICT DO NOTHING;

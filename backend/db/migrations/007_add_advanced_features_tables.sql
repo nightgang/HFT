@@ -468,5 +468,4 @@ EXECUTE FUNCTION update_cross_chain_bridges_timestamp();
 -- Record migration
 INSERT INTO schema_migrations (migration_name, success)
 VALUES ('007_add_advanced_features_tables', true)
-ON CONFLICT DO NOTHING;</content>
-<parameter name="filePath">/workspaces/HFT/backend/db/migrations/007_add_advanced_features_tables.sql
+ON CONFLICT DO NOTHING;

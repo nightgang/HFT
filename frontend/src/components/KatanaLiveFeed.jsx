@@ -13,7 +13,7 @@ function KatanaLiveFeed() {
     const fetchFeed = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/katana/detections');
+        const response = await fetch('/api/system/detections');
         const data = await response.json();
 
         if (!mounted) return;

@@ -1,5 +1,6 @@
 const path = require('path');
-// Load environment variables FIRST
+
+// Load environment variables FIRST - only from root .env
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const express = require('express');
@@ -302,32 +303,6 @@ app.get('/api/system/errors', authenticate, async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// System status summary
-app.get('/api/system/status', authenticate, async (req, res) => {
-  try {
-    const [circuitStatus, recoveryStats, errorStats] = await Promise.all([
-      circuitBreakerService.getAllStatus(),
-      failedTradeRecoveryService.getQueueStats(),
-      errorHandlingService.getErrorStats()
-    ]);
-
-    res.json({
-      success: true,
-      system: {
-        uptime_seconds: process.uptime(),
-        circuit_breakers: circuitStatus,
-        recovery_queue: recoveryStats,
-        error_stats: errorStats,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logger.error('System status error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 
 // Authentication routes
 app.post('/auth/login', strictLimiter, async (req, res) => {
