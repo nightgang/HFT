@@ -138,7 +138,7 @@ async function healthCheckHandler(req, res) {
     // API check
     health.checks.api = await monitoringService.checkAPIHealth();
 
-    const statusCode = health.status === 'healthy' ? 200 : 503;
+    const statusCode = health.status === 'unhealthy' ? 503 : 200;
     res.status(statusCode).json(health);
   } catch (error) {
     logger.error('Health check failed:', error);

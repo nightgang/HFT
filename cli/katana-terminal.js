@@ -78,11 +78,26 @@ class KatanaTerminal {
     return [commands.length ? commands : this.availableCommands, line];
   }
 
+  question(promptText) {
+    return new Promise((resolve) => {
+      this.rl.question(promptText, (answer) => {
+        resolve(answer.trim());
+      });
+    });
+  }
+
   /**
    * Start the Katana terminal
    */
   async start() {
     console.clear();
+    console.log('⚔️  KATANA MODE TERMINAL');
+    console.log('========================');
+
+    if (!this.demoMode && !process.stdin.isTTY) {
+      console.log('⚠️  No interactive terminal detected. Starting in demo mode.');
+      this.demoMode = true;
+    }
     console.log('⚔️  KATANA MODE TERMINAL');
     console.log('========================');
 

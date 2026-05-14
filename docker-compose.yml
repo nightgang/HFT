@@ -64,7 +64,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: 'false'
     ports:
-      - "3001:3000"
+      - "3003:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
@@ -226,7 +226,12 @@ services:
     networks:
       - hft-network
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+      grafana:
+        condition: service_started
+      prometheus:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
