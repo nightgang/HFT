@@ -30,7 +30,7 @@ const AdvancedOrders = () => {
   const fetchOrders = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/advanced-orders",
+        "/api/advanced-orders",
       );
       setOrders(response.data);
       setLoading(false);
@@ -43,7 +43,7 @@ const AdvancedOrders = () => {
   const handleCreateOrder = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:3001/api/advanced-orders", formData);
+      await axios.post("/api/advanced-orders", formData);
       setFormData({
         orderType: "stop_loss",
         tokenMint: "",
@@ -61,7 +61,7 @@ const AdvancedOrders = () => {
   const handleDeleteOrder = async (orderId) => {
     try {
       await axios.delete(
-        `http://localhost:3001/api/advanced-orders/${orderId}`,
+        `/api/advanced-orders/${orderId}`,
       );
       fetchOrders();
     } catch (error) {

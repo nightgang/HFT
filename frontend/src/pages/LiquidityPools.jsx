@@ -24,7 +24,7 @@ const LiquidityPools = () => {
   const fetchPools = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/liquidity-pools",
+        "/api/liquidity-pools",
       );
       setPools(response.data);
       setLoading(false);
@@ -37,7 +37,7 @@ const LiquidityPools = () => {
   const handleCreatePool = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:3001/api/liquidity-pools", formData);
+      await axios.post("/api/liquidity-pools", formData);
       setFormData({
         poolAddress: "",
         tokenAMint: "",
@@ -55,7 +55,7 @@ const LiquidityPools = () => {
 
   const handleDeletePool = async (poolId) => {
     try {
-      await axios.delete(`http://localhost:3001/api/liquidity-pools/${poolId}`);
+      await axios.delete(`/api/liquidity-pools/${poolId}`);
       fetchPools();
     } catch (error) {
       console.error("Failed to delete pool:", error);

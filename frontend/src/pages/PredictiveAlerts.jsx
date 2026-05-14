@@ -16,7 +16,7 @@ const PredictiveAlerts = () => {
   const fetchAlerts = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/predictive-alerts",
+        "/api/predictive-alerts",
       );
       setAlerts(response.data);
       setLoading(false);
@@ -29,7 +29,7 @@ const PredictiveAlerts = () => {
   const handleAcknowledge = async (alertId) => {
     try {
       await axios.put(
-        `http://localhost:3001/api/predictive-alerts/${alertId}/acknowledge`,
+        `/api/predictive-alerts/${alertId}/acknowledge`,
       );
       setAcknowledged(new Set([...acknowledged, alertId]));
       fetchAlerts();

@@ -30,7 +30,7 @@ const JitoBundles = () => {
   const fetchBundles = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/jito-bundles",
+        "/api/jito-bundles",
       );
       setBundles(response.data);
       setLoading(false);
@@ -43,7 +43,7 @@ const JitoBundles = () => {
   const handleSubmitBundle = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:3001/api/jito-bundles", {
+      await axios.post("/api/jito-bundles", {
         transactions: formData.transactions.split(",").map((t) => t.trim()),
         tipAmount: parseFloat(formData.tipAmount),
         priority: formData.priority,
@@ -64,7 +64,7 @@ const JitoBundles = () => {
 
   const handleDeleteBundle = async (bundleId) => {
     try {
-      await axios.delete(`http://localhost:3001/api/jito-bundles/${bundleId}`);
+      await axios.delete(`/api/jito-bundles/${bundleId}`);
       fetchBundles();
     } catch (error) {
       console.error("Failed to delete bundle:", error);

@@ -16,7 +16,7 @@ const PnLDashboard = () => {
   const fetchPnLData = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3001/api/pnl-dashboard?period=${period}`,
+        `/api/pnl-dashboard?period=${period}`,
       );
       setPnl(response.data);
       setLoading(false);

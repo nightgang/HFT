@@ -16,8 +16,8 @@ const RiskHeatmap = () => {
   const fetchRiskData = async () => {
     try {
       const [heatmapRes, correlationRes] = await Promise.all([
-        axios.get("http://localhost:3001/api/risk-heatmap"),
-        axios.get("http://localhost:3001/api/correlation-matrix"),
+        axios.get("/api/risk-heatmap"),
+        axios.get("/api/correlation-matrix"),
       ]);
       setHeatmap(heatmapRes.data);
       setCorrelation(correlationRes.data);

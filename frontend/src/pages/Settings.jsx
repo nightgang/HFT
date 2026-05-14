@@ -31,7 +31,7 @@ const Settings = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get("http://localhost:3001/api/settings");
+      const response = await axios.get("/api/settings");
       setSettings(response.data);
       setLoading(false);
     } catch (error) {
@@ -43,7 +43,7 @@ const Settings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put("http://localhost:3001/api/settings", settings);
+      await axios.put("/api/settings", settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       setSaving(false);

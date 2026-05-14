@@ -22,7 +22,7 @@ const PerformanceAnalytics = () => {
   const fetchAnalytics = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/performance-analytics",
+        "/api/performance-analytics",
         {
           params: {
             period: period,

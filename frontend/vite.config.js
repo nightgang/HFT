@@ -14,12 +14,12 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, "/api"),
       },
       "/ws": {
-        target: "ws://localhost:3003",
+        target: "ws://localhost:3002",
         ws: true,
         changeOrigin: true,
       },
       "/grafana": {
-        target: "http://localhost:3001",
+        target: "http://localhost:3003",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/grafana/, ""),
       },

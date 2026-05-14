@@ -26,7 +26,9 @@ import json
 SERVICE_NAME = "Solana Trading AI Service"
 SERVICE_VERSION = "2.0.0"
 MODEL_DIR = "models"
-JUPITER_API = "https://price.jup.ag/v4/price"
+JUPITER_API_URL = os.getenv("JUPITER_API_URL", "https://price.jup.ag/v4/price")
+AI_SERVICE_HOST = os.getenv("AI_SERVICE_HOST", "0.0.0.0")
+AI_SERVICE_PORT = int(os.getenv("AI_SERVICE_PORT", 8000))
 
 # Model versions
 MODEL_VERSIONS = {

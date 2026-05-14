@@ -28,7 +28,7 @@ const CrossChainBridge = () => {
   const fetchBridges = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/cross-chain-bridge",
+        "/api/cross-chain-bridge",
       );
       setBridges(response.data);
       setLoading(false);
@@ -42,7 +42,7 @@ const CrossChainBridge = () => {
     e.preventDefault();
     try {
       await axios.post(
-        "http://localhost:3001/api/cross-chain-bridge",
+        "/api/cross-chain-bridge",
         formData,
       );
       setFormData({

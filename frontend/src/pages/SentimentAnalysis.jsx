@@ -22,7 +22,7 @@ const SentimentAnalysis = () => {
   const fetchSentimentData = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3001/api/sentiment-analysis?source=${filter}`,
+        `/api/sentiment-analysis?source=${filter}`,
       );
       setSentiments(response.data);
       setLoading(false);
