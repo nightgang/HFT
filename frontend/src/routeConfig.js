@@ -14,10 +14,12 @@ import {
   AlertTriangle,
   MessageCircle,
   Link as LinkIcon,
+  Activity,
 } from "lucide-react";
 
 import HFTDashboard from "./pages/HFTDashboard";
 import AdvancedOrders from "./pages/AdvancedOrders";
+import Monitoring from "./pages/Monitoring";
 import PnLDashboard from "./pages/PnLDashboard";
 import RiskHeatmap from "./pages/RiskHeatmap";
 import PredictiveAlerts from "./pages/PredictiveAlerts";
@@ -65,6 +67,12 @@ const routes = [
     label: "Analytics",
     icon: AreaChart,
     component: PerformanceAnalytics,
+  },
+  {
+    path: "/monitoring",
+    label: "Monitoring",
+    icon: Activity,
+    component: Monitoring,
   },
   {
     path: "/notifications",

@@ -16,12 +16,13 @@ import {
   Brain,
   Settings,
   Puzzle,
+  Activity,
 
   // Trading Icons
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Activity,
+  Activity as ActivityIcon,
   Shield,
   Zap as ZapIcon,
   Play,
@@ -146,6 +147,7 @@ const HFTDashboard = () => {
     { id: "orders", label: "Orders", icon: FileText },
     { id: "history", label: "History", icon: History },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "monitoring", label: "Monitoring", icon: Activity },
     { id: "strategies", label: "Strategies", icon: Brain },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "plugins", label: "Plugins", icon: Puzzle },
@@ -189,7 +191,13 @@ const HFTDashboard = () => {
           {sidebarItems.map((item) => (
             <motion.button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if (item.id === 'monitoring') {
+                  window.open('/monitoring', '_blank');
+                } else {
+                  setActiveTab(item.id);
+                }
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                 activeTab === item.id
                   ? "bg-purple-500/20 border border-purple-500/40 shadow-lg shadow-purple-500/20"
@@ -260,6 +268,16 @@ const HFTDashboard = () => {
               <div className="text-sm text-gray-400 font-mono">
                 {currentTime.toLocaleTimeString()}
               </div>
+              <motion.a
+                href="/monitoring"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-300 hover:text-purple-200 transition-all duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ActivityIcon className="w-4 h-4" />
+                <span className="text-sm font-medium">Monitoring</span>
+                <ExternalLink className="w-3 h-3" />
+              </motion.a>
             </div>
           </div>
 

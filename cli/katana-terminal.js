@@ -5,13 +5,15 @@ const WebSocket = require('ws');
 const axios = require('axios');
 
 // Constants
-const API_BASE = 'http://localhost:3001';
-const KATANA_WS_URL = 'ws://localhost:3003';
+const API_BASE = process.env.API_BASE || 'http://localhost:3001';
+const KATANA_WS_URL = process.env.KATANA_WS_URL || 'ws://localhost:3003';
 const MAX_LOGIN_RETRIES = 3;
 const WS_CONNECTION_TIMEOUT = 5000;
 const AVAILABLE_COMMANDS = [
   'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
-  'predict', 'positions', 'tokens', 'help', 'exit', 'toggle', 'autotrade'
+  'predict', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
+  'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
+  'portfolio', 'settings', 'help', 'exit', 'toggle', 'autotrade'
 ];
 
 // Emojis and symbols
@@ -306,6 +308,19 @@ class KatanaTerminal {
     console.log('  predict <mint> - Request AI signal for token');
     console.log('  positions      - Show active positions');
     console.log('  tokens         - Show recent token detections');
+    console.log('  history        - Show trade history for selected wallet');
+    console.log('  orders         - Show advanced orders for selected wallet');
+    console.log('  cancel-order <id> - Cancel an advanced order');
+    console.log('  risk-heatmap   - Show portfolio risk heatmap');
+    console.log('  risk-correlation - Show portfolio correlation data');
+    console.log('  alerts         - Show active predictive alerts');
+    console.log('  ack-alert <id> - Acknowledge an alert');
+    console.log('  sentiment bullish - Show bullish sentiment opportunities');
+    console.log('  sentiment token <mint> - Show sentiment for a token');
+    console.log('  pnl            - Show P&L dashboard summary');
+    console.log('  portfolio      - Show portfolio summary for selected wallet');
+    console.log('  settings show <wallet> - Show wallet limits');
+    console.log('  settings set <wallet> <spendingLimitUsd> [dailySpendingUsd] - Update wallet limits');
     console.log('  help           - Show this help');
     console.log('  exit           - Exit terminal\n');
     console.log('Keyboard shortcuts:');
@@ -364,6 +379,40 @@ class KatanaTerminal {
           break;
         case 'tokens':
           await this.showTokens();
+          break;
+        case 'history':
+        case 'trades':
+          await this.showTradeHistory();
+          break;
+        case 'orders':
+          await this.showAdvancedOrders();
+          break;
+        case 'cancel-order':
+          await this.cancelAdvancedOrder(args[0]);
+          break;
+        case 'risk-heatmap':
+          await this.showRiskHeatmap();
+          break;
+        case 'risk-correlation':
+          await this.showRiskCorrelation();
+          break;
+        case 'alerts':
+          await this.showAlerts('active');
+          break;
+        case 'ack-alert':
+          await this.acknowledgeAlert(args[0]);
+          break;
+        case 'sentiment':
+          await this.showSentiment(args);
+          break;
+        case 'pnl':
+          await this.showPnLDashboard();
+          break;
+        case 'portfolio':
+          await this.showPortfolio(args[0]);
+          break;
+        case 'settings':
+          await this.handleSettingsCommand(args);
           break;
         case 'h':
         case 'help':
@@ -637,6 +686,374 @@ class KatanaTerminal {
       });
     } catch (error) {
       console.log('❌ Failed to fetch recent tokens:', error.response?.data?.error || error.message);
+    }
+  }
+
+  requireSelectedWallet(command) {
+    if (!this.selectedWallet) {
+      console.log(`❌ Select a wallet first with \"usewallet <publicKey>\" to use ${command}.`);
+      return null;
+    }
+    return this.selectedWallet;
+  }
+
+  async showTradeHistory() {
+    if (this.demoMode) {
+      console.log('\n📜 Trade History (DEMO):');
+      const demoHistory = [
+        { id: 'tx1', token: 'SOL', side: 'BUY', amount: 3.0, price: 45.12, pnl: 28.80 },
+        { id: 'tx2', token: 'RAY', side: 'SELL', amount: 200, price: 0.93, pnl: -12.10 }
+      ];
+      demoHistory.forEach((trade, index) => {
+        console.log(`   ${index + 1}. [${trade.side}] ${trade.amount} ${trade.token} @ $${trade.price.toFixed(2)} | PnL: ${this.formatPnL(trade.pnl)}`);
+      });
+      return;
+    }
+
+    const walletId = this.requireSelectedWallet('trade history');
+    if (!walletId) return;
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/trading/trades/${walletId}`);
+      const trades = response.data.trades || [];
+
+      console.log('\n📜 Trade History:');
+      if (!trades.length) {
+        console.log('   No trades found for selected wallet.');
+        return;
+      }
+
+      trades.slice(0, 20).forEach((trade, index) => {
+        console.log(`   ${index + 1}. [${trade.side?.toUpperCase() || 'N/A'}] ${trade.amount || 'N/A'} ${trade.tokenMint?.slice(0, 8) || trade.token || ''} @ $${trade.price?.toFixed(4) || 'N/A'} | PnL: ${this.formatPnL(trade.pnl || 0)}`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch trade history:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showAdvancedOrders() {
+    if (this.demoMode) {
+      console.log('\n📦 Advanced Orders (DEMO):');
+      const demoOrders = [
+        { orderId: 'A1', type: 'Stop-Loss', token: 'SOL', amount: 2, status: 'Pending' },
+        { orderId: 'A2', type: 'Take-Profit', token: 'RAY', amount: 100, status: 'Active' }
+      ];
+      demoOrders.forEach((order, index) => {
+        console.log(`   ${index + 1}. ${order.orderId} | ${order.type} ${order.amount} ${order.token} | ${order.status}`);
+      });
+      return;
+    }
+
+    const walletId = this.requireSelectedWallet('advanced orders');
+    if (!walletId) return;
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/trading/advanced-orders/${walletId}`);
+      const orders = response.data.orders || [];
+
+      console.log('\n📦 Advanced Orders:');
+      if (!orders.length) {
+        console.log('   No advanced orders found for selected wallet.');
+        return;
+      }
+
+      orders.forEach((order, index) => {
+        console.log(`   ${index + 1}. ${order.orderId || order.id} | ${order.type || order.orderType} ${order.amount || order.quantity} ${order.tokenMint?.slice(0, 8) || order.token || ''} | ${order.status}`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch advanced orders:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async cancelAdvancedOrder(orderId) {
+    if (!orderId) {
+      console.log('❌ Usage: cancel-order <orderId>');
+      return;
+    }
+
+    if (this.demoMode) {
+      console.log(`✅ (DEMO) Cancelled advanced order ${orderId}`);
+      return;
+    }
+
+    const walletId = this.requireSelectedWallet('cancel-order');
+    if (!walletId) return;
+
+    try {
+      const response = await axios.delete(`${API_BASE}/api/trading/advanced-orders/${orderId}`, {
+        data: { walletId }
+      });
+
+      if (response.data.success) {
+        console.log(`✅ Advanced order ${orderId} cancelled`);
+      }
+    } catch (error) {
+      console.log('❌ Failed to cancel advanced order:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showRiskHeatmap() {
+    if (this.demoMode) {
+      console.log('\n🌡️ Risk Heatmap (DEMO):');
+      console.log('   - Low concentration in SOL');
+      console.log('   - Medium concentration in RAY');
+      console.log('   - High concentration in MNGO');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/risk/heatmap`);
+      const heatmap = response.data.data || {};
+
+      console.log('\n🌡️ Risk Heatmap:');
+      if (!heatmap.positions || !heatmap.positions.length) {
+        console.log('   No risk data available.');
+        return;
+      }
+
+      heatmap.positions.forEach((item, index) => {
+        console.log(`   ${index + 1}. ${item.token || item.symbol || item.tokenMint?.slice(0, 8)} - Exposure: ${item.exposure || item.weight || 'N/A'} - Risk: ${item.riskLevel || item.level || 'N/A'}`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch risk heatmap:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showRiskCorrelation() {
+    if (this.demoMode) {
+      console.log('\n📉 Risk Correlation (DEMO):');
+      console.log('   SOL/RAY: 0.32');
+      console.log('   SOL/USDC: -0.14');
+      console.log('   RAY/COPE: 0.76');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/risk/correlation`);
+      const matrix = response.data.data || [];
+
+      console.log('\n📉 Risk Correlation Matrix:');
+      if (!matrix.length) {
+        console.log('   No correlation data available.');
+        return;
+      }
+
+      matrix.slice(0, 10).forEach((row) => {
+        console.log(`   ${row.tokenA || row.a} / ${row.tokenB || row.b}: ${row.correlation?.toFixed(2) || 'N/A'}`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch correlation matrix:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showAlerts(filter = 'active') {
+    if (this.demoMode) {
+      console.log('\n🚨 Predictive Alerts (DEMO):');
+      console.log('   [A1] Price spike detected in SOL');
+      console.log('   [A2] Liquidity drain in Raydium pool');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/alerts/${filter}`);
+      const alerts = response.data.data || [];
+
+      console.log(`\n🚨 Predictive Alerts (${filter}):`);
+      if (!alerts.length) {
+        console.log('   No alerts found.');
+        return;
+      }
+
+      alerts.forEach((alert, index) => {
+        console.log(`   ${index + 1}. [${alert.id || alert.alertId}] ${alert.title || alert.message || alert.type} - ${alert.severity || 'N/A'} - Status: ${alert.status || 'N/A'}`);
+      });
+    } catch (error) {
+      console.log('❌ Failed to fetch alerts:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async acknowledgeAlert(alertId) {
+    if (!alertId) {
+      console.log('❌ Usage: ack-alert <alertId>');
+      return;
+    }
+
+    if (this.demoMode) {
+      console.log(`✅ (DEMO) Acknowledged alert ${alertId}`);
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE}/api/alerts/${alertId}/acknowledge`);
+      if (response.data.success) {
+        console.log(`✅ Alert ${alertId} acknowledged`);
+      }
+    } catch (error) {
+      console.log('❌ Failed to acknowledge alert:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showSentiment(args) {
+    if (this.demoMode) {
+      if (args[0] === 'token' && args[1]) {
+        console.log(`\n📊 Sentiment for ${args[1]} (DEMO): Positive`);
+      } else {
+        console.log('\n📊 Bullish Sentiment Opportunities (DEMO):');
+        console.log('   SOL, RAY, BONK');
+      }
+      return;
+    }
+
+    try {
+      if (args[0] === 'token' && args[1]) {
+        const response = await axios.get(`${API_BASE}/api/sentiment/token/${args[1]}`);
+        const sentiment = response.data.data || {};
+        console.log(`\n📊 Sentiment for ${args[1]}:`);
+        console.log(`   Score: ${sentiment.score ?? 'N/A'}`);
+        console.log(`   Trend: ${sentiment.trend || 'N/A'}`);
+        console.log(`   Summary: ${sentiment.summary || 'N/A'}`);
+      } else {
+        const response = await axios.get(`${API_BASE}/api/sentiment/bullish`);
+        const opportunities = response.data.data || [];
+        console.log('\n📊 Bullish Sentiment Opportunities:');
+        if (!opportunities.length) {
+          console.log('   No bullish opportunities found.');
+          return;
+        }
+        opportunities.slice(0, 10).forEach((item, index) => {
+          console.log(`   ${index + 1}. ${item.token || item.symbol || item.mint} - ${item.score || item.sentimentScore || 'N/A'}`);
+        });
+      }
+    } catch (error) {
+      console.log('❌ Failed to fetch sentiment data:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showPnLDashboard() {
+    if (this.demoMode) {
+      console.log('\n📈 P&L Dashboard (DEMO):');
+      console.log('   Total PnL: +$4,230.50');
+      console.log('   Daily Change: +3.2%');
+      console.log('   Open Positions: 8');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/analytics/pnl/dashboard`);
+      const dashboard = response.data.data || {};
+
+      console.log('\n📈 P&L Dashboard:');
+      console.log(`   Total PnL: ${this.formatPnL(dashboard.totalPnL ?? 0)}`);
+      console.log(`   Period: ${dashboard.period || 'N/A'}`);
+      console.log(`   Return: ${dashboard.returnPercentage != null ? `${dashboard.returnPercentage.toFixed(2)}%` : 'N/A'}`);
+      console.log(`   Open Positions: ${dashboard.openPositions ?? 'N/A'}`);
+      console.log(`   Realized PnL: ${this.formatPnL(dashboard.realizedPnL ?? 0)}`);
+      console.log(`   Unrealized PnL: ${this.formatPnL(dashboard.unrealizedPnL ?? 0)}`);
+    } catch (error) {
+      console.log('❌ Failed to fetch P&L dashboard:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async showPortfolio(walletPublicKey) {
+    if (this.demoMode) {
+      console.log('\n💼 Portfolio Summary (DEMO):');
+      console.log('   Wallet: demo-wallet-1');
+      console.log('   Total Value: $12,540.10');
+      console.log('   Holdings: SOL, RAY, BONK');
+      console.log('   Unrealized PnL: +$1,220.50');
+      return;
+    }
+
+    const publicKey = walletPublicKey || this.requireSelectedWallet('portfolio');
+    if (!publicKey) return;
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/trading/portfolio/${publicKey}`);
+      const portfolio = response.data || response.data.data || {};
+
+      console.log('\n💼 Portfolio Summary:');
+      if (!portfolio || typeof portfolio !== 'object') {
+        console.log('   No portfolio data available.');
+        return;
+      }
+
+      console.log(`   Wallet: ${publicKey}`);
+      console.log(`   Total Value: $${(portfolio.totalValueUsd || portfolio.total_portfolio_value_usd || 0).toFixed(2)}`);
+      console.log(`   Unrealized PnL: ${this.formatPnL(portfolio.unrealizedPnL || portfolio.unrealized_pnl_usd || 0)}`);
+      console.log(`   Realized PnL: ${this.formatPnL(portfolio.realizedPnL || portfolio.realized_pnl_usd || 0)}`);
+      console.log(`   Holdings: ${Array.isArray(portfolio.holdings) ? portfolio.holdings.map(h => h.symbol || h.tokenMint || h.token).join(', ') : 'N/A'}`);
+    } catch (error) {
+      console.log('❌ Failed to fetch portfolio summary:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async handleSettingsCommand(args) {
+    if (args[0] === 'show') {
+      await this.showWalletSettings(args[1]);
+      return;
+    }
+
+    if (args[0] === 'set') {
+      await this.setWalletSettings(args[1], args[2], args[3]);
+      return;
+    }
+
+    console.log('❌ Usage: settings show <walletAddress> OR settings set <walletAddress> <spendingLimitUsd> [dailySpendingUsd]');
+  }
+
+  async showWalletSettings(walletAddress) {
+    if (this.demoMode) {
+      console.log('\n⚙️ Wallet Settings (DEMO):');
+      console.log('   Wallet: demo-wallet-1');
+      console.log('   Spending Limit USD: $10,000');
+      console.log('   Daily Spending USD: $500');
+      return;
+    }
+
+    const publicKey = walletAddress || this.requireSelectedWallet('settings show');
+    if (!publicKey) return;
+
+    try {
+      const response = await axios.get(`${API_BASE}/api/trading/wallet/${publicKey}`);
+      const wallet = response.data.wallet || response.data || {};
+
+      console.log('\n⚙️ Wallet Settings:');
+      console.log(`   Wallet: ${publicKey}`);
+      console.log(`   Spending Limit USD: $${wallet.spending_limit_usd ?? wallet.spendingLimitUsd ?? 'N/A'}`);
+      console.log(`   Daily Spending USD: $${wallet.daily_spending_usd ?? wallet.dailySpendingUsd ?? 'N/A'}`);
+    } catch (error) {
+      console.log('❌ Failed to fetch wallet settings:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async setWalletSettings(walletAddress, spendingLimitUsd, dailySpendingUsd) {
+    if (this.demoMode) {
+      console.log(`\n✅ (DEMO) Wallet settings updated for ${walletAddress}`);
+      return;
+    }
+
+    if (!walletAddress || !spendingLimitUsd) {
+      console.log('❌ Usage: settings set <walletAddress> <spendingLimitUsd> [dailySpendingUsd]');
+      return;
+    }
+
+    try {
+      const body = {
+        walletAddress,
+        spendingLimitUsd: parseFloat(spendingLimitUsd),
+      };
+      if (dailySpendingUsd) {
+        body.dailySpendingUsd = parseFloat(dailySpendingUsd);
+      }
+
+      const response = await axios.post(`${API_BASE}/api/trading/wallet/settings`, body);
+      const wallet = response.data.wallet || {};
+
+      console.log(`\n✅ Wallet settings updated for ${walletAddress}:`);
+      console.log(`   Spending Limit USD: $${wallet.spending_limit_usd ?? body.spendingLimitUsd}`);
+      console.log(`   Daily Spending USD: $${wallet.daily_spending_usd ?? body.dailySpendingUsd ?? 'N/A'}`);
+    } catch (error) {
+      console.log('❌ Failed to update wallet settings:', error.response?.data?.error || error.message);
     }
   }
 

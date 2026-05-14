@@ -18,6 +18,21 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      "/grafana": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/grafana/, ""),
+      },
+      "/prometheus": {
+        target: "http://localhost:9090",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/prometheus/, ""),
+      },
+      "/metrics": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/metrics/, "/metrics"),
+      },
     },
   },
   build: {

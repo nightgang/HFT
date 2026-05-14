@@ -141,6 +141,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      WS_PORT: 3002
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-hft_user}
@@ -159,7 +160,8 @@ services:
       SMTP_USER: your-email@gmail.com
       SMTP_PASS: your-app-password
     ports:
-      - "3000:3000"
+      - "3001:3000"
+      - "3002:3002"
     networks:
       - hft-network
     depends_on:
@@ -196,6 +198,22 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+
+  # CLI service for terminal access
+  cli:
+    build:
+      context: ./cli
+      dockerfile: Dockerfile
+    container_name: hft-cli
+    environment:
+      - API_BASE=http://backend:3000
+      - KATANA_WS_URL=ws://backend:3002
+    networks:
+      - hft-network
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
 
   # Frontend
   frontend:
