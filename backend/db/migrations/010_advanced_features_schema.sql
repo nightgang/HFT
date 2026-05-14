@@ -92,32 +92,57 @@ CREATE INDEX IF NOT EXISTS idx_advanced_orders_execute_at ON advanced_orders(exe
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_expires_at ON advanced_orders(expires_at);
 
 -- ============================================================================
--- JITO BUNDLES (skipping limit_orders and cross_chain as they're in 003)
+-- JITO BUNDLES - Add missing columns if table exists
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS jito_bundles (
-    bundle_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    wallet_id UUID NOT NULL REFERENCES wallets(wallet_id) ON DELETE CASCADE,
+-- Add columns to jito_bundles if they don't exist
+DO $$
+BEGIN
+    -- Add bundle_hash if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'jito_bundles' AND column_name = 'bundle_hash'
+    ) THEN
+        ALTER TABLE jito_bundles ADD COLUMN bundle_hash VARCHAR(255) UNIQUE;
+    END IF;
 
-    -- Bundle details
-    bundle_hash VARCHAR(255) UNIQUE NOT NULL,
-    status bundle_status DEFAULT 'pending',
-    transactions JSONB NOT NULL, -- Array of transaction signatures
+    -- Add status if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'jito_bundles' AND column_name = 'status'
+    ) THEN
+        ALTER TABLE jito_bundles ADD COLUMN status bundle_status DEFAULT 'pending';
+    END IF;
 
-    -- Fees
-    tip_amount_lamports BIGINT,
-    priority_fee_lamports BIGINT,
+    -- Add tip_amount_lamports if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'jito_bundles' AND column_name = 'tip_amount_lamports'
+    ) THEN
+        ALTER TABLE jito_bundles ADD COLUMN tip_amount_lamports BIGINT;
+        ALTER TABLE jito_bundles ADD COLUMN priority_fee_lamports BIGINT;
+    END IF;
 
-    -- Execution details
-    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    slot_submitted BIGINT,
-    slot_landed BIGINT,
-    landed_at TIMESTAMP,
-    mev_reward_lamports BIGINT,
+    -- Add execution details if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'jito_bundles' AND column_name = 'submitted_at'
+    ) THEN
+        ALTER TABLE jito_bundles ADD COLUMN submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        ALTER TABLE jito_bundles ADD COLUMN slot_submitted BIGINT;
+        ALTER TABLE jito_bundles ADD COLUMN slot_landed BIGINT;
+        ALTER TABLE jito_bundles ADD COLUMN landed_at TIMESTAMP;
+        ALTER TABLE jito_bundles ADD COLUMN mev_reward_lamports BIGINT;
+    END IF;
 
-    -- Metadata
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Add metadata if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'jito_bundles' AND column_name = 'metadata'
+    ) THEN
+        ALTER TABLE jito_bundles ADD COLUMN metadata JSONB;
+    END IF;
+END $$;
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

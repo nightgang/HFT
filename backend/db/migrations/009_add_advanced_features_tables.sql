@@ -1,50 +1,128 @@
 -- Migration: Add Advanced Features Tables
 
 -- ============================================================================
--- ADVANCED ORDERS
+-- ADVANCED ORDERS - Add missing columns if table exists
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS advanced_orders (
-    order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    wallet_id UUID NOT NULL REFERENCES wallets(wallet_id) ON DELETE CASCADE,
-    order_type VARCHAR(50) NOT NULL, -- 'limit', 'stop_loss', 'take_profit', 'conditional'
-    status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'active', 'executed', 'cancelled', 'expired'
+-- Add columns to advanced_orders if they don't exist
+DO $$
+BEGIN
+    -- Add order_type if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'order_type'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN order_type VARCHAR(50) DEFAULT 'limit';
+    END IF;
 
-    -- Token Details
-    input_token_mint VARCHAR(255) NOT NULL,
-    input_token_symbol VARCHAR(20),
-    input_amount NUMERIC(38, 8) NOT NULL,
+    -- Add status if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'status'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN status VARCHAR(50) DEFAULT 'pending';
+    END IF;
 
-    output_token_mint VARCHAR(255) NOT NULL,
-    output_token_symbol VARCHAR(20),
+    -- Add input_token_symbol if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'input_token_symbol'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN input_token_symbol VARCHAR(20);
+    END IF;
 
-    -- Pricing
-    trigger_price NUMERIC(38, 8),
-    limit_price NUMERIC(38, 8),
-    stop_loss_price NUMERIC(38, 8),
-    take_profit_price NUMERIC(38, 8),
+    -- Add output_token_symbol if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'output_token_symbol'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN output_token_symbol VARCHAR(20);
+    END IF;
 
-    -- Conditions
-    condition_type VARCHAR(50), -- 'price_above', 'price_below', 'price_between', 'volatility_above', 'time_based'
-    condition_value NUMERIC(38, 8),
-    condition_metadata JSONB,
+    -- Add trigger_price if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'trigger_price'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN trigger_price NUMERIC(38, 8);
+    END IF;
 
-    -- Timing
-    execute_at TIMESTAMP,
-    expires_at TIMESTAMP,
+    -- Add limit_price if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'limit_price'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN limit_price NUMERIC(38, 8);
+    END IF;
 
-    -- Execution
-    executed_at TIMESTAMP,
-    executed_price NUMERIC(38, 8),
-    tx_signature VARCHAR(255),
+    -- Add stop_loss_price if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'stop_loss_price'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN stop_loss_price NUMERIC(38, 8);
+    END IF;
 
-    -- Metadata
-    metadata JSONB,
-    notes TEXT,
+    -- Add take_profit_price if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'take_profit_price'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN take_profit_price NUMERIC(38, 8);
+    END IF;
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    -- Add condition columns if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'condition_type'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN condition_type VARCHAR(50);
+        ALTER TABLE advanced_orders ADD COLUMN condition_value NUMERIC(38, 8);
+        ALTER TABLE advanced_orders ADD COLUMN condition_metadata JSONB;
+    END IF;
+
+    -- Add timing columns if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'execute_at'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN execute_at TIMESTAMP;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'expires_at'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN expires_at TIMESTAMP;
+    END IF;
+
+    -- Add execution columns if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'executed_at'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN executed_at TIMESTAMP;
+        ALTER TABLE advanced_orders ADD COLUMN executed_price NUMERIC(38, 8);
+        ALTER TABLE advanced_orders ADD COLUMN tx_signature VARCHAR(255);
+    END IF;
+
+    -- Add metadata columns if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'metadata'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN metadata JSONB;
+        ALTER TABLE advanced_orders ADD COLUMN notes TEXT;
+    END IF;
+
+    -- Add updated_at if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_wallet ON advanced_orders(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_status ON advanced_orders(status);

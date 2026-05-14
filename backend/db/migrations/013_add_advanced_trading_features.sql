@@ -23,9 +23,9 @@ CREATE TABLE IF NOT EXISTS grid_trading_configs (
   closed_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_grid_trading_wallet ON grid_trading_configs(wallet_id);
-CREATE INDEX idx_grid_trading_status ON grid_trading_configs(status);
-CREATE INDEX idx_grid_trading_token ON grid_trading_configs(token_mint);
+CREATE INDEX IF NOT EXISTS idx_grid_trading_wallet ON grid_trading_configs(wallet_id);
+CREATE INDEX IF NOT EXISTS idx_grid_trading_status ON grid_trading_configs(status);
+CREATE INDEX IF NOT EXISTS idx_grid_trading_token ON grid_trading_configs(token_mint);
 
 -- Grid Orders
 CREATE TABLE IF NOT EXISTS grid_orders (

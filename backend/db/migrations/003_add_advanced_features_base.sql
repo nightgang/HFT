@@ -49,6 +49,17 @@ CREATE TABLE IF NOT EXISTS advanced_orders (
     metadata JSONB
 );
 
+-- Add is_active column if missing (for backward compatibility)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'advanced_orders' AND column_name = 'is_active'
+    ) THEN
+        ALTER TABLE advanced_orders ADD COLUMN is_active BOOLEAN DEFAULT true;
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_wallet ON advanced_orders(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_status ON advanced_orders(status, wallet_id);
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_triggers ON advanced_orders(trigger_price, expires_at) WHERE status = 'active';
