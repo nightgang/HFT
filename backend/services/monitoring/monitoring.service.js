@@ -275,7 +275,7 @@ class MonitoringService {
   }
 
   // Get all metrics for Prometheus
-  getMetrics() {
+  async getMetrics() {
     return promClient.register.metrics();
   }
 

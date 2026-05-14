@@ -170,7 +170,7 @@ app.get('/healthz/ready', readinessProbeHandler);
 
 app.get('/metrics', async (req, res) => {
   try {
-    const metrics = monitoringService.getMetrics();
+    const metrics = await monitoringService.getMetrics();
     res.set('Content-Type', 'text/plain; charset=utf-8');
     res.send(metrics);
   } catch (error) {

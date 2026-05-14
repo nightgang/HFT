@@ -46,6 +46,7 @@ services:
     container_name: hft-prometheus
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/rules:/etc/prometheus/rules
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
