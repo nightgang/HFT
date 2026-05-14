@@ -23,7 +23,8 @@ pool.on('connect', (client) => {
 
 pool.on('error', (err, client) => {
   logger.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  // Don't exit process immediately - let graceful shutdown handle it
+  // This allows proper cleanup of other services
 });
 
 // Test connection

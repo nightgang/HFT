@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174,
-    host: "localhost",
+    host: "0.0.0.0",
     proxy: {
       "/api": {
         target: "http://localhost:3001",
@@ -37,11 +37,12 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    sourcemap: false,
+    sourcemap: process.env.NODE_ENV === "development",
     minify: "esbuild",
     terserOptions: {
       compress: {
         drop_console: true,
+        drop_debugger: true,
       },
     },
     rollupOptions: {

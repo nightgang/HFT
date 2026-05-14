@@ -38,10 +38,12 @@ function requestLoggingMiddleware(req, res, next) {
       logger.debug('Failed to record metrics:', error.message);
     }
 
-    // Store in database
-    this.storeRequestLog(req, statusCode, duration).catch(err => {
-      logger.debug('Failed to store request log:', err.message);
-    });
+    // Store in database - with better error handling
+    if (res.storeRequestLog) {
+      res.storeRequestLog(req, statusCode, duration).catch(err => {
+        logger.debug('Failed to store request log:', err.message);
+      });
+    }
 
     return originalJson(data);
   };
@@ -49,6 +51,12 @@ function requestLoggingMiddleware(req, res, next) {
   // Store request log method
   res.storeRequestLog = async function(req, statusCode, duration) {
     try {
+      // Check if request log table exists and is writable
+      // Skip logging for very frequent endpoints to prevent log table from growing too fast
+      if (req.path === '/health' || req.path === '/metrics' || req.path === '/healthz/live' || req.path === '/healthz/ready') {
+        return; // Don't log health checks
+      }
+
       await query(`
         INSERT INTO api_request_logs (method, path, status_code, response_time_ms, client_ip, user_agent)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -61,6 +69,7 @@ function requestLoggingMiddleware(req, res, next) {
         req.get('user-agent')
       ]);
     } catch (error) {
+      // Log table might not exist or query might fail - don't crash
       logger.debug('Could not store request log:', error.message);
     }
   };

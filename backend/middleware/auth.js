@@ -5,6 +5,19 @@ const auditLogger = require('../utils/audit');
 const logger = require('../utils/logger');
 const UserModel = require('../models/user.model');
 
+// Cache encryption key to improve performance
+let cachedEncryptionKey = null;
+
+const getEncryptionKey = () => {
+  if (!cachedEncryptionKey) {
+    if (!process.env.ENCRYPTION_KEY) {
+      throw new Error('ENCRYPTION_KEY environment variable is required');
+    }
+    cachedEncryptionKey = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+  }
+  return cachedEncryptionKey;
+};
+
 // JWT Authentication Middleware
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -55,15 +68,30 @@ const authenticateApiKey = async (req, res, next) => {
   }
 
   try {
-    if (apiKey === process.env.HELIUS_API_KEY) {
-      return next();
-    }
-
+    // Never compare sensitive API keys directly - always use database
+    // Remove hardcoded HELIUS_API_KEY comparison for security
     const apiKeyRecord = await UserModel.findApiKeyByKey(apiKey);
     if (!apiKeyRecord) {
+      auditLogger.logSecurityEvent('INVALID_API_KEY', {
+        endpoint: req.path,
+        method: req.method
+      }, req.ip, req.get('User-Agent'));
       return res.status(401).json({
         error: 'Invalid API key.',
         code: 'API_KEY_INVALID'
+      });
+    }
+
+    // Check if API key is expired or disabled
+    if (apiKeyRecord.revoked || (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) < new Date())) {
+      auditLogger.logSecurityEvent('REVOKED_API_KEY', {
+        endpoint: req.path,
+        method: req.method,
+        keyId: apiKeyRecord.key_id
+      }, req.ip, req.get('User-Agent'));
+      return res.status(401).json({
+        error: 'API key has been revoked or expired.',
+        code: 'API_KEY_REVOKED'
       });
     }
 
@@ -78,6 +106,11 @@ const authenticateApiKey = async (req, res, next) => {
     next();
   } catch (error) {
     logger.error('API key authentication error:', error);
+    auditLogger.logSecurityEvent('API_KEY_AUTH_ERROR', {
+      endpoint: req.path,
+      method: req.method,
+      error: error.message
+    }, req.ip, req.get('User-Agent'));
     return res.status(500).json({
       error: 'API key authentication failed.',
       code: 'API_KEY_AUTH_ERROR'
@@ -85,9 +118,10 @@ const authenticateApiKey = async (req, res, next) => {
   }
 };
 
-// Encrypt/Decrypt functions for sensitive data
+// Encrypt/Decrypt functions for sensitive data (using cached key)
 const encrypt = (text) => {
-  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+  if (!text) throw new Error('Text to encrypt cannot be empty');
+  const key = getEncryptionKey();
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   let encrypted = iv.toString('hex') + ':' + cipher.update(text, 'utf8', 'hex');
@@ -96,8 +130,10 @@ const encrypt = (text) => {
 };
 
 const decrypt = (encrypted) => {
-  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+  if (!encrypted) throw new Error('Encrypted text cannot be empty');
+  const key = getEncryptionKey();
   const parts = encrypted.split(':');
+  if (parts.length !== 2) throw new Error('Invalid encrypted format');
   const iv = Buffer.from(parts[0], 'hex');
   const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
   let decrypted = decipher.update(parts[1], 'hex', 'utf8');

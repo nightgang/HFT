@@ -4,19 +4,23 @@ const readline = require('readline');
 const WebSocket = require('ws');
 const axios = require('axios');
 
-// Constants
-const API_BASE = process.env.API_BASE || 'http://localhost:3001';
-const KATANA_WS_URL = process.env.KATANA_WS_URL || 'ws://localhost:3003';
-const MAX_LOGIN_RETRIES = 3;
-const WS_CONNECTION_TIMEOUT = 5000;
-const AVAILABLE_COMMANDS = [
+// ============ CONFIGURATION FROM ENVIRONMENT ============
+// Use environment variables with fallbacks for development
+const API_BASE = process.env.API_BASE || process.env.BACKEND_URL || 'http://localhost:3001';
+const KATANA_WS_URL = process.env.KATANA_WS_URL || process.env.WS_URL || 'ws://localhost:3002';
+const REQUEST_TIMEOUT = parseInt(process.env.REQUEST_TIMEOUT || '5000', 10); // 5 seconds default
+const MAX_LOGIN_RETRIES = parseInt(process.env.MAX_LOGIN_RETRIES || '3', 10);
+const WS_CONNECTION_TIMEOUT = parseInt(process.env.WS_CONNECTION_TIMEOUT || '5000', 10);
+
+// Validate configuration
+if (!API_BASE || !KATANA_WS_URL) {\n  console.error('❌ Error: API_BASE or KATANA_WS_URL not configured');\n  console.error('Please set environment variables:');\n  console.error('  - API_BASE or BACKEND_URL');\n  console.error('  - KATANA_WS_URL or WS_URL');\n  process.exit(1);\n}\n\nconst AVAILABLE_COMMANDS = [
   'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
   'predict', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
   'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
   'portfolio', 'settings', 'help', 'exit', 'toggle', 'autotrade'
 ];
 
-// Emojis and symbols
+// ============ EMOJIS AND MESSAGES ============
 const EMOJIS = {
   SWORD: '⚔️',
   GREEN_CIRCLE: '🟢',
@@ -46,6 +50,14 @@ const MESSAGES = {
   UNKNOWN_COMMAND: '❌ Unknown command. Type "help" for available commands.',
   EXITING: '⚔️ Exiting Katana Terminal...'
 };
+
+// ============ API HELPER FUNCTIONS ============
+/**
+ * Make API call with timeout and error handling
+ */
+async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIMEOUT) {
+  try {
+    const config = {\n      timeout,\n      headers: { 'Content-Type': 'application/json' }\n    };\n\n    let response;\n    if (method === 'GET') {\n      response = await axios.get(`${API_BASE}${endpoint}`, config);\n    } else if (method === 'POST') {\n      response = await axios.post(`${API_BASE}${endpoint}`, data, config);\n    } else if (method === 'PUT') {\n      response = await axios.put(`${API_BASE}${endpoint}`, data, config);\n    } else {\n      throw new Error(`Unsupported HTTP method: ${method}`);\n    }\n\n    return response.data;\n  } catch (error) {\n    if (error.code === 'ECONNABORTED') {\n      throw new Error(`Request timeout (${timeout}ms). Backend server may be unresponsive.`);\n    }\n    if (error.code === 'ECONNREFUSED') {\n      throw new Error(`Cannot connect to backend at ${API_BASE}. Is it running?`);\n    }\n    if (error.response?.status === 401) {\n      throw new Error('Unauthorized. Please log in again.');\n    }\n    if (error.response?.status === 403) {\n      throw new Error('Access denied.');\n    }\n    if (error.response?.data?.error) {\n      throw new Error(error.response.data.error);\n    }\n    throw error;\n  }\n}
 
 /**
  * Katana Terminal CLI for HFT Solana Trading System
@@ -140,32 +152,28 @@ class KatanaTerminal {
         const username = await this.question('Username: ');
         const password = await this.question('Password: ');
 
-        const response = await axios.post(`${API_BASE}/auth/login`, {
+        const result = await makeApiCall('POST', '/auth/login', {
           username,
           password
-        }, { timeout: 10000 });
+        });
 
-        if (response.data.success) {
-          this.authToken = response.data.token;
+        if (result.success) {
+          this.authToken = result.token;
           console.log(MESSAGES.AUTH_SUCCESS);
           axios.defaults.headers.common['Authorization'] = `Bearer ${this.authToken}`;
           return;
         } else {
-          console.log(`${MESSAGES.AUTH_FAILED}:`, response.data.error || 'Invalid credentials');
+          console.log(`${MESSAGES.AUTH_FAILED}:`, result.error || 'Invalid credentials');
           retryCount++;
           if (retryCount < MAX_LOGIN_RETRIES) {
             console.log(`Retrying... (${retryCount}/${MAX_LOGIN_RETRIES})`);
           }
         }
       } catch (error) {
-        if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-          console.log(MESSAGES.CONNECTION_FAILED);
+        console.log('❌ Login error:', error.message);
+        if (error.message.includes('Cannot connect') || error.message.includes('timeout')) {
           console.log('💡 Try running in demo mode: node katana-terminal.js --demo');
           process.exit(1);
-        } else if (error.response) {
-          console.log('❌ Login error:', error.response.data?.error || error.response.statusText);
-        } else {
-          console.log('❌ Network error:', error.message);
         }
         retryCount++;
         if (retryCount < MAX_LOGIN_RETRIES) {
@@ -174,7 +182,7 @@ class KatanaTerminal {
       }
     }
 
-    console.log('❌ Maximum login attempts exceeded');
+    console.log('❌ Login failed after maximum retries');
     process.exit(1);
   }
 

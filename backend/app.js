@@ -138,15 +138,23 @@ const csrfProtection = csurf({
 });
 
 app.use((req, res, next) => {
-  if (
-    req.method === 'GET' ||
-    req.path === '/webhook/helius' ||
-    req.path === '/metrics' ||
-    req.path.startsWith('/auth') ||
-    req.path.startsWith('/api-docs') ||
-    req.path === '/swagger.json' ||
-    req.path.startsWith('/api')
-  ) {
+  // Skip CSRF for GET requests, webhooks, health checks, and API endpoints
+  const skipCsrf = [
+    req.method === 'GET',
+    req.method === 'HEAD',
+    req.method === 'OPTIONS',
+    req.path === '/webhook/helius',
+    req.path === '/health',
+    req.path === '/healthz/live',
+    req.path === '/healthz/ready',
+    req.path === '/metrics',
+    req.path.startsWith('/auth/login'),
+    req.path.startsWith('/auth/register'),
+    req.path.startsWith('/api-docs'),
+    req.path === '/swagger.json',
+  ];
+
+  if (skipCsrf.some(skip => skip)) {
     return next();
   }
 
@@ -168,10 +176,12 @@ app.get('/health', healthCheckHandler);
 app.get('/healthz/live', livenessProbeHandler);
 app.get('/healthz/ready', readinessProbeHandler);
 
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', authenticate, async (req, res) => {
   try {
     const metrics = await monitoringService.getMetrics();
     res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('X-Content-Type-Options', 'nosniff');
     res.send(metrics);
   } catch (error) {
     logger.error('Metrics endpoint error:', error);
@@ -182,9 +192,41 @@ app.get('/metrics', async (req, res) => {
 app.post('/auth/login', strictLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
-    const validUsername = process.env.ADMIN_USERNAME || 'admin';
-    const validPassword = process.env.ADMIN_PASSWORD || 'password123';
-    const success = username === validUsername && password === validPassword;
+
+    // Validate required fields
+    if (!username || !password) {
+      await auditUtil.logLoginAttempt(username || 'unknown', false, req.ip, req.get('User-Agent'));
+      return res.status(400).json({
+        success: false,
+        error: 'Username and password are required',
+        code: 'MISSING_CREDENTIALS'
+      });
+    }
+
+    // Require environment variables - no defaults
+    const validUsername = process.env.ADMIN_USERNAME;
+    const validPassword = process.env.ADMIN_PASSWORD;
+
+    if (!validUsername || !validPassword) {
+      logger.error('Admin credentials not configured in environment');
+      return res.status(500).json({
+        success: false,
+        error: 'Authentication service not properly configured',
+        code: 'AUTH_CONFIG_ERROR'
+      });
+    }
+
+    // Use constant-time comparison to prevent timing attacks
+    const usernameMatch = crypto.timingSafeEqual(
+      Buffer.from(username),
+      Buffer.from(validUsername)
+    ).valueOf();
+    const passwordMatch = crypto.timingSafeEqual(
+      Buffer.from(password),
+      Buffer.from(validPassword)
+    ).valueOf();
+
+    const success = usernameMatch && passwordMatch;
 
     await auditUtil.logLoginAttempt(username, success, req.ip, req.get('User-Agent'));
 
@@ -192,11 +234,12 @@ app.post('/auth/login', strictLimiter, async (req, res) => {
       const token = generateToken({ username });
       res.json({ success: true, token, message: 'Login successful' });
     } else {
-      res.status(401).json({ success: false, error: 'Invalid credentials' });
+      res.status(401).json({ success: false, error: 'Invalid credentials', code: 'AUTH_INVALID' });
     }
   } catch (error) {
     logger.error('Login error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    await auditUtil.logLoginAttempt(req.body?.username || 'unknown', false, req.ip, req.get('User-Agent'));
+    res.status(500).json({ success: false, error: 'Internal server error', code: 'SERVER_ERROR' });
   }
 });
 
