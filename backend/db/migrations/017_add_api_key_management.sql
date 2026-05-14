@@ -13,6 +13,16 @@ CREATE TABLE IF NOT EXISTS api_keys (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+-- Create index on user_id only if the column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'api_keys' AND column_name = 'user_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
 CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active);

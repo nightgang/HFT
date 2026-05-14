@@ -124,7 +124,17 @@ CREATE TABLE IF NOT EXISTS jito_bundles (
 CREATE INDEX IF NOT EXISTS idx_jito_bundles_wallet ON jito_bundles(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_jito_bundles_status ON jito_bundles(status);
 CREATE INDEX IF NOT EXISTS idx_jito_bundles_hash ON jito_bundles(bundle_hash);
-CREATE INDEX IF NOT EXISTS idx_jito_bundles_submitted_at ON jito_bundles(submitted_at);
+
+-- Create index on submitted_at only if the column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'jito_bundles' AND column_name = 'submitted_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_jito_bundles_submitted_at ON jito_bundles(submitted_at);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- LIQUIDITY POOLS

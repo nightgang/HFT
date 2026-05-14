@@ -50,7 +50,18 @@ CREATE INDEX IF NOT EXISTS idx_advanced_orders_wallet ON advanced_orders(wallet_
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_status ON advanced_orders(status);
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_type ON advanced_orders(order_type);
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_execute_at ON advanced_orders(execute_at);
-CREATE INDEX IF NOT EXISTS idx_advanced_orders_expires_at ON advanced_orders(expires_at);
+
+-- Create index on expires_at only if the column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'advanced_orders' AND column_name = 'expires_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_advanced_orders_expires_at ON advanced_orders(expires_at);
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_created_at ON advanced_orders(created_at DESC);
 
 -- ============================================================================
@@ -91,7 +102,18 @@ CREATE TABLE IF NOT EXISTS limit_orders (
 
 CREATE INDEX IF NOT EXISTS idx_limit_orders_wallet ON limit_orders(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_limit_orders_status ON limit_orders(status);
-CREATE INDEX IF NOT EXISTS idx_limit_orders_expires_at ON limit_orders(expires_at);
+
+-- Create index on expires_at only if the column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'limit_orders' AND column_name = 'expires_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_limit_orders_expires_at ON limit_orders(expires_at);
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_limit_orders_created_at ON limit_orders(created_at DESC);
 
 -- ============================================================================

@@ -30,10 +30,13 @@ class EmailConfig {
     try {
       this.transporter = nodemailer.createTransport(this.config);
 
-      // Verify connection
+      // Verify connection (don't throw on failure for development)
       this.transporter.verify((error, success) => {
         if (error) {
-          console.error('Email service verification failed:', error);
+          console.warn('Email service verification failed: SMTP credentials may be invalid or service unavailable. Email functionality will be disabled.');
+          console.warn('Error details:', error.message);
+          // Don't throw error - allow service to continue without email
+          this.transporter = null;
         } else {
           console.log('Email service is ready to send messages');
         }
@@ -41,8 +44,10 @@ class EmailConfig {
 
       return this.transporter;
     } catch (error) {
-      console.error('Failed to initialize email service:', error);
-      throw error;
+      console.warn('Failed to initialize email service:', error.message);
+      console.warn('Email functionality will be disabled.');
+      this.transporter = null;
+      // Don't throw error - allow service to continue without email
     }
   }
 

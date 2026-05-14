@@ -25,8 +25,9 @@ class EmailService {
       this.initialized = true;
       logger.info('Email service initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize email service:', error);
-      throw error;
+      logger.warn('Failed to initialize email service:', error.message);
+      logger.warn('Email functionality will be disabled, but server will continue.');
+      // Don't throw error - allow server to continue without email
     }
   }
 

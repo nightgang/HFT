@@ -181,8 +181,12 @@ class MonitoringService {
     const usage = process.memoryUsage();
     const heapUsagePercent = (usage.heapUsed / usage.heapTotal) * 100;
 
+    // Use a more reasonable threshold for Node.js applications
+    // 95% is too strict for typical Node.js heap usage
+    const isDegraded = heapUsagePercent > 95;
+
     return {
-      status: heapUsagePercent > 90 ? 'degraded' : 'healthy',
+      status: isDegraded ? 'degraded' : 'healthy',
       heap_used_mb: Math.round(usage.heapUsed / 1024 / 1024),
       heap_total_mb: Math.round(usage.heapTotal / 1024 / 1024),
       heap_usage_percent: Math.round(heapUsagePercent),

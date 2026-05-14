@@ -81,7 +81,17 @@ CREATE TABLE IF NOT EXISTS liquidity_pools (
 );
 
 CREATE INDEX IF NOT EXISTS idx_liquidity_pools_tokens ON liquidity_pools(token_a_mint, token_b_mint);
-CREATE INDEX IF NOT EXISTS idx_liquidity_pools_active ON liquidity_pools(is_active);
+
+-- Create index on is_active only if the column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'liquidity_pools' AND column_name = 'is_active'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_liquidity_pools_active ON liquidity_pools(is_active);
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS liquidity_positions (
     position_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

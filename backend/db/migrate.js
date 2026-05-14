@@ -54,11 +54,11 @@ class DatabaseMigrator {
     }
   }
 
-  // Check if migration has been executed
+  // Check if migration has already completed successfully
   async isMigrationExecuted(migrationName) {
     try {
       const result = await query(
-        'SELECT migration_id FROM schema_migrations WHERE migration_name = $1',
+        'SELECT 1 FROM schema_migrations WHERE migration_name = $1 AND success = TRUE',
         [migrationName]
       );
       return result.rows.length > 0;
@@ -67,6 +67,18 @@ class DatabaseMigrator {
       if (error.code === '42P01') { // undefined_table
         return false;
       }
+      throw error;
+    }
+  }
+
+  async cleanupFailedMigrationRecord(migrationName) {
+    try {
+      await query(
+        'DELETE FROM schema_migrations WHERE migration_name = $1 AND success = FALSE',
+        [migrationName]
+      );
+    } catch (error) {
+      logger.error(`Failed to cleanup failed migration record for ${migrationName}:`, error);
       throw error;
     }
   }
@@ -83,6 +95,9 @@ class DatabaseMigrator {
         logger.info(`Migration ${migrationName} already executed, skipping`);
         return true;
       }
+
+      // Clean up failed migration records so rerun can proceed safely.
+      await this.cleanupFailedMigrationRecord(migrationName);
 
       // For initial schema migration, check if schema already exists (from init.sql)
       if (migrationName === '001_initial_schema') {
@@ -105,14 +120,20 @@ class DatabaseMigrator {
       logger.info(`Executing migration: ${migrationName}`);
       await query(sql);
 
-      // Record successful migration
-      await query(
-        `INSERT INTO schema_migrations (migration_name, success)
-         VALUES ($1, $2)
-         ON CONFLICT (migration_name)
-         DO UPDATE SET success = EXCLUDED.success, error_message = NULL, executed_at = NOW()`,
-        [migrationName, true]
+      // Record successful migration if the migration file did not already self-record.
+      const recordResult = await query(
+        'SELECT 1 FROM schema_migrations WHERE migration_name = $1',
+        [migrationName]
       );
+      if (recordResult.rows.length === 0) {
+        await query(
+          `INSERT INTO schema_migrations (migration_name, success)
+           VALUES ($1, $2)
+           ON CONFLICT (migration_name)
+           DO UPDATE SET success = EXCLUDED.success, error_message = NULL, executed_at = NOW()`,
+          [migrationName, true]
+        );
+      }
 
       logger.info(`Migration ${migrationName} executed successfully`);
       return true;
@@ -146,6 +167,26 @@ class DatabaseMigrator {
     }
   }
 
+  // Check if full schema is already initialized
+  async checkFullSchemaExists() {
+    try {
+      // Check for key tables that indicate full schema initialization
+      const tables = ['wallets', 'trades', 'api_keys', 'liquidity_pools', 'advanced_orders'];
+      for (const table of tables) {
+        const result = await query(
+          "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1",
+          [table]
+        );
+        if (result.rows.length === 0) {
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Mark migration as executed without running it
   async markMigrationExecuted(migrationName) {
     try {
@@ -158,6 +199,15 @@ class DatabaseMigrator {
       );
     } catch (error) {
       logger.error('Failed to mark migration as executed:', error);
+    }
+  }
+
+  // Mark all migrations as executed
+  async markAllMigrationsExecuted() {
+    const migrationFiles = this.getMigrationFiles();
+    for (const file of migrationFiles) {
+      const migrationName = path.parse(file).name;
+      await this.markMigrationExecuted(migrationName);
     }
   }
 
@@ -184,6 +234,14 @@ class DatabaseMigrator {
     await this.ensureSchemaMigrationsTable();
 
     logger.info('Starting database migrations...');
+
+    // Check if schema is already fully initialized (from schema.sql)
+    const schemaExists = await this.checkFullSchemaExists();
+    if (schemaExists) {
+      logger.info('Full schema already exists from schema.sql, marking all migrations as executed');
+      await this.markAllMigrationsExecuted();
+      return true;
+    }
 
     const migrationFiles = this.getMigrationFiles();
     if (migrationFiles.length === 0) {

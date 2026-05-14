@@ -45,11 +45,11 @@ async function initializeServices() {
 
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     await emailService.initialize().catch((error) => {
-      logger.error('Failed to initialize email service:', error);
+      logger.warn('Email service initialization failed, continuing without email functionality:', error.message);
     });
 
     emailScheduler.start().catch((error) => {
-      logger.error('Failed to start email scheduler:', error);
+      logger.warn('Failed to start email scheduler, continuing without scheduled emails:', error.message);
     });
   }
 
