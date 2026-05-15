@@ -6,6 +6,8 @@
 
 :root {
   --color-background: #050510;
+  --color-bg: #0f172a;
+  --color-bg-darker: #050510;
   --color-surface: #0a0a1a;
   --color-primary: #a855f7;
   --color-primary-light: #c084fc;
@@ -23,6 +25,7 @@
   --shadow-glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
   --shadow-glow-green: 0 0 20px rgba(0, 255, 136, 0.3);
   --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.3);
+  --shadow-glow-soft: 0 0 20px rgba(168, 85, 247, 0.2);
 
   --blur-glass: 16px;
 
@@ -31,6 +34,35 @@
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
+}
+
+[data-theme="light"] {
+  --color-background: #f8fafc;
+  --color-bg: #f8fafc;
+  --color-bg-darker: #e2e8f0;
+  --color-surface: rgba(255, 255, 255, 0.92);
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --shadow-glow-soft: 0 0 20px rgba(168, 85, 247, 0.08);
+}
+
+[data-accent="purple"] {
+  --color-primary: #a855f7;
+  --color-primary-light: #c084fc;
+  --color-accent: #06b6d4;
+}
+
+[data-accent="green"] {
+  --color-primary: #22c55e;
+  --color-primary-light: #4ade80;
+  --color-accent: #14b8a6;
+}
+
+[data-accent="cyan"] {
+  --color-primary: #06b6d4;
+  --color-primary-light: #7dd3fc;
+  --color-accent: #5eead4;
 }
 
 *,

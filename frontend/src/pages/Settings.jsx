@@ -21,12 +21,37 @@ const Settings = () => {
     riskWeighting: 0.2,
   });
 
+  const [uiPreferences, setUiPreferences] = useState({
+    themeMode: "dark",
+    accentColor: "purple",
+    sidebarCompact: false,
+    dashboardConfig: {
+      showStatsCards: true,
+      showTradePanel: true,
+      showLiveFeed: true,
+      showWalletTracker: true,
+      showActiveTrades: true,
+    },
+  });
+
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [uiSaved, setUiSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchSettings();
+    const storedUi = window.localStorage.getItem("uiPreferences");
+    if (storedUi) {
+      try {
+        setUiPreferences((prev) => ({
+          ...prev,
+          ...JSON.parse(storedUi),
+        }));
+      } catch (error) {
+        console.warn("Unable to load UI preferences", error);
+      }
+    }
   }, []);
 
   const fetchSettings = async () => {
@@ -50,6 +75,24 @@ const Settings = () => {
     } catch (error) {
       console.error("Failed to save settings:", error);
       setSaving(false);
+    }
+  };
+
+  const handleUiSave = () => {
+    try {
+      window.localStorage.setItem(
+        "uiPreferences",
+        JSON.stringify(uiPreferences)
+      );
+      window.dispatchEvent(
+        new CustomEvent("frontend-ui-config-updated", {
+          detail: uiPreferences,
+        })
+      );
+      setUiSaved(true);
+      setTimeout(() => setUiSaved(false), 3000);
+    } catch (error) {
+      console.error("Failed to save UI preferences:", error);
     }
   };
 
@@ -78,7 +121,181 @@ const Settings = () => {
         </div>
       )}
 
+      {uiSaved && (
+        <div className="bg-cyan-500/20 border border-cyan-500/50 rounded-lg p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-cyan-400" />
+          <span className="text-cyan-400">Interface preferences saved!</span>
+        </div>
+      )}
+
       <div className="space-y-6">
+        {/* Interface Preferences */}
+        <div className="bg-slate-900/50 border border-cyan-500/20 rounded-lg p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <SettingsIcon className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-xl font-bold text-white">Interface Preferences</h2>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Theme Mode</label>
+              <select
+                value={uiPreferences.themeMode}
+                onChange={(e) =>
+                  setUiPreferences({
+                    ...uiPreferences,
+                    themeMode: e.target.value,
+                  })
+                }
+                className="w-full bg-slate-800 border border-cyan-500/30 rounded px-4 py-2 text-white"
+              >
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Accent Color</label>
+              <select
+                value={uiPreferences.accentColor}
+                onChange={(e) =>
+                  setUiPreferences({
+                    ...uiPreferences,
+                    accentColor: e.target.value,
+                  })
+                }
+                className="w-full bg-slate-800 border border-cyan-500/30 rounded px-4 py-2 text-white"
+              >
+                <option value="purple">Purple</option>
+                <option value="green">Green</option>
+                <option value="cyan">Cyan</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={uiPreferences.sidebarCompact}
+                  onChange={(e) =>
+                    setUiPreferences({
+                      ...uiPreferences,
+                      sidebarCompact: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 rounded bg-slate-800 border-cyan-500/30"
+                />
+                Compact Sidebar Layout
+              </label>
+              <p className="text-xs text-gray-500 mt-1">
+                Enable compact sidebar layout for a cleaner workspace.
+              </p>
+            </div>
+
+            <div className="border-t border-slate-700/60 pt-4">
+              <h3 className="text-lg font-semibold text-white mb-3">Dashboard Layout</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={uiPreferences.dashboardConfig.showStatsCards}
+                    onChange={(e) =>
+                      setUiPreferences({
+                        ...uiPreferences,
+                        dashboardConfig: {
+                          ...uiPreferences.dashboardConfig,
+                          showStatsCards: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 rounded bg-slate-800 border-cyan-500/30"
+                  />
+                  <span className="text-gray-200">Show stats cards</span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={uiPreferences.dashboardConfig.showTradePanel}
+                    onChange={(e) =>
+                      setUiPreferences({
+                        ...uiPreferences,
+                        dashboardConfig: {
+                          ...uiPreferences.dashboardConfig,
+                          showTradePanel: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 rounded bg-slate-800 border-cyan-500/30"
+                  />
+                  <span className="text-gray-200">Show trade panel</span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={uiPreferences.dashboardConfig.showLiveFeed}
+                    onChange={(e) =>
+                      setUiPreferences({
+                        ...uiPreferences,
+                        dashboardConfig: {
+                          ...uiPreferences.dashboardConfig,
+                          showLiveFeed: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 rounded bg-slate-800 border-cyan-500/30"
+                  />
+                  <span className="text-gray-200">Show live feed</span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={uiPreferences.dashboardConfig.showWalletTracker}
+                    onChange={(e) =>
+                      setUiPreferences({
+                        ...uiPreferences,
+                        dashboardConfig: {
+                          ...uiPreferences.dashboardConfig,
+                          showWalletTracker: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 rounded bg-slate-800 border-cyan-500/30"
+                  />
+                  <span className="text-gray-200">Show wallet tracker</span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={uiPreferences.dashboardConfig.showActiveTrades}
+                    onChange={(e) =>
+                      setUiPreferences({
+                        ...uiPreferences,
+                        dashboardConfig: {
+                          ...uiPreferences.dashboardConfig,
+                          showActiveTrades: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 rounded bg-slate-800 border-cyan-500/30"
+                  />
+                  <span className="text-gray-200">Show active trades table</span>
+                </label>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleUiSave}
+              className="bg-cyan-500 hover:bg-cyan-600 text-slate-950 px-5 py-2 rounded-lg font-semibold transition-colors"
+            >
+              Save Interface Preferences
+            </button>
+          </div>
+        </div>
+
         {/* Risk Management */}
         <div className="bg-slate-900/50 border border-purple-500/20 rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">

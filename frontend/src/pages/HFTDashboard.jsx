@@ -66,13 +66,47 @@ const mockWallets = [
   { address: "9wL5...2kT7", pnl: "-$320", balance: "$4,890", status: "LOSS" },
 ];
 
-const HFTDashboard = () => {
+const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isOnline, setIsOnline] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [dashboardConfig, setDashboardConfig] = useState({
+    showStatsCards: true,
+    showTradePanel: true,
+    showLiveFeed: true,
+    showWalletTracker: true,
+    showActiveTrades: true,
+  });
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
+
+  // Load dashboard config from local storage on mount
+  useEffect(() => {
+    const storedUiConfig = window.localStorage.getItem("uiPreferences");
+    if (storedUiConfig) {
+      try {
+        const parsed = JSON.parse(storedUiConfig);
+        if (parsed.dashboardConfig) {
+          setDashboardConfig((prev) => ({
+            ...prev,
+            ...parsed.dashboardConfig,
+          }));
+        }
+      } catch (error) {
+        console.warn("Unable to load dashboard configuration", error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (dashboardConfigProp) {
+      setDashboardConfig((prev) => ({
+        ...prev,
+        ...dashboardConfigProp,
+      }));
+    }
+  }, [dashboardConfigProp]);
 
   // Update time every second
   useEffect(() => {
@@ -282,34 +316,36 @@ const HFTDashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
-            {statsCards.map((card, index) => (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4 hover:border-purple-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/10"
-                whileHover={{ scale: 1.02 }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <card.icon className={`w-5 h-5 ${card.color}`} />
-                  <span className={`text-xs ${card.change.startsWith('+') ? 'text-green-400' : card.change.startsWith('-') ? 'text-red-400' : 'text-cyan-400'}`}>
-                    {card.change}
-                  </span>
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">{card.value}</div>
-                <div className="text-xs text-gray-400">{card.label}</div>
-              </motion.div>
-            ))}
-          </div>
+          {dashboardConfig.showStatsCards && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+              {statsCards.map((card, index) => (
+                <motion.div
+                  key={card.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4 hover:border-purple-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/10"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <card.icon className={`w-5 h-5 ${card.color}`} />
+                    <span className={`text-xs ${card.change.startsWith('+') ? 'text-green-400' : card.change.startsWith('-') ? 'text-red-400' : 'text-cyan-400'}`}>
+                      {card.change}
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">{card.value}</div>
+                  <div className="text-xs text-gray-400">{card.label}</div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </header>
 
         {/* Main Grid Layout */}
         <div className="p-6 grid grid-cols-12 gap-6 min-h-[calc(100vh-200px)]">
-          {/* Main Chart - 60% width */}
+          {/* Main Chart */}
           <motion.div
-            className="col-span-12 lg:col-span-7 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden"
+            className={`col-span-12 ${!dashboardConfig.showTradePanel && !dashboardConfig.showLiveFeed && !dashboardConfig.showWalletTracker ? 'lg:col-span-12' : !dashboardConfig.showTradePanel && (dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) ? 'lg:col-span-9' : dashboardConfig.showTradePanel && !(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) ? 'lg:col-span-10' : 'lg:col-span-7'} bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden`}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
@@ -336,12 +372,13 @@ const HFTDashboard = () => {
           </motion.div>
 
           {/* Trade Panel - 20% width */}
-          <motion.div
-            className="col-span-12 lg:col-span-2 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-          >
+          {dashboardConfig.showTradePanel && (
+            <motion.div
+              className="col-span-12 lg:col-span-2 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
             <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
               KATANA TRADE PANEL
             </h3>
@@ -420,68 +457,72 @@ const HFTDashboard = () => {
               </motion.button>
             </div>
           </motion.div>
+          )}
 
-          {/* Right Analytics Panel - 20% width */}
-          <motion.div
-            className="col-span-12 lg:col-span-3 space-y-6"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            {/* Live Feed */}
-            <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
-                LIVE FEED
-              </h3>
-              <div className="space-y-3 max-h-48 overflow-y-auto">
-                <AnimatePresence>
-                  {mockLiveFeed.map((feed) => (
-                    <motion.div
-                      key={feed.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="flex items-center gap-3 p-2 bg-slate-800/50 rounded border border-purple-500/10"
-                    >
-                      <div className={`w-2 h-2 rounded-full ${feed.color.replace('text-', 'bg-')}`}></div>
-                      <div className="flex-1">
-                        <div className={`text-sm ${feed.color}`}>{feed.message}</div>
-                        <div className="text-xs text-gray-500">{feed.time}</div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Wallet Tracker */}
-            <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
-                WALLET TRACKER
-              </h3>
-              <div className="space-y-3">
-                {mockWallets.map((wallet) => (
-                  <div key={wallet.address} className="p-3 bg-slate-800/50 rounded border border-purple-500/10">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-mono text-gray-400">{wallet.address}</span>
-                      <span className={`text-xs ${wallet.pnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
-                        {wallet.pnl}
-                      </span>
-                    </div>
-                    <div className="text-sm text-white">{wallet.balance}</div>
+          {(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) && (
+            <motion.div
+              className="col-span-12 lg:col-span-3 space-y-6"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              {dashboardConfig.showLiveFeed && (
+                <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
+                    LIVE FEED
+                  </h3>
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    <AnimatePresence>
+                      {mockLiveFeed.map((feed) => (
+                        <motion.div
+                          key={feed.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="flex items-center gap-3 p-2 bg-slate-800/50 rounded border border-purple-500/10"
+                        >
+                          <div className={`w-2 h-2 rounded-full ${feed.color.replace('text-', 'bg-')}`}></div>
+                          <div className="flex-1">
+                            <div className={`text-sm ${feed.color}`}>{feed.message}</div>
+                            <div className="text-xs text-gray-500">{feed.time}</div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
+                </div>
+              )}
 
-          {/* Active Trades Table - Full width bottom */}
-          <motion.div
-            className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
+              {dashboardConfig.showWalletTracker && (
+                <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
+                    WALLET TRACKER
+                  </h3>
+                  <div className="space-y-3">
+                    {mockWallets.map((wallet) => (
+                      <div key={wallet.address} className="p-3 bg-slate-800/50 rounded border border-purple-500/10">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-mono text-gray-400">{wallet.address}</span>
+                          <span className={`text-xs ${wallet.pnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
+                            {wallet.pnl}
+                          </span>
+                        </div>
+                        <div className="text-sm text-white">{wallet.balance}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {dashboardConfig.showActiveTrades && (
+            <motion.div
+              className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
             <div className="p-4 border-b border-purple-500/20">
               <h3 className="text-lg font-bold text-white">ACTIVE TRADES</h3>
             </div>
@@ -530,6 +571,7 @@ const HFTDashboard = () => {
               </table>
             </div>
           </motion.div>
+        )}
         </div>
 
         {/* KATANA TERMINAL */}

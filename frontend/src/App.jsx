@@ -6,11 +6,74 @@ import NotFound from "./pages/NotFound";
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+  const [themeMode, setThemeMode] = useState("dark");
+  const [accentColor, setAccentColor] = useState("purple");
+  const [dashboardConfig, setDashboardConfig] = useState({
+    showStatsCards: true,
+    showTradePanel: true,
+    showLiveFeed: true,
+    showWalletTracker: true,
+    showActiveTrades: true,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const storedUiConfig = window.localStorage.getItem("uiPreferences");
+    if (storedUiConfig) {
+      try {
+        const parsed = JSON.parse(storedUiConfig);
+        if (parsed.themeMode) setThemeMode(parsed.themeMode);
+        if (parsed.accentColor) setAccentColor(parsed.accentColor);
+        if (parsed.sidebarCompact !== undefined) {
+          setSidebarOpen(!parsed.sidebarCompact);
+        }
+        if (parsed.dashboardConfig) {
+          setDashboardConfig((prev) => ({
+            ...prev,
+            ...parsed.dashboardConfig,
+          }));
+        }
+      } catch (error) {
+        console.warn("Failed to parse UI preferences", error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", themeMode);
+    document.documentElement.setAttribute("data-accent", accentColor);
+    window.localStorage.setItem(
+      "uiPreferences",
+      JSON.stringify({
+        themeMode,
+        accentColor,
+        sidebarCompact: !sidebarOpen,
+        dashboardConfig,
+      })
+    );
+  }, [themeMode, accentColor, sidebarOpen, dashboardConfig]);
+
+  useEffect(() => {
+    const handleUiUpdate = (event) => {
+      const detail = event?.detail || {};
+      if (detail.themeMode) setThemeMode(detail.themeMode);
+      if (detail.accentColor) setAccentColor(detail.accentColor);
+      if (detail.sidebarCompact !== undefined) {
+        setSidebarOpen(!detail.sidebarCompact);
+      }
+      if (detail.dashboardConfig) {
+        setDashboardConfig((prev) => ({
+          ...prev,
+          ...detail.dashboardConfig,
+        }));
+      }
+    };
+    window.addEventListener("frontend-ui-config-updated", handleUiUpdate);
+    return () => window.removeEventListener("frontend-ui-config-updated", handleUiUpdate);
   }, []);
 
   if (isLoading) {
@@ -29,7 +92,8 @@ function App() {
     );
   }
 
-  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+  const toggleDarkMode = () =>
+    setThemeMode((prev) => (prev === "dark" ? "light" : "dark"));
 
   return (
     <Router>
@@ -78,7 +142,12 @@ function App() {
               <div className="mb-2 text-xs uppercase tracking-[0.2em] text-purple-300">Status</div>
               <div className="rounded-2xl bg-slate-900 p-3">
                 <p className="text-slate-300">Advanced Trading Platform</p>
-                <p className="mt-2 text-xs text-slate-500">Mode: {darkMode ? "Dark" : "Light"}</p>
+                <p className="mt-2 text-xs text-slate-500">
+                  Mode: {themeMode === "dark" ? "Dark" : "Light"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Accent: {accentColor}
+                </p>
               </div>
             </div>
           )}
@@ -94,9 +163,9 @@ function App() {
               <button
                 type="button"
                 onClick={toggleDarkMode}
-                className="rounded-full border border-purple-500/30 bg-slate-950/80 px-4 py-2 text-slate-200 hover:bg-purple-500/20 transition"
+                className="rounded-full border border-[var(--color-primary)] bg-[var(--color-surface)] px-4 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-white transition"
               >
-                {darkMode ? "Dark Mode" : "Light Mode"}
+                Switch to {themeMode === "dark" ? "Light" : "Dark"}
               </button>
             </div>
 
@@ -104,9 +173,13 @@ function App() {
               {routes.map((route) => {
                 const Page = route.component;
                 const element = route.needsDarkMode ? (
-                  <Page darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />
+                  <Page
+                    darkMode={themeMode === "dark"}
+                    onToggleDarkMode={toggleDarkMode}
+                    dashboardConfig={dashboardConfig}
+                  />
                 ) : (
-                  <Page />
+                  <Page dashboardConfig={dashboardConfig} />
                 );
                 return <Route key={route.path} path={route.path} element={element} />;
               })}

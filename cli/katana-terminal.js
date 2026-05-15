@@ -13,7 +13,15 @@ const MAX_LOGIN_RETRIES = parseInt(process.env.MAX_LOGIN_RETRIES || '3', 10);
 const WS_CONNECTION_TIMEOUT = parseInt(process.env.WS_CONNECTION_TIMEOUT || '5000', 10);
 
 // Validate configuration
-if (!API_BASE || !KATANA_WS_URL) {\n  console.error('❌ Error: API_BASE or KATANA_WS_URL not configured');\n  console.error('Please set environment variables:');\n  console.error('  - API_BASE or BACKEND_URL');\n  console.error('  - KATANA_WS_URL or WS_URL');\n  process.exit(1);\n}\n\nconst AVAILABLE_COMMANDS = [
+if (!API_BASE || !KATANA_WS_URL) {
+  console.error('❌ Error: API_BASE or KATANA_WS_URL not configured');
+  console.error('Please set environment variables:');
+  console.error('  - API_BASE or BACKEND_URL');
+  console.error('  - KATANA_WS_URL or WS_URL');
+  process.exit(1);
+}
+
+const AVAILABLE_COMMANDS = [
   'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
   'predict', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
   'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
@@ -57,7 +65,42 @@ const MESSAGES = {
  */
 async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIMEOUT) {
   try {
-    const config = {\n      timeout,\n      headers: { 'Content-Type': 'application/json' }\n    };\n\n    let response;\n    if (method === 'GET') {\n      response = await axios.get(`${API_BASE}${endpoint}`, config);\n    } else if (method === 'POST') {\n      response = await axios.post(`${API_BASE}${endpoint}`, data, config);\n    } else if (method === 'PUT') {\n      response = await axios.put(`${API_BASE}${endpoint}`, data, config);\n    } else {\n      throw new Error(`Unsupported HTTP method: ${method}`);\n    }\n\n    return response.data;\n  } catch (error) {\n    if (error.code === 'ECONNABORTED') {\n      throw new Error(`Request timeout (${timeout}ms). Backend server may be unresponsive.`);\n    }\n    if (error.code === 'ECONNREFUSED') {\n      throw new Error(`Cannot connect to backend at ${API_BASE}. Is it running?`);\n    }\n    if (error.response?.status === 401) {\n      throw new Error('Unauthorized. Please log in again.');\n    }\n    if (error.response?.status === 403) {\n      throw new Error('Access denied.');\n    }\n    if (error.response?.data?.error) {\n      throw new Error(error.response.data.error);\n    }\n    throw error;\n  }\n}
+    const config = {
+      timeout,
+      headers: { 'Content-Type': 'application/json' }
+    };
+
+    let response;
+    if (method === 'GET') {
+      response = await axios.get(`${API_BASE}${endpoint}`, config);
+    } else if (method === 'POST') {
+      response = await axios.post(`${API_BASE}${endpoint}`, data, config);
+    } else if (method === 'PUT') {
+      response = await axios.put(`${API_BASE}${endpoint}`, data, config);
+    } else {
+      throw new Error(`Unsupported HTTP method: ${method}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    if (error.code === 'ECONNABORTED') {
+      throw new Error(`Request timeout (${timeout}ms). Backend server may be unresponsive.`);
+    }
+    if (error.code === 'ECONNREFUSED') {
+      throw new Error(`Cannot connect to backend at ${API_BASE}. Is it running?`);
+    }
+    if (error.response?.status === 401) {
+      throw new Error('Unauthorized. Please log in again.');
+    }
+    if (error.response?.status === 403) {
+      throw new Error('Access denied.');
+    }
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error);
+    }
+    throw error;
+  }
+}
 
 /**
  * Katana Terminal CLI for HFT Solana Trading System
@@ -110,8 +153,6 @@ class KatanaTerminal {
       console.log('⚠️  No interactive terminal detected. Starting in demo mode.');
       this.demoMode = true;
     }
-    console.log('⚔️  KATANA MODE TERMINAL');
-    console.log('========================');
 
     if (this.demoMode) {
       console.log(MESSAGES.DEMO_MODE);
@@ -313,43 +354,50 @@ class KatanaTerminal {
    * Display welcome message and available commands
    */
   showWelcome() {
-    console.log('\n================================');
-    console.log('      HFT SYSTEM - KATANA MODE');
-    console.log('================================\n');
-    console.log(`${this.getAutoTradeDisplay()}`);
+    const walletDisplay = this.selectedWallet || 'None';
+    const tokenDisplay = this.selectedToken || 'None';
+    const demoDisplay = this.demoMode ? ' (DEMO)' : '';
+
+    console.log('\n========================================');
+    console.log('      HFT SYSTEM - KATANA MODE TERMINAL');
+    console.log('========================================\n');
+    console.log(`${this.getAutoTradeDisplay()}${demoDisplay}`);
     console.log(`   MODE       : KATANA`);
-    console.log(`   STATUS     : ${this.katanaActive ? '🟢 RUNNING' : '🔴 STOPPED'}\n`);
+    console.log(`   STATUS     : ${this.katanaActive ? '🟢 RUNNING' : '🔴 STOPPED'}`);
+    console.log(`   TOKEN      : ${tokenDisplay}`);
+    console.log(`   WALLET     : ${walletDisplay}\n`);
+
     console.log('Available commands:');
-    console.log('  start          - Start Katana Mode');
-    console.log('  stop           - Stop Katana Mode');
-    console.log('  status         - Show current status');
-    console.log('  buy <amount>   - Buy selected token');
-    console.log('  sell <amount>  - Sell selected token');
-    console.log('  select <mint>  - Select token for trading');
-    console.log('  wallets        - List configured wallets');
-    console.log('  usewallet <pk> - Select wallet for trades');
-    console.log('  predict <mint> - Request AI signal for token');
-    console.log('  positions      - Show active positions');
-    console.log('  tokens         - Show recent token detections');
-    console.log('  history        - Show trade history for selected wallet');
-    console.log('  orders         - Show advanced orders for selected wallet');
-    console.log('  cancel-order <id> - Cancel an advanced order');
-    console.log('  risk-heatmap   - Show portfolio risk heatmap');
-    console.log('  risk-correlation - Show portfolio correlation data');
-    console.log('  alerts         - Show active predictive alerts');
-    console.log('  ack-alert <id> - Acknowledge an alert');
-    console.log('  sentiment bullish - Show bullish sentiment opportunities');
-    console.log('  sentiment token <mint> - Show sentiment for a token');
-    console.log('  pnl            - Show P&L dashboard summary');
-    console.log('  portfolio      - Show portfolio summary for selected wallet');
-    console.log('  settings show <wallet> - Show wallet limits');
+    console.log('  start                   - Start Katana Mode');
+    console.log('  stop                    - Stop Katana Mode');
+    console.log('  status                  - Show current status');
+    console.log('  buy <amount>            - Buy selected token');
+    console.log('  sell <amount>           - Sell selected token');
+    console.log('  select <mint>           - Select token for trading');
+    console.log('  wallets                 - List configured wallets');
+    console.log('  usewallet <pk>          - Select wallet for trades');
+    console.log('  predict <mint>          - Request AI signal for token');
+    console.log('  positions               - Show active positions');
+    console.log('  tokens                  - Show recent token detections');
+    console.log('  history / trades        - Show trade history for selected wallet');
+    console.log('  orders                  - Show advanced orders for selected wallet');
+    console.log('  cancel-order <id>       - Cancel an advanced order');
+    console.log('  risk-heatmap            - Show portfolio risk heatmap');
+    console.log('  risk-correlation        - Show portfolio correlation data');
+    console.log('  alerts                  - Show active predictive alerts');
+    console.log('  ack-alert <id>          - Acknowledge an alert');
+    console.log('  sentiment bullish       - Show bullish sentiment opportunities');
+    console.log('  sentiment token <mint>  - Show sentiment for a token');
+    console.log('  pnl                     - Show P&L dashboard summary');
+    console.log('  portfolio               - Show portfolio summary for selected wallet');
+    console.log('  settings show <wallet>  - Show wallet limits');
     console.log('  settings set <wallet> <spendingLimitUsd> [dailySpendingUsd] - Update wallet limits');
-    console.log('  help           - Show this help');
-    console.log('  exit           - Exit terminal\n');
+    console.log('  help                    - Show this help');
+    console.log('  exit                    - Exit terminal\n');
     console.log('Keyboard shortcuts:');
-    console.log('  [T]            - Toggle AUTO TRADE ON/OFF');
-    console.log('  [H]            - Show help');
-    console.log('  [Q]            - Quick exit\n');
+    console.log('  T  - Toggle AUTO TRADE ON/OFF');
+    console.log('  H  - Show help');
+    console.log('  Q  - Quick exit\n');
   }
 
   /**
