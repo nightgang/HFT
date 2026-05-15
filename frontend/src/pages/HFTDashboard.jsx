@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { createChart } from "lightweight-charts";
 import TerminalConsole from "../components/TerminalConsole";
 import KatanaLiveFeed from "../components/KatanaLiveFeed";
 import KatanaWalletTracker from "../components/KatanaWalletTracker";
 import KatanaTradePanel from "../components/KatanaTradePanel";
 import {
-  // Navigation Icons
   LayoutDashboard,
   Terminal,
   Zap,
@@ -20,34 +19,816 @@ import {
   Settings,
   Puzzle,
   Activity,
-
-  // Trading Icons
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Activity as ActivityIcon,
   Shield,
-  Zap as ZapIcon,
   Play,
   Pause,
-  RotateCcw,
-
-  // Status Icons
   Wifi,
   WifiOff,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Cpu,
-
-  // UI Icons
   ChevronRight,
   ChevronLeft,
-  Eye,
-  EyeOff,
-  Copy,
   ExternalLink,
+  Square,
+  RefreshCw,
+  Lock,
+  ChevronDown,
+  Radar,
+  Flame,
+  Terminal as TerminalIcon,
+  Crosshair,
+  Zap as ZapIcon,
 } from "lucide-react";
+
+const NEON = {
+  green: "#00FF9D",
+  red: "#FF3B3B",
+  purple: "#8B5CF6",
+  cyan: "#22D3EE",
+  amber: "#FBBF24",
+  bg1: "#070A12",
+  bg2: "#0B0F1A",
+};
+
+const CyberpunkGridBackground = () => {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* subtle matrix grid */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `linear-gradient(0deg, rgba(34,211,238,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.03) 1px, transparent 1px)`,
+          backgroundSize: "64px 64px",
+          mixBlendMode: "overlay",
+        }}
+      />
+
+      {/* animated scanning band */}
+      <motion.div
+        className="absolute inset-0 opacity-30"
+        style={{ background: `linear-gradient(180deg, transparent 0%, ${NEON.cyan}11 40%, transparent 80%)` }}
+        animate={{ y: ["-10%", "110%"] }}
+        transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+      />
+
+      {/* radial vignette */}
+      <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-black/60" />
+
+      {/* noise texture */}
+      <div
+        className="absolute inset-0 opacity-6"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='f'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='0.06'/%3E%3C/svg%3E\")",
+          mixBlendMode: "overlay",
+        }}
+      />
+    </div>
+  );
+};
+
+const StatusBar = () => {
+  const [metrics, setMetrics] = useState({
+    botStatus: "SCANNING",
+    latency: 2.3,
+    rpcHealth: "healthy",
+    walletBalance: { sol: 42.5, usdc: 12500.0 },
+    tps: 1200,
+    strategiesActive: 3,
+    timestamp: new Date(),
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMetrics((prev) => ({
+        ...prev,
+        latency: Math.max(0.5, Math.min(50, prev.latency + (Math.random() - 0.5) * 2)),
+        tps: Math.max(100, Math.min(4000, prev.tps + (Math.random() - 0.5) * 300)),
+        walletBalance: {
+          sol: prev.walletBalance.sol + (Math.random() - 0.5) * 0.1,
+          usdc: prev.walletBalance.usdc + (Math.random() - 0.5) * 50,
+        },
+        timestamp: new Date(),
+      }));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const statusColors = {
+    ONLINE: "text-[#00FF9D]",
+    SCANNING: "text-[#22D3EE]",
+    EXECUTING: "text-[#8B5CF6]",
+    IDLE: "text-[#FBBF24]",
+  };
+
+  const rpcStatusColors = {
+    healthy: "text-green-400 bg-green-400/10",
+    degraded: "text-amber-400 bg-amber-400/10",
+    down: "text-red-400 bg-red-400/10",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="w-full bg-black/25 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden"
+      style={{ boxShadow: `0 20px 60px ${NEON.cyan}14`, borderLeft: `1px solid rgba(139,92,246,0.12)` }}
+    >
+      <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-7 gap-4 text-[11px] font-mono">
+        <div className="flex items-center gap-3">
+          <motion.div
+            className={`w-2 h-2 rounded-full ${
+              metrics.botStatus === "ONLINE"
+                ? "bg-green-400"
+                : metrics.botStatus === "EXECUTING"
+                ? "bg-purple-400"
+                : metrics.botStatus === "SCANNING"
+                ? "bg-cyan-400"
+                : "bg-amber-400"
+            }`}
+            animate={
+              metrics.botStatus !== "IDLE"
+                ? { scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }
+                : {}
+            }
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          <div>
+            <div className="text-gray-400">BOT</div>
+            <div className={statusColors[metrics.botStatus]}>{metrics.botStatus}</div>
+          </div>
+        </div>
+
+        <div>
+          <div className="text-gray-400">LATENCY</div>
+          <motion.div className="text-[#22D3EE] text-sm font-bold" key={Math.floor(metrics.latency)}>
+            {metrics.latency.toFixed(1)}ms
+          </motion.div>
+        </div>
+
+        <div>
+          <div className="text-gray-400">RPC HEALTH</div>
+          <div className={`px-2 py-1 rounded text-center text-xs ${rpcStatusColors[metrics.rpcHealth]}`}>
+            {metrics.rpcHealth.toUpperCase()}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-gray-400">WALLET</div>
+          <div className="text-[#00FF9D]">{metrics.walletBalance.sol.toFixed(2)} SOL</div>
+          <div className="text-xs text-[#8B5CF6]">${metrics.walletBalance.usdc.toFixed(0)}</div>
+        </div>
+
+        <div>
+          <div className="text-gray-400">NETWORK TPS</div>
+          <motion.div className="text-[#FBBF24] text-sm font-bold" key={metrics.tps}>
+            {Math.floor(metrics.tps)}
+          </motion.div>
+        </div>
+
+        <div>
+          <div className="text-gray-400">STRATEGIES</div>
+          <div className="text-purple-400 text-sm font-bold">{metrics.strategiesActive}</div>
+        </div>
+
+        <div>
+          <div className="text-gray-400">TIME</div>
+          <motion.div className="text-[#22D3EE] text-sm font-bold" key={metrics.timestamp.getSeconds()}>
+            {metrics.timestamp.toLocaleTimeString()}
+          </motion.div>
+        </div>
+      </div>
+      <motion.div
+        className="absolute bottom-0 left-0 h-1 rounded"
+        style={{ background: `linear-gradient(90deg, ${NEON.cyan}22, ${NEON.purple}22)` }}
+        animate={{ width: ["0%", "100%"] }}
+        transition={{ duration: 4, repeat: Infinity }}
+      />
+    </motion.div>
+  );
+};
+
+const ControlPanel = () => {
+  const [botRunning, setBotRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [selectedStrategy, setSelectedStrategy] = useState("sniper");
+  const [riskSettings, setRiskSettings] = useState({
+    maxDrawdown: 5,
+    positionSize: 50,
+    slippage: 0.5,
+    gasPriority: "high",
+  });
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const strategies = [
+    { id: "sniper", label: "SNIPER", icon: Crosshair },
+    { id: "arbitrage", label: "ARBITRAGE", icon: ZapIcon },
+    { id: "momentum", label: "MOMENTUM", icon: TrendingUp },
+    { id: "mev", label: "MEV SHIELD", icon: Lock },
+  ];
+
+  const emergencyStop = () => {
+    setBotRunning(false);
+    setPaused(false);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="w-full border border-white/10 bg-black/20 backdrop-blur-3xl rounded-3xl overflow-hidden"
+      style={{ boxShadow: `0 20px 60px ${NEON.purple}14` }}
+    >
+      <div className="p-6 space-y-6">
+        <div className="text-center border-b border-cyan-500/20 pb-4">
+          <h2 className="text-cyan-400 font-mono font-bold text-lg">⚙️ CONTROL CENTER</h2>
+          <p className="text-xs text-gray-500 mt-1">Command & Strategy</p>
+        </div>
+
+        <div className="space-y-3">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setBotRunning(!botRunning)}
+            className={`w-full py-3 rounded-lg font-mono text-sm font-bold transition-all duration-200`}
+            style={{
+              background: botRunning
+                ? `linear-gradient(90deg, ${NEON.red}, rgba(255,59,59,0.9))`
+                : `linear-gradient(90deg, ${NEON.green}, rgba(0,255,157,0.9))`,
+              color: "#041018",
+              boxShadow: botRunning ? `0 8px 30px ${NEON.red}55` : `0 8px 30px ${NEON.green}44`,
+              border: `1px solid rgba(255,255,255,0.03)`,
+            }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              {botRunning ? <Square size={16} /> : <Play size={16} />}
+              {botRunning ? "STOP BOT" : "START BOT"}
+            </div>
+          </motion.button>
+
+          {botRunning && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => setPaused(!paused)}
+              className={`w-full py-3 rounded-lg font-mono text-sm font-bold transition-all duration-300 ${
+                paused
+                  ? "bg-cyan-600/20 text-cyan-400 border border-cyan-400/50"
+                  : "bg-amber-600/20 text-amber-300 border border-amber-400/50 hover:bg-amber-600/30"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                {paused ? <Play size={16} /> : <Pause size={16} />}
+                {paused ? "RESUME" : "PAUSE"}
+              </div>
+            </motion.button>
+          )}
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={emergencyStop}
+          className="w-full py-4 rounded-lg font-mono text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2"
+          style={{
+            background: `radial-gradient(circle at 25% 25%, rgba(255,59,59,0.95), ${NEON.red})`,
+            boxShadow: `0 14px 48px ${NEON.red}66, inset 0 0 20px ${NEON.red}44`,
+            border: `1px solid rgba(255,59,59,0.18)`,
+          }}
+        >
+          <Flame size={18} />
+          ⚡ KILL SWITCH ⚡
+        </motion.button>
+
+        <div className="border-t border-cyan-500/20 pt-6">
+          <h3 className="text-cyan-400 text-xs font-bold uppercase mb-3">📊 Select Strategy</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {strategies.map((strategy) => {
+              const Icon = strategy.icon;
+              return (
+                <motion.button
+                  key={strategy.id}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => setSelectedStrategy(strategy.id)}
+                  className={`p-3 rounded-lg border transition-all duration-200 flex flex-col items-center gap-1 text-xs font-mono ${
+                    selectedStrategy === strategy.id
+                      ? "bg-purple-500/30 border-purple-400 text-purple-300 shadow-lg shadow-purple-500/20"
+                      : "bg-black/40 border-cyan-500/30 text-cyan-300 hover:border-cyan-400"
+                  }`}
+                >
+                  <Icon size={16} />
+                  {strategy.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-cyan-500/20 pt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-cyan-400 text-xs font-bold uppercase">🎚️ Risk Settings</h3>
+            <motion.button
+              whileHover={{ rotate: 180 }}
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-purple-400 hover:text-purple-300"
+            >
+              <ChevronDown size={16} style={{ rotate: showAdvanced ? "180deg" : "0deg" }} />
+            </motion.button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs text-gray-400">Max Drawdown</label>
+                <span className="text-amber-400 text-xs font-bold">{riskSettings.maxDrawdown}%</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={riskSettings.maxDrawdown}
+                onChange={(e) =>
+                  setRiskSettings({ ...riskSettings, maxDrawdown: parseInt(e.target.value, 10) })
+                }
+                className="w-full accent-amber-400 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs text-gray-400">Position Size</label>
+                <span className="text-green-400 text-xs font-bold">{riskSettings.positionSize}%</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={riskSettings.positionSize}
+                onChange={(e) =>
+                  setRiskSettings({ ...riskSettings, positionSize: parseInt(e.target.value, 10) })
+                }
+                className="w-full accent-green-400 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs text-gray-400">Max Slippage</label>
+                <span className="text-cyan-400 text-xs font-bold">{riskSettings.slippage}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="5"
+                step="0.1"
+                value={riskSettings.slippage}
+                onChange={(e) =>
+                  setRiskSettings({ ...riskSettings, slippage: parseFloat(e.target.value) })
+                }
+                className="w-full accent-cyan-400 cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-400 block mb-2">⛽ Gas Priority</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['low', 'medium', 'high'].map((priority) => (
+                  <motion.button
+                    key={priority}
+                    onClick={() => setRiskSettings({ ...riskSettings, gasPriority: priority })}
+                    className={`py-1 rounded text-xs font-mono transition-all ${
+                      riskSettings.gasPriority === priority
+                        ? "bg-purple-500/40 text-purple-300 border border-purple-400"
+                        : "bg-black/40 text-gray-400 border border-gray-600 hover:border-purple-400"
+                    }`}
+                  >
+                    {priority.toUpperCase()}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const MainPanel = () => {
+  const chartContainerRef = useRef(null);
+  const chartRef = useRef(null);
+  const [chartData, setChartData] = useState([]);
+  const [selectedPair, setSelectedPair] = useState("SOL/USDC");
+  const [timeframe, setTimeframe] = useState("1m");
+
+  useEffect(() => {
+    if (chartContainerRef.current && !chartRef.current) {
+      const chart = createChart(chartContainerRef.current, {
+        layout: {
+          background: { color: "#070a12" },
+          textColor: "#d1d5db",
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', monospace",
+        },
+        width: chartContainerRef.current.clientWidth,
+        height: 400,
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: true,
+        },
+        grid: {
+          horzLines: { color: "#1a1a2e" },
+          vertLines: { color: "#1a1a2e" },
+        },
+      });
+
+      const candlestickSeries = chart.addCandlestickSeries({
+        upColor: "#00FF9D",
+        downColor: "#FF3B3B",
+        borderUpColor: "#00FF9D",
+        borderDownColor: "#FF3B3B",
+        wickUpColor: "#00FF9D",
+        wickDownColor: "#FF3B3B",
+      });
+
+      const generateCandles = () => {
+        const data = [];
+        let price = 140;
+        const now = Math.floor(Date.now() / 1000);
+        for (let i = 100; i >= 0; i--) {
+          const change = (Math.random() - 0.5) * 2;
+          price += change;
+          data.push({
+            time: now - i * 60,
+            open: price,
+            high: price + Math.random() * 1,
+            low: price - Math.random() * 1,
+            close: price + (Math.random() - 0.5) * 0.5,
+          });
+        }
+        return data;
+      };
+
+      const initialData = generateCandles();
+      candlestickSeries.setData(initialData);
+      chart.timeScale().fitContent();
+      chartRef.current = { chart, candlestickSeries };
+      setChartData(initialData);
+
+      const handleResize = () => {
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      };
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        chart.remove();
+      };
+    }
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setChartData((prev) => {
+        if (!chartRef.current || !chartRef.current.candlestickSeries || prev.length === 0) {
+          return prev;
+        }
+        const lastCandle = prev[prev.length - 1];
+        const newPrice = lastCandle.close + (Math.random() - 0.5) * 0.5;
+        const newCandle = {
+          time: lastCandle.time + 60,
+          open: lastCandle.close,
+          high: newPrice + Math.random() * 0.5,
+          low: newPrice - Math.random() * 0.5,
+          close: newPrice,
+        };
+        chartRef.current.candlestickSeries.update(newCandle);
+        return [...prev.slice(1), newCandle];
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"];
+  const tradingPairs = ["SOL/USDC", "BONK/USDC", "JTO/USDC", "ORCA/USDC"];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex-1 flex flex-col border-r border-cyan-500/10 bg-black/20 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-[0_30px_90px_rgba(0,255,157,0.06)]"
+    >
+      <div className="border-b border-cyan-500/20 px-6 py-4 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 bg-black/40">
+        <div className="flex flex-wrap gap-2">
+          {tradingPairs.map((pair) => (
+            <motion.button
+              key={pair}
+              onClick={() => setSelectedPair(pair)}
+              className={`px-3 py-1 rounded text-xs font-mono transition-all ${
+                selectedPair === pair
+                  ? "bg-cyan-500/30 text-cyan-300 border border-cyan-400"
+                  : "bg-black/50 text-gray-400 border border-gray-700 hover:border-cyan-400"
+              }`}
+            >
+              {pair}
+            </motion.button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-1 items-center">
+          {timeframes.map((tf) => (
+            <motion.button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`px-2 py-1 rounded text-xs font-mono transition-all ${
+                timeframe === tf
+                  ? "bg-purple-500/30 text-purple-300"
+                  : "bg-black/50 text-gray-400 hover:text-purple-300"
+              }`}
+            >
+              {tf}
+            </motion.button>
+          ))}
+          <motion.button whileHover={{ rotate: 180 }} className="text-cyan-400 hover:text-cyan-300">
+            <RefreshCw size={16} />
+          </motion.button>
+        </div>
+      </div>
+
+      <div className="flex-1 p-4 relative">
+        <div className="grid grid-cols-2 gap-3 mb-4 text-[11px]">
+          <div className="rounded-3xl border border-white/10 bg-black/30 p-3 text-gray-300 shadow-[0_18px_60px_rgba(34,211,238,0.08)]">
+            <div className="text-[10px] uppercase tracking-[0.24em] text-gray-500 mb-2">Order Flow</div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-[#00FF9D]">BUY 68%</span>
+              <span className="text-sm font-semibold text-[#FF3B3B]">SELL 32%</span>
+            </div>
+            <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#00FF9D] via-[#22D3EE] to-[#FF3B3B]" style={{ width: '68%' }} />
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-black/30 p-3 text-gray-300 shadow-[0_18px_60px_rgba(139,92,246,0.08)]">
+            <div className="text-[10px] uppercase tracking-[0.24em] text-gray-500 mb-2">Liquidity Zones</div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-cyan-300">High</span>
+              <span className="text-sm text-gray-400">3 zones</span>
+            </div>
+            <div className="mt-3 space-y-2 text-[11px]">
+              <div className="rounded-full bg-white/5 px-2 py-1">Bid wall at 0.0009</div>
+              <div className="rounded-full bg-white/5 px-2 py-1">Ask wall at 0.0011</div>
+            </div>
+          </div>
+        </div>
+        <div
+          ref={chartContainerRef}
+          className="w-full h-full rounded-lg border bg-black/60 backdrop-blur-sm overflow-hidden relative"
+          style={{ borderColor: "rgba(34,211,238,0.06)", boxShadow: `0 12px 40px ${NEON.cyan}10` }}
+        >
+          {/* order-flow heatmap overlay (visual placeholder, pointer-events-none) */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40 opacity-20" />
+            <motion.div
+              className="absolute left-1/2 top-10 w-96 h-48 rounded-lg mix-blend-overlay opacity-20"
+              style={{ background: `radial-gradient(circle at 30% 30%, ${NEON.green}33, transparent 30%), linear-gradient(90deg, ${NEON.red}12, ${NEON.cyan}12)` }}
+              animate={{ x: [0, 8, -8, 0], opacity: [0.12, 0.24, 0.12] }}
+              transition={{ duration: 6, repeat: Infinity }}
+            />
+
+            {/* buy/sell arrows */}
+            <div className="absolute right-8 bottom-16 text-xs text-[#00FF9D] font-bold animate-pulse">▲ BUY</div>
+            <div className="absolute left-8 bottom-24 text-xs text-[#FF3B3B] font-bold animate-pulse">▼ SELL</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-3 border-t border-cyan-500/20 bg-black/40 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <div>
+          <span className="text-gray-400">24H HIGH</span>
+          <div className="text-green-400 font-bold">$142.50</div>
+        </div>
+        <div>
+          <span className="text-gray-400">24H LOW</span>
+          <div className="text-red-400 font-bold">$138.20</div>
+        </div>
+        <div>
+          <span className="text-gray-400">VOLUME</span>
+          <div className="text-cyan-400 font-bold">$234.5M</div>
+        </div>
+        <div>
+          <span className="text-gray-400">24H CHANGE</span>
+          <div className="text-green-400 font-bold">+2.34%</div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const LiveDataStream = () => {
+  const [events, setEvents] = useState([
+    { id: 1, type: "whale", text: "🐋 Whale moved 500 SOL → FEX9wD", time: "00:12:45", color: "purple" },
+    { id: 2, type: "token", text: "🆕 New Token: MEME (Ca: 7hX...) 18 SOL liquidity", time: "00:11:30", color: "amber" },
+    { id: 3, type: "swap", text: "📊 Large Swap: 1000 BONK → 12.5 SOL", time: "00:10:15", color: "cyan" },
+  ]);
+  const [blinkingCursor, setBlinkingCursor] = useState(true);
+
+  useEffect(() => {
+    const cursorInterval = setInterval(() => setBlinkingCursor((prev) => !prev), 500);
+    return () => clearInterval(cursorInterval);
+  }, []);
+
+  useEffect(() => {
+    const eventInterval = setInterval(() => {
+      const newEvent = {
+        id: Date.now(),
+        type: ["whale", "token", "swap", "mev"][Math.floor(Math.random() * 4)],
+        text: [
+          "🐋 Whale moved 250 SOL → New Wallet",
+          "🆕 New Token launched: 10M supply",
+          "📊 Arbitrage opportunity detected",
+          "⚡ MEV opportunity in mempool",
+        ][Math.floor(Math.random() * 4)],
+        time: new Date().toLocaleTimeString(),
+        color: ["purple", "amber", "cyan", "green"][Math.floor(Math.random() * 4)],
+      };
+      setEvents((prev) => [newEvent, ...prev.slice(0, 14)]);
+    }, 2000);
+    return () => clearInterval(eventInterval);
+  }, []);
+
+  const colorMap = {
+    purple: "border-l-purple-500 text-purple-300",
+    amber: "border-l-amber-500 text-amber-300",
+    cyan: "border-l-cyan-500 text-cyan-300",
+    green: "border-l-green-500 text-green-300",
+    red: "border-l-red-500 text-red-300",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="w-full border-l bg-black/20 backdrop-blur-3xl flex flex-col overflow-hidden rounded-3xl"
+      style={{ borderLeft: "1px solid rgba(34,211,238,0.15)", boxShadow: `0 20px 60px ${NEON.cyan}14` }}
+    >
+      <div className="border-b border-cyan-500/20 px-6 py-4 bg-black/60">
+        <h3 className="text-cyan-400 font-mono font-bold flex items-center gap-2">
+          <Radar size={14} className="text-cyan-500 animate-pulse" />
+          LIVE DATA STREAM
+        </h3>
+        <p className="text-xs text-gray-500 mt-1">Real-time market intelligence</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-xs" style={{ color: NEON.cyan }}>
+        <AnimatePresence>
+          {events.map((event) => (
+            <motion.div
+              key={event.id}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className={`p-3 border-l-4 bg-black/40 rounded-r-lg ${colorMap[event.color]} hover:bg-black/60 transition-all cursor-pointer`}
+            >
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1">{event.text}</div>
+                <span className="text-gray-500 flex-shrink-0">{event.time}</span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        <div className="mt-4 text-cyan-400">{"> "} <span style={{ opacity: blinkingCursor ? 1 : 0 }}>_</span></div>
+      </div>
+
+      <div className="border-t border-cyan-500/20 px-4 py-3 bg-black/60 text-xs text-gray-500">
+        <div className="flex items-center justify-between">
+          <span>Connected • Live</span>
+          <motion.div className="w-2 h-2 bg-green-400 rounded-full" animate={{ opacity: [0.5, 1] }} transition={{ duration: 1, repeat: Infinity }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const ExecutionTerminal = () => {
+  const [trades, setTrades] = useState([
+    { id: 1, type: "BUY", token: "BONK", amount: "50K", price: "0.00024", time: "14:23:45", pnl: null },
+    { id: 2, type: "SELL", token: "JTO", amount: "500", price: "2.15", time: "14:20:12", pnl: "+$45.20" },
+    { id: 3, type: "BUY", token: "ORCA", amount: "100", price: "1.23", time: "14:18:30", pnl: null },
+  ]);
+  const [stats, setStats] = useState({
+    winRate: 68.5,
+    totalPnL: 1245.5,
+    sessionPnL: 340.25,
+    avgLatency: 2.1,
+    tradesExecuted: 23,
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newTrade = {
+        id: Date.now(),
+        type: Math.random() > 0.5 ? "BUY" : "SELL",
+        token: ["BONK", "JTO", "ORCA", "COPE"][Math.floor(Math.random() * 4)],
+        amount: `${Math.floor(Math.random() * 1000)}${Math.random() > 0.5 ? "K" : ""}`,
+        price: (Math.random() * 3).toFixed(4),
+        time: new Date().toLocaleTimeString(),
+        pnl: Math.random() > 0.6 ? `+$${(Math.random() * 100).toFixed(2)}` : null,
+      };
+      setTrades((prev) => [newTrade, ...prev.slice(0, 11)]);
+      setStats((prev) => ({
+        ...prev,
+        totalPnL: prev.totalPnL + (Math.random() - 0.4) * 50,
+        sessionPnL: prev.sessionPnL + (Math.random() - 0.4) * 50,
+        tradesExecuted: prev.tradesExecuted + 1,
+        winRate: Math.min(100, Math.max(0, prev.winRate + (Math.random() - 0.5) * 2)),
+      }));
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border-t bg-black/20 backdrop-blur-3xl rounded-3xl overflow-hidden"
+      style={{ borderTop: `1px solid rgba(34,211,238,0.1)`, boxShadow: `0 -20px 80px ${NEON.purple}22` }}
+    >
+      <div className="px-8 py-4 border-b border-cyan-500/20 flex items-center gap-3 bg-black/60">
+        <TerminalIcon size={16} className="text-green-400 animate-pulse" />
+        <h3 className="font-mono font-bold text-cyan-400">EXECUTION TERMINAL</h3>
+        <div className="flex-1" />
+        <div className="text-xs text-gray-500">Live trading log</div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-4 p-8">
+        <div className="col-span-12 xl:col-span-8">
+          <div className="border rounded-lg bg-black/40 overflow-hidden" style={{ borderColor: "rgba(34,211,238,0.06)" }}>
+            <div className="grid grid-cols-6 gap-4 px-6 py-3 bg-black/60 border-b border-cyan-500/20 text-xs font-mono text-gray-400 font-bold">
+              <div>TYPE</div>
+              <div>TOKEN</div>
+              <div>AMOUNT</div>
+              <div>PRICE</div>
+              <div>TIME</div>
+              <div>P&L</div>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {trades.map((trade) => (
+                <motion.div
+                  key={trade.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="grid grid-cols-6 gap-4 px-6 py-3 text-xs font-mono border-b border-cyan-500/10 hover:bg-black/60 transition-colors"
+                >
+                  <div className={trade.type === "BUY" ? "text-[#00FF9D] font-bold" : "text-[#FF3B3B] font-bold"}>
+                    {trade.type}
+                  </div>
+                  <div className="text-cyan-300">{trade.token}</div>
+                  <div className="text-gray-300">{trade.amount}</div>
+                  <div className="text-amber-300">${trade.price}</div>
+                  <div className="text-gray-400">{trade.time}</div>
+                  <div className={trade.pnl ? "text-[#00FF9D] font-bold" : "text-gray-500"}>{trade.pnl || "-"}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-span-12 xl:col-span-4 space-y-3">
+          <div className="border border-cyan-500/20 bg-black/40 rounded-lg p-4 space-y-2">
+            <div className="text-xs text-gray-400 font-mono">WIN RATE</div>
+            <motion.div className="text-2xl font-bold text-green-400" key={Math.floor(stats.winRate)}>
+              {stats.winRate.toFixed(1)}%
+            </motion.div>
+          </div>
+          <div className="border border-cyan-500/20 bg-black/40 rounded-lg p-4 space-y-2">
+            <div className="text-xs text-gray-400 font-mono">SESSION P&L</div>
+            <motion.div className="text-2xl font-bold text-green-400" key={Math.floor(stats.sessionPnL)}>
+              +${stats.sessionPnL.toFixed(2)}
+            </motion.div>
+          </div>
+          <div className="border border-cyan-500/20 bg-black/40 rounded-lg p-4 space-y-2">
+            <div className="text-xs text-gray-400 font-mono">TOTAL TRADES</div>
+            <motion.div className="text-2xl font-bold text-cyan-400" key={stats.tradesExecuted}>
+              {stats.tradesExecuted}
+            </motion.div>
+          </div>
+          <div className="border border-cyan-500/20 bg-black/40 rounded-lg p-4 space-y-2">
+            <div className="text-xs text-gray-400 font-mono">AVG LATENCY</div>
+            <motion.div className="text-2xl font-bold text-purple-400" key={Math.floor(stats.avgLatency * 10)}>
+              {stats.avgLatency.toFixed(1)}ms
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      <motion.div
+        className="h-0.5 bg-gradient-to-r from-cyan-500/20 via-purple-500/40 to-cyan-500/20"
+        animate={{ backgroundPosition: ["0%", "100%"] }}
+        transition={{ duration: 4, repeat: Infinity }}
+      />
+    </motion.div>
+  );
+};
 
 const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -67,17 +848,13 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
 
-  // Load dashboard config from local storage on mount
   useEffect(() => {
     const storedUiConfig = window.localStorage.getItem("uiPreferences");
     if (storedUiConfig) {
       try {
         const parsed = JSON.parse(storedUiConfig);
         if (parsed.dashboardConfig) {
-          setDashboardConfig((prev) => ({
-            ...prev,
-            ...parsed.dashboardConfig,
-          }));
+          setDashboardConfig((prev) => ({ ...prev, ...parsed.dashboardConfig }));
         }
       } catch (error) {
         console.warn("Unable to load dashboard configuration", error);
@@ -87,10 +864,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
 
   useEffect(() => {
     if (dashboardConfigProp) {
-      setDashboardConfig((prev) => ({
-        ...prev,
-        ...dashboardConfigProp,
-      }));
+      setDashboardConfig((prev) => ({ ...prev, ...dashboardConfigProp }));
     }
   }, [dashboardConfigProp]);
 
@@ -124,67 +898,63 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     };
   }, []);
 
-  // Update time every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Initialize chart
   useEffect(() => {
     if (chartContainerRef.current && !chartRef.current) {
       const chart = createChart(chartContainerRef.current, {
         layout: {
-          background: { color: 'transparent' },
-          textColor: '#a855f7',
+          background: { color: "transparent" },
+          textColor: "#a855f7",
         },
         grid: {
-          vertLines: { color: '#1a1a2e' },
-          horzLines: { color: '#1a1a2e' },
+          vertLines: { color: "#1a1a2e" },
+          horzLines: { color: "#1a1a2e" },
         },
         crosshair: {
           mode: 1,
         },
         rightPriceScale: {
-          borderColor: '#a855f7',
+          borderColor: "#a855f7",
         },
         timeScale: {
-          borderColor: '#a855f7',
+          borderColor: "#a855f7",
           timeVisible: true,
         },
       });
 
       const candlestickSeries = chart.addCandlestickSeries({
-        upColor: '#00ff88',
-        downColor: '#a855f7',
+        upColor: "#00ff88",
+        downColor: "#a855f7",
         borderVisible: false,
-        wickUpColor: '#00ff88',
-        wickDownColor: '#a855f7',
+        wickUpColor: "#00ff88",
+        wickDownColor: "#a855f7",
       });
 
-      // Mock candlestick data
       const data = [
-        { time: '2024-01-01', open: 0.0008, high: 0.0009, low: 0.0007, close: 0.00085 },
-        { time: '2024-01-02', open: 0.00085, high: 0.00095, low: 0.0008, close: 0.0009 },
-        { time: '2024-01-03', open: 0.0009, high: 0.0010, low: 0.00085, close: 0.00095 },
-        { time: '2024-01-04', open: 0.00095, high: 0.0011, low: 0.0009, close: 0.00098 },
-        { time: '2024-01-05', open: 0.00098, high: 0.0012, low: 0.00095, close: 0.0011 },
+        { time: "2024-01-01", open: 0.0008, high: 0.0009, low: 0.0007, close: 0.00085 },
+        { time: "2024-01-02", open: 0.00085, high: 0.00095, low: 0.0008, close: 0.0009 },
+        { time: "2024-01-03", open: 0.0009, high: 0.0010, low: 0.00085, close: 0.00095 },
+        { time: "2024-01-04", open: 0.00095, high: 0.0011, low: 0.0009, close: 0.00098 },
+        { time: "2024-01-05", open: 0.00098, high: 0.0012, low: 0.00095, close: 0.0011 },
       ];
-
       candlestickSeries.setData(data);
       chartRef.current = chart;
 
-      // Handle resize
       const handleResize = () => {
         chart.applyOptions({ width: chartContainerRef.current.clientWidth });
       };
 
-      window.addEventListener('resize', handleResize);
+      window.addEventListener("resize", handleResize);
       return () => {
-        window.removeEventListener('resize', handleResize);
+        window.removeEventListener("resize", handleResize);
         chart.remove();
       };
     }
+    return undefined;
   }, [sidebarCollapsed]);
 
   const sidebarItems = [
@@ -213,19 +983,17 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050510] via-[#0a0a1a] to-[#050510] text-white overflow-hidden">
-      {/* Background Effects */}
+    <div className="min-h-screen bg-gradient-to-br from-[#050510] via-[#0a0a1a] to-[#050510] text-white overflow-hidden relative">
+      <CyberpunkGridBackground />
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.05),transparent_50%)] pointer-events-none" />
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(0,255,136,0.03),transparent_50%)] pointer-events-none" />
 
-      {/* Sidebar */}
       <motion.div
         initial={{ x: 0 }}
         animate={{ x: sidebarCollapsed ? -280 : 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="fixed left-0 top-0 h-full w-70 bg-black/80 backdrop-blur-xl border-r border-purple-500/20 z-50"
       >
-        {/* Logo */}
         <div className="p-6 border-b border-purple-500/20">
           <motion.h1
             className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent"
@@ -236,14 +1004,13 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           <div className="text-xs text-purple-400 mt-1 font-mono">KATANA MODE</div>
         </div>
 
-        {/* Navigation */}
         <nav className="p-4 space-y-2">
           {sidebarItems.map((item) => (
             <motion.button
               key={item.id}
               onClick={() => {
-                if (item.id === 'monitoring') {
-                  window.open('/monitoring', '_blank');
+                if (item.id === "monitoring") {
+                  window.open("/monitoring", "_blank");
                 } else {
                   setActiveTab(item.id);
                 }
@@ -264,7 +1031,6 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           ))}
         </nav>
 
-        {/* Katana Mode Button */}
         <div className="absolute bottom-6 left-4 right-4">
           <motion.button
             className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-purple-500/30 border border-purple-400/30"
@@ -278,7 +1044,6 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           </motion.button>
         </div>
 
-        {/* Collapse Button */}
         <motion.button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           className="absolute -right-4 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-purple-500/20 backdrop-blur-xl border border-purple-500/30 rounded-full flex items-center justify-center hover:bg-purple-500/30 transition-colors"
@@ -289,20 +1054,24 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
         </motion.button>
       </motion.div>
 
-      {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-0' : 'ml-70'}`}>
-        {/* Header */}
-        <header className="bg-black/40 backdrop-blur-xl border-b border-purple-500/20 p-6">
-          <div className="flex items-center justify-between">
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? "ml-0" : "ml-70"}`}>
+        <header className="bg-black/20 backdrop-blur-3xl border border-white/10 rounded-3xl p-6 shadow-[0_30px_90px_rgba(34,211,238,0.06)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
                 HFT-SYSTEM – KATANA MODE
               </h1>
-              <p className="text-gray-400 text-sm mt-1">Ultra-fast Solana trading terminal</p>
+              <p className="text-gray-400 text-sm mt-1">Ultra-fast Solana trading command center for Solana HFT.</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/10 bg-white/5 px-3 py-1 text-cyan-200 tracking-[0.12em]">
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  KATANA AI ONLINE
+                </span>
+                <span className="rounded-full border border-purple-500/10 bg-purple-500/10 px-3 py-1 text-purple-200">HFT Strategy Suite</span>
+              </div>
             </div>
 
-            {/* Status Indicators */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 {isOnline ? (
                   <Wifi className="w-4 h-4 text-green-400 animate-pulse" />
@@ -315,8 +1084,10 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                 <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
                 <span className="text-sm text-gray-300">WS</span>
               </div>
-              <div className="text-sm text-gray-400 font-mono">
-                {currentTime.toLocaleTimeString()}
+              <div className="text-sm text-gray-400 font-mono">{currentTime.toLocaleTimeString()}</div>
+              <div className="inline-flex items-center gap-2 rounded-3xl border border-cyan-500/10 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-200">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                Congestion 32%
               </div>
               <motion.a
                 href="/monitoring"
@@ -324,14 +1095,13 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <ActivityIcon className="w-4 h-4" />
+                <Activity className="w-4 h-4" />
                 <span className="text-sm font-medium">Monitoring</span>
                 <ExternalLink className="w-3 h-3" />
               </motion.a>
             </div>
           </div>
 
-          {/* Stats Cards */}
           {dashboardConfig.showStatsCards && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
               {statsCards.map((card, index) => (
@@ -340,12 +1110,12 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4 hover:border-purple-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/10"
+                  className="bg-black/30 backdrop-blur-3xl border border-white/10 rounded-[28px] p-4 transition-all duration-200 hover:border-cyan-400/20 hover:shadow-[0_18px_80px_rgba(34,211,238,0.08)]"
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <card.icon className={`w-5 h-5 ${card.color}`} />
-                    <span className={`text-xs ${card.change.startsWith('+') ? 'text-green-400' : card.change.startsWith('-') ? 'text-red-400' : 'text-cyan-400'}`}>
+                    <span className={`text-xs ${card.change.startsWith("+") ? "text-green-400" : card.change.startsWith("-") ? "text-red-400" : "text-cyan-400"}`}>
                       {card.change}
                     </span>
                   </div>
@@ -357,83 +1127,74 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           )}
         </header>
 
-        {/* Main Grid Layout */}
-        <div className="p-6 grid grid-cols-12 gap-6 min-h-[calc(100vh-200px)]">
-          {/* Main Chart */}
+        <StatusBar />
+
+        <div className="p-6 grid grid-cols-12 gap-6 min-h-[calc(100vh-340px)]">
           <motion.div
-            className={`col-span-12 ${!dashboardConfig.showTradePanel && !dashboardConfig.showLiveFeed && !dashboardConfig.showWalletTracker ? 'lg:col-span-12' : !dashboardConfig.showTradePanel && (dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) ? 'lg:col-span-9' : dashboardConfig.showTradePanel && !(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) ? 'lg:col-span-10' : 'lg:col-span-7'} bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden`}
+            className={`col-span-12 ${!dashboardConfig.showTradePanel && !dashboardConfig.showLiveFeed && !dashboardConfig.showWalletTracker ? "lg:col-span-12" : !dashboardConfig.showTradePanel && (dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) ? "lg:col-span-9" : dashboardConfig.showTradePanel && !(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) ? "lg:col-span-10" : "lg:col-span-7"} bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden`}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="p-4 border-b border-purple-500/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">$KAT – Katana Token</h2>
-                  <div className="text-sm text-gray-400">Current: $0.000956 <span className="text-green-400">+211%</span></div>
-                </div>
-                <div className="flex gap-2">
-                  {['1s', '5s', '15s', '1m', '5m', '15m', '1h', '4h'].map((tf) => (
-                    <button
-                      key={tf}
-                      className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded transition-colors"
-                    >
-                      {tf}
-                    </button>
-                  ))}
-                </div>
+            <div className="p-4 border-b border-purple-500/20 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">$KAT – Katana Token</h2>
+                <div className="text-sm text-gray-400">Current: $0.000956 <span className="text-green-400">+211%</span></div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {['1s', '5s', '15s', '1m', '5m', '15m', '1h', '4h'].map((tf) => (
+                  <button
+                    key={tf}
+                    className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded transition-colors"
+                  >
+                    {tf}
+                  </button>
+                ))}
               </div>
             </div>
             <div ref={chartContainerRef} className="h-96 w-full" />
           </motion.div>
 
-          {/* Trade Panel - 20% width */}
           {dashboardConfig.showTradePanel && (
-            <motion.div
-              className="col-span-12 lg:col-span-2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
+            <motion.div className="col-span-12 lg:col-span-2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
               <KatanaTradePanel />
             </motion.div>
           )}
 
           {(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) && (
-            <motion.div
-              className="col-span-12 lg:col-span-3 space-y-6"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
+            <motion.div className="col-span-12 lg:col-span-3 space-y-6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
               {dashboardConfig.showLiveFeed && <KatanaLiveFeed />}
               {dashboardConfig.showWalletTracker && <KatanaWalletTracker />}
+              <div className="rounded-3xl border border-white/10 bg-black/30 p-4 text-xs text-gray-300 shadow-[0_18px_60px_rgba(34,211,238,0.08)]">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-gray-500">KATANA AI</div>
+                    <div className="text-sm font-bold text-white">Signal Feed</div>
+                  </div>
+                  <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-cyan-200 text-[10px]">93% Confidence</span>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-5">High-conviction MEV signal detected. Monitor mempool latency and prepare execution lane.</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] text-gray-400">
+                  <span className="rounded-full bg-white/5 px-2 py-1">AI +3.2</span>
+                  <span className="rounded-full bg-white/5 px-2 py-1">Mempool</span>
+                  <span className="rounded-full bg-white/5 px-2 py-1">Signal Live</span>
+                </div>
+              </div>
             </motion.div>
-          )}
+          )
 
           {dashboardConfig.showActiveTrades && (
-            <motion.div
-              className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
+            <motion.div className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
               <div className="p-4 border-b border-purple-500/20">
                 <h3 className="text-lg font-bold text-white">ACTIVE TRADES</h3>
               </div>
               <div className="overflow-x-auto">
                 {tradesLoading ? (
-                  <div className="p-6 text-center text-sm text-gray-400">
-                    Loading active trades...
-                  </div>
+                  <div className="p-6 text-center text-sm text-gray-400">Loading active trades...</div>
                 ) : tradesError ? (
-                  <div className="p-6 text-center text-sm text-red-400">
-                    {tradesError}
-                  </div>
+                  <div className="p-6 text-center text-sm text-red-400">{tradesError}</div>
                 ) : activeTrades.length === 0 ? (
-                  <div className="p-6 text-center text-sm text-gray-400">
-                    No active trades available right now.
-                  </div>
+                  <div className="p-6 text-center text-sm text-gray-400">No active trades available right now.</div>
                 ) : (
                   <table className="w-full">
                     <thead>
@@ -492,8 +1253,27 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           )}
         </div>
 
-        {/* KATANA TERMINAL */}
-        <TerminalConsole />
+        <div className="p-6">
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 xl:col-span-3">
+              <ControlPanel />
+            </div>
+            <div className="col-span-12 xl:col-span-6">
+              <MainPanel />
+            </div>
+            <div className="col-span-12 xl:col-span-3">
+              <LiveDataStream />
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 pb-6">
+          <ExecutionTerminal />
+        </div>
+
+        <div className="px-6 pb-10">
+          <TerminalConsole />
+        </div>
       </div>
     </div>
   );
