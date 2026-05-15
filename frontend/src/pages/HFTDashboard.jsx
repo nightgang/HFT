@@ -39,6 +39,13 @@ import {
   Terminal as TerminalIcon,
   Crosshair,
   Zap as ZapIcon,
+  Layers,
+  TrendingUpIcon,
+  Copy,
+  CheckCircle,
+  AlertCircle,
+  Gauge,
+  Zap as ZapSmall,
 } from "lucide-react";
 
 const NEON = {
@@ -49,6 +56,272 @@ const NEON = {
   amber: "#FBBF24",
   bg1: "#070A12",
   bg2: "#0B0F1A",
+};
+
+const MempoolTransactionViewer = () => {
+  const [mempool, setMempool] = useState([
+    { id: 1, hash: "3hX9d...8Zq2", from: "Auth...Q7nK", to: "Prog...5L9Z", amount: "2.5 SOL", fee: 0.00005, priority: "critical", status: "pending", timestamp: "14:23:45" },
+    { id: 2, hash: "7mK2w...5Ry4", from: "User...A3kP", to: "Auth...Q7nK", amount: "12.0 USDC", fee: 0.00003, priority: "high", status: "confirmed", timestamp: "14:23:40" },
+    { id: 3, hash: "9pL4x...2Xy1", from: "Bot...Z8Qr", to: "Prog...5L9Z", amount: "50 BONK", fee: 0.00001, priority: "low", status: "pending", timestamp: "14:23:35" },
+    { id: 4, hash: "2qJ6v...7Wn3", from: "Auth...Q7nK", to: "User...A3kP", amount: "5.25 SOL", fee: 0.00002, priority: "high", status: "pending", timestamp: "14:23:30" },
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newTx = {
+        id: Date.now(),
+        hash: `${Math.random().toString(36).substr(2, 5)}...${Math.random().toString(36).substr(2, 4)}`,
+        from: `${Math.random() > 0.5 ? "Bot" : "User"}...${Math.random().toString(36).substr(2, 4)}`,
+        to: `${Math.random() > 0.5 ? "Auth" : "Prog"}...${Math.random().toString(36).substr(2, 4)}`,
+        amount: `${(Math.random() * 100).toFixed(1)} ${Math.random() > 0.5 ? "SOL" : "USDC"}`,
+        fee: (Math.random() * 0.0001).toFixed(5),
+        priority: ["low", "medium", "high", "critical"][Math.floor(Math.random() * 4)],
+        status: ["pending", "confirmed"][Math.floor(Math.random() * 2)],
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setMempool((prev) => [newTx, ...prev.slice(0, 7)]);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const priorityColors = {
+    low: "border-l-gray-500 text-gray-300 bg-gray-500/5",
+    medium: "border-l-amber-500 text-amber-300 bg-amber-500/5",
+    high: "border-l-purple-500 text-purple-300 bg-purple-500/5",
+    critical: "border-l-red-500 text-red-300 bg-red-500/5",
+  };
+
+  const statusIcons = {
+    pending: <Radar size={14} className="animate-spin text-amber-400" />,
+    confirmed: <CheckCircle size={14} className="text-green-400" />,
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border rounded-3xl bg-black/20 backdrop-blur-3xl overflow-hidden"
+      style={{ borderColor: "rgba(34,211,238,0.15)", boxShadow: `0 20px 60px ${NEON.cyan}14` }}
+    >
+      <div className="border-b border-cyan-500/20 px-6 py-4 bg-black/60">
+        <h3 className="text-cyan-400 font-mono font-bold flex items-center gap-2">
+          <Layers size={14} className="text-cyan-500" />
+          MEMPOOL VIEWER
+        </h3>
+        <p className="text-xs text-gray-500 mt-1">Real-time transaction monitoring</p>
+      </div>
+
+      <div className="max-h-64 overflow-y-auto p-4 space-y-2 font-mono text-[11px]">
+        <AnimatePresence>
+          {mempool.map((tx) => (
+            <motion.div
+              key={tx.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className={`p-2 border-l-4 rounded-r bg-black/40 hover:bg-black/60 transition-all cursor-pointer ${priorityColors[tx.priority]}`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-cyan-300 font-bold">{tx.hash}</span>
+                <div className="flex items-center gap-2">
+                  {statusIcons[tx.status]}
+                  <span className="text-gray-500">{tx.timestamp}</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center gap-2 text-[10px] text-gray-400">
+                <span>{tx.from} → {tx.to}</span>
+                <span className="text-green-400">{tx.amount}</span>
+                <span className="text-purple-300">Fee: {tx.fee}</span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
+
+const CopyTradingSignalFeed = () => {
+  const [signals, setSignals] = useState([
+    { id: 1, trader: "🐋 WhaleMaster", action: "BUY", token: "BONK", amount: "500K", confidence: 94, pnl: "+$2,450", followers: 1284, timestamp: "14:23:45" },
+    { id: 2, trader: "⚡ MomentumKing", action: "BUY", token: "JTO", amount: "2000", confidence: 87, pnl: "+$1,120", followers: 892, timestamp: "14:23:30" },
+    { id: 3, trader: "🔥 AlphaBot", action: "SELL", token: "ORCA", amount: "500", confidence: 92, pnl: "+$890", followers: 2145, timestamp: "14:23:15" },
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newSignal = {
+        id: Date.now(),
+        trader: ["🐋 WhaleMaster", "⚡ MomentumKing", "🔥 AlphaBot", "🤖 GridBot"][Math.floor(Math.random() * 4)],
+        action: Math.random() > 0.5 ? "BUY" : "SELL",
+        token: ["BONK", "JTO", "ORCA", "COPE"][Math.floor(Math.random() * 4)],
+        amount: `${Math.floor(Math.random() * 10000)}${Math.random() > 0.5 ? "K" : ""}`,
+        confidence: Math.floor(Math.random() * 15) + 80,
+        pnl: `+$${Math.floor(Math.random() * 5000)}`,
+        followers: Math.floor(Math.random() * 2000) + 500,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setSignals((prev) => [newSignal, ...prev.slice(0, 5)]);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getConfidenceColor = (conf) => {
+    if (conf >= 92) return "text-green-400 bg-green-500/10";
+    if (conf >= 85) return "text-cyan-400 bg-cyan-500/10";
+    return "text-amber-400 bg-amber-500/10";
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border rounded-3xl bg-black/20 backdrop-blur-3xl overflow-hidden"
+      style={{ borderColor: "rgba(34,211,238,0.15)", boxShadow: `0 20px 60px ${NEON.purple}14` }}
+    >
+      <div className="border-b border-cyan-500/20 px-6 py-4 bg-black/60">
+        <h3 className="text-cyan-400 font-mono font-bold flex items-center gap-2">
+          <Copy size={14} className="text-purple-500" />
+          COPY TRADING SIGNALS
+        </h3>
+        <p className="text-xs text-gray-500 mt-1">Top traders' latest moves</p>
+      </div>
+
+      <div className="max-h-64 overflow-y-auto p-4 space-y-2 font-mono text-xs">
+        <AnimatePresence>
+          {signals.map((signal) => (
+            <motion.div
+              key={signal.id}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-3 border border-purple-500/20 bg-black/40 rounded-lg hover:bg-black/60 transition-all cursor-pointer hover:border-purple-400/40"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-purple-300 font-bold">{signal.trader}</span>
+                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${signal.action === "BUY" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                  {signal.action}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-[11px] text-gray-300 mb-2">
+                <span className="text-cyan-300 font-semibold">{signal.token}</span>
+                <span className="text-amber-300">{signal.amount}</span>
+                <span className="text-green-400 font-semibold">{signal.pnl}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-[10px] text-gray-400">
+                <span>Followers: {signal.followers}</span>
+                <span className={`px-2 py-1 rounded font-bold ${getConfidenceColor(signal.confidence)}`}>
+                  Confidence: {signal.confidence}%
+                </span>
+                <span className="text-gray-500">{signal.timestamp}</span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
+
+const NetworkCongestionVisualizer = () => {
+  const [congestion, setCongestion] = useState({
+    current: 32,
+    tps: 1200,
+    avgLatency: 2.3,
+    maxLatency: 8.5,
+    failureRate: 0.12,
+    networkHealth: "healthy",
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCongestion((prev) => ({
+        current: Math.max(10, Math.min(100, prev.current + (Math.random() - 0.5) * 8)),
+        tps: Math.max(100, Math.min(4000, prev.tps + (Math.random() - 0.5) * 200)),
+        avgLatency: Math.max(0.5, Math.min(50, prev.avgLatency + (Math.random() - 0.5) * 1.5)),
+        maxLatency: Math.max(1, Math.min(100, prev.maxLatency + (Math.random() - 0.5) * 3)),
+        failureRate: Math.max(0, Math.min(10, prev.failureRate + (Math.random() - 0.5) * 0.5)),
+        networkHealth: Math.random() > 0.1 ? "healthy" : "degraded",
+      }));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const healthColor = congestion.networkHealth === "healthy" ? "text-green-400" : "text-amber-400";
+  const congestionColor = congestion.current < 40 ? "from-green-400" : congestion.current < 70 ? "from-amber-400" : "from-red-400";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border rounded-3xl bg-black/20 backdrop-blur-3xl overflow-hidden"
+      style={{ borderColor: "rgba(34,211,238,0.15)", boxShadow: `0 20px 60px ${NEON.cyan}14` }}
+    >
+      <div className="border-b border-cyan-500/20 px-6 py-4 bg-black/60">
+        <h3 className="text-cyan-400 font-mono font-bold flex items-center gap-2">
+          <Gauge size={14} className="text-cyan-500" />
+          NETWORK CONGESTION
+        </h3>
+        <p className="text-xs text-gray-500 mt-1">Real-time Solana network metrics</p>
+      </div>
+
+      <div className="p-6 space-y-4">
+        {/* Congestion meter */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-400">Network Congestion</span>
+            <motion.span className={`text-sm font-bold ${congestion.current < 40 ? "text-green-400" : congestion.current < 70 ? "text-amber-400" : "text-red-400"}`}>
+              {congestion.current.toFixed(0)}%
+            </motion.span>
+          </div>
+          <div className="h-3 rounded-full bg-black/40 border border-cyan-500/20 overflow-hidden">
+            <motion.div
+              className={`h-full bg-gradient-to-r ${congestionColor} to-cyan-400`}
+              animate={{ width: `${congestion.current}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+        </div>
+
+        {/* Status indicators grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-black/40 border border-cyan-500/10 rounded-lg p-3">
+            <div className="text-[10px] text-gray-400 mb-1">TPS</div>
+            <motion.div className="text-lg font-bold text-cyan-400" key={Math.floor(congestion.tps)}>
+              {Math.floor(congestion.tps)}
+            </motion.div>
+          </div>
+          <div className="bg-black/40 border border-cyan-500/10 rounded-lg p-3">
+            <div className="text-[10px] text-gray-400 mb-1">AVG LATENCY</div>
+            <motion.div className="text-lg font-bold text-purple-400" key={Math.floor(congestion.avgLatency * 10)}>
+              {congestion.avgLatency.toFixed(1)}ms
+            </motion.div>
+          </div>
+          <div className="bg-black/40 border border-cyan-500/10 rounded-lg p-3">
+            <div className="text-[10px] text-gray-400 mb-1">MAX LATENCY</div>
+            <motion.div className="text-lg font-bold text-amber-400" key={Math.floor(congestion.maxLatency * 10)}>
+              {congestion.maxLatency.toFixed(1)}ms
+            </motion.div>
+          </div>
+          <div className="bg-black/40 border border-cyan-500/10 rounded-lg p-3">
+            <div className="text-[10px] text-gray-400 mb-1">FAILURE RATE</div>
+            <motion.div className="text-lg font-bold text-red-400" key={Math.floor(congestion.failureRate * 100)}>
+              {congestion.failureRate.toFixed(2)}%
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Health status */}
+        <div className="flex items-center justify-between p-3 bg-black/40 border border-cyan-500/10 rounded-lg">
+          <span className="text-xs text-gray-400">Network Health</span>
+          <div className={`flex items-center gap-2 ${healthColor}`}>
+            {congestion.networkHealth === "healthy" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+            <span className="text-sm font-bold uppercase">{congestion.networkHealth}</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
 };
 
 const CyberpunkGridBackground = () => {
@@ -132,13 +405,13 @@ const StatusBar = () => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-full bg-black/25 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden"
-      style={{ boxShadow: `0 20px 60px ${NEON.cyan}14`, borderLeft: `1px solid rgba(139,92,246,0.12)` }}
+      className="w-full bg-gradient-to-br from-black/40 via-black/25 to-black/40 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden transition-all duration-300 hover:border-white/20 hover:shadow-[0_20px_60px_rgba(34,211,238,0.1)]"
+      style={{ boxShadow: `0 20px 60px ${NEON.cyan}14, inset 0 1px 0 rgba(255,255,255,0.05)`, borderLeft: `2px solid rgba(139,92,246,0.12)` }}
     >
-      <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-7 gap-4 text-[11px] font-mono">
-        <div className="flex items-center gap-3">
+      <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-[11px] font-mono">
+        <div className="flex items-center gap-3 p-3 bg-black/30 rounded-lg">
           <motion.div
-            className={`w-2 h-2 rounded-full ${
+            className={`w-2.5 h-2.5 rounded-full ${
               metrics.botStatus === "ONLINE"
                 ? "bg-green-400"
                 : metrics.botStatus === "EXECUTING"
@@ -146,63 +419,62 @@ const StatusBar = () => {
                 : metrics.botStatus === "SCANNING"
                 ? "bg-cyan-400"
                 : "bg-amber-400"
-            }`}
+            } shadow-lg`}
             animate={
               metrics.botStatus !== "IDLE"
-                ? { scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }
+                ? { scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }
                 : {}
             }
             transition={{ duration: 2, repeat: Infinity }}
           />
           <div>
-            <div className="text-gray-400">BOT</div>
-            <div className={statusColors[metrics.botStatus]}>{metrics.botStatus}</div>
+            <div className="text-gray-400 text-[10px] uppercase tracking-wider">BOT</div>
+            <div className={`${statusColors[metrics.botStatus]} font-bold`}>{metrics.botStatus}</div>
           </div>
         </div>
 
-        <div>
-          <div className="text-gray-400">LATENCY</div>
+        <div className="p-3 bg-black/30 rounded-lg">
+          <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">LATENCY</div>
           <motion.div className="text-[#22D3EE] text-sm font-bold" key={Math.floor(metrics.latency)}>
             {metrics.latency.toFixed(1)}ms
           </motion.div>
         </div>
 
-        <div>
-          <div className="text-gray-400">RPC HEALTH</div>
-          <div className={`px-2 py-1 rounded text-center text-xs ${rpcStatusColors[metrics.rpcHealth]}`}>
-            {metrics.rpcHealth.toUpperCase()}
+        <div className="p-3 bg-black/30 rounded-lg">
+          <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">RPC HEALTH</div>
+          <div className={`px-2 py-1 rounded text-center text-xs font-semibold ${rpcStatusColors[metrics.rpcHealth]}`}>
+            {metrics.rpcHealth === "healthy" ? "✓" : "!"} {metrics.rpcHealth.toUpperCase()}
           </div>
         </div>
 
-        <div>
-          <div className="text-gray-400">WALLET</div>
-          <div className="text-[#00FF9D]">{metrics.walletBalance.sol.toFixed(2)} SOL</div>
-          <div className="text-xs text-[#8B5CF6]">${metrics.walletBalance.usdc.toFixed(0)}</div>
+        <div className="p-3 bg-black/30 rounded-lg">
+          <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">WALLET</div>
+          <div className="text-[#00FF9D] font-semibold">{metrics.walletBalance.sol.toFixed(2)} SOL</div>
+          <div className="text-[10px] text-[#8B5CF6] font-semibold">${metrics.walletBalance.usdc.toFixed(0)}</div>
         </div>
 
-        <div>
-          <div className="text-gray-400">NETWORK TPS</div>
+        <div className="p-3 bg-black/30 rounded-lg md:col-span-1 sm:col-span-2 md:col-span-1">
+          <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">NETWORK TPS</div>
           <motion.div className="text-[#FBBF24] text-sm font-bold" key={metrics.tps}>
             {Math.floor(metrics.tps)}
           </motion.div>
         </div>
 
-        <div>
-          <div className="text-gray-400">STRATEGIES</div>
+        <div className="p-3 bg-black/30 rounded-lg">
+          <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">STRATEGIES</div>
           <div className="text-purple-400 text-sm font-bold">{metrics.strategiesActive}</div>
         </div>
 
-        <div>
-          <div className="text-gray-400">TIME</div>
+        <div className="p-3 bg-black/30 rounded-lg">
+          <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">TIME</div>
           <motion.div className="text-[#22D3EE] text-sm font-bold" key={metrics.timestamp.getSeconds()}>
             {metrics.timestamp.toLocaleTimeString()}
           </motion.div>
         </div>
       </div>
       <motion.div
-        className="absolute bottom-0 left-0 h-1 rounded"
-        style={{ background: `linear-gradient(90deg, ${NEON.cyan}22, ${NEON.purple}22)` }}
-        animate={{ width: ["0%", "100%"] }}
+        className="h-1 rounded-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
+        animate={{ opacity: [0.3, 0.8, 0.3] }}
         transition={{ duration: 4, repeat: Infinity }}
       />
     </motion.div>
@@ -237,12 +509,12 @@ const ControlPanel = () => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-full border border-white/10 bg-black/20 backdrop-blur-3xl rounded-3xl overflow-hidden"
-      style={{ boxShadow: `0 20px 60px ${NEON.purple}14` }}
+      className="w-full border border-white/10 bg-gradient-to-br from-black/40 via-black/20 to-black/40 backdrop-blur-xl rounded-2xl lg:rounded-3xl overflow-hidden transition-all duration-300 hover:border-purple-400/20 hover:shadow-[0_20px_60px_rgba(139,92,246,0.15)]"
+      style={{ boxShadow: `0 20px 60px ${NEON.purple}14, inset 0 1px 0 rgba(255,255,255,0.05)` }}
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="text-center border-b border-cyan-500/20 pb-4">
-          <h2 className="text-cyan-400 font-mono font-bold text-lg">⚙️ CONTROL CENTER</h2>
+          <h2 className="text-cyan-400 font-mono font-bold text-base md:text-lg">⚙️ CONTROL CENTER</h2>
           <p className="text-xs text-gray-500 mt-1">Command & Strategy</p>
         </div>
 
@@ -251,14 +523,14 @@ const ControlPanel = () => {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setBotRunning(!botRunning)}
-            className={`w-full py-3 rounded-lg font-mono text-sm font-bold transition-all duration-200`}
+            className={`w-full py-3 px-4 rounded-lg font-mono text-sm font-bold transition-all duration-200`}
             style={{
               background: botRunning
-                ? `linear-gradient(90deg, ${NEON.red}, rgba(255,59,59,0.9))`
-                : `linear-gradient(90deg, ${NEON.green}, rgba(0,255,157,0.9))`,
+                ? `linear-gradient(135deg, ${NEON.red}, rgba(255,59,59,0.8))`
+                : `linear-gradient(135deg, ${NEON.green}, rgba(0,255,157,0.8))`,
               color: "#041018",
-              boxShadow: botRunning ? `0 8px 30px ${NEON.red}55` : `0 8px 30px ${NEON.green}44`,
-              border: `1px solid rgba(255,255,255,0.03)`,
+              boxShadow: botRunning ? `0 12px 30px ${NEON.red}55, inset 0 1px 0 rgba(255,255,255,0.2)` : `0 12px 30px ${NEON.green}44, inset 0 1px 0 rgba(255,255,255,0.2)`,
+              border: `1px solid rgba(255,255,255,0.1)`,
             }}
           >
             <div className="flex items-center justify-center gap-2">
@@ -269,12 +541,12 @@ const ControlPanel = () => {
 
           {botRunning && (
             <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               onClick={() => setPaused(!paused)}
-              className={`w-full py-3 rounded-lg font-mono text-sm font-bold transition-all duration-300 ${
+              className={`w-full py-3 px-4 rounded-lg font-mono text-sm font-bold transition-all duration-300 ${
                 paused
-                  ? "bg-cyan-600/20 text-cyan-400 border border-cyan-400/50"
+                  ? "bg-cyan-600/20 text-cyan-400 border border-cyan-400/50 hover:bg-cyan-600/30"
                   : "bg-amber-600/20 text-amber-300 border border-amber-400/50 hover:bg-amber-600/30"
               }`}
             >
@@ -290,11 +562,11 @@ const ControlPanel = () => {
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
           onClick={emergencyStop}
-          className="w-full py-4 rounded-lg font-mono text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2"
+          className="w-full py-4 px-4 rounded-lg font-mono text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2"
           style={{
             background: `radial-gradient(circle at 25% 25%, rgba(255,59,59,0.95), ${NEON.red})`,
-            boxShadow: `0 14px 48px ${NEON.red}66, inset 0 0 20px ${NEON.red}44`,
-            border: `1px solid rgba(255,59,59,0.18)`,
+            boxShadow: `0 16px 48px ${NEON.red}66, inset 0 1px 0 rgba(255,255,255,0.1)`,
+            border: `1px solid rgba(255,59,59,0.2)`,
           }}
         >
           <Flame size={18} />
@@ -318,7 +590,8 @@ const ControlPanel = () => {
                   }`}
                 >
                   <Icon size={16} />
-                  {strategy.label}
+                  <span className="hidden sm:inline text-[10px]">{strategy.label}</span>
+                  <span className="sm:hidden text-[10px]">{strategy.label.substring(0, 3)}</span>
                 </motion.button>
               );
             })}
@@ -333,82 +606,89 @@ const ControlPanel = () => {
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="text-purple-400 hover:text-purple-300"
             >
-              <ChevronDown size={16} style={{ rotate: showAdvanced ? "180deg" : "0deg" }} />
+              <ChevronDown size={16} style={{ rotate: showAdvanced ? "180deg" : "0deg", transition: "rotate 0.3s" }} />
             </motion.button>
           </div>
 
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs text-gray-400">Max Drawdown</label>
-                <span className="text-amber-400 text-xs font-bold">{riskSettings.maxDrawdown}%</span>
+          {showAdvanced && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-3"
+            >
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-gray-400">Max Drawdown</label>
+                  <span className="text-amber-400 text-xs font-bold">{riskSettings.maxDrawdown}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  value={riskSettings.maxDrawdown}
+                  onChange={(e) =>
+                    setRiskSettings({ ...riskSettings, maxDrawdown: parseInt(e.target.value, 10) })
+                  }
+                  className="w-full accent-amber-400 cursor-pointer"
+                />
               </div>
-              <input
-                type="range"
-                min="1"
-                max="20"
-                value={riskSettings.maxDrawdown}
-                onChange={(e) =>
-                  setRiskSettings({ ...riskSettings, maxDrawdown: parseInt(e.target.value, 10) })
-                }
-                className="w-full accent-amber-400 cursor-pointer"
-              />
-            </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs text-gray-400">Position Size</label>
-                <span className="text-green-400 text-xs font-bold">{riskSettings.positionSize}%</span>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-gray-400">Position Size</label>
+                  <span className="text-green-400 text-xs font-bold">{riskSettings.positionSize}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  value={riskSettings.positionSize}
+                  onChange={(e) =>
+                    setRiskSettings({ ...riskSettings, positionSize: parseInt(e.target.value, 10) })
+                  }
+                  className="w-full accent-green-400 cursor-pointer"
+                />
               </div>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={riskSettings.positionSize}
-                onChange={(e) =>
-                  setRiskSettings({ ...riskSettings, positionSize: parseInt(e.target.value, 10) })
-                }
-                className="w-full accent-green-400 cursor-pointer"
-              />
-            </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs text-gray-400">Max Slippage</label>
-                <span className="text-cyan-400 text-xs font-bold">{riskSettings.slippage}%</span>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-gray-400">Max Slippage</label>
+                  <span className="text-cyan-400 text-xs font-bold">{riskSettings.slippage}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="5"
+                  step="0.1"
+                  value={riskSettings.slippage}
+                  onChange={(e) =>
+                    setRiskSettings({ ...riskSettings, slippage: parseFloat(e.target.value) })
+                  }
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
               </div>
-              <input
-                type="range"
-                min="0.1"
-                max="5"
-                step="0.1"
-                value={riskSettings.slippage}
-                onChange={(e) =>
-                  setRiskSettings({ ...riskSettings, slippage: parseFloat(e.target.value) })
-                }
-                className="w-full accent-cyan-400 cursor-pointer"
-              />
-            </div>
 
-            <div>
-              <label className="text-xs text-gray-400 block mb-2">⛽ Gas Priority</label>
-              <div className="grid grid-cols-3 gap-2">
-                {['low', 'medium', 'high'].map((priority) => (
-                  <motion.button
-                    key={priority}
-                    onClick={() => setRiskSettings({ ...riskSettings, gasPriority: priority })}
-                    className={`py-1 rounded text-xs font-mono transition-all ${
-                      riskSettings.gasPriority === priority
-                        ? "bg-purple-500/40 text-purple-300 border border-purple-400"
-                        : "bg-black/40 text-gray-400 border border-gray-600 hover:border-purple-400"
-                    }`}
-                  >
-                    {priority.toUpperCase()}
-                  </motion.button>
-                ))}
+              <div>
+                <label className="text-xs text-gray-400 block mb-2">⛽ Gas Priority</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['low', 'medium', 'high'].map((priority) => (
+                    <motion.button
+                      key={priority}
+                      onClick={() => setRiskSettings({ ...riskSettings, gasPriority: priority })}
+                      className={`py-1 rounded text-xs font-mono transition-all ${
+                        riskSettings.gasPriority === priority
+                          ? "bg-purple-500/40 text-purple-300 border border-purple-400"
+                          : "bg-black/40 text-gray-400 border border-gray-600 hover:border-purple-400"
+                      }`}
+                    >
+                      {priority.toUpperCase()}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -711,9 +991,9 @@ const LiveDataStream = () => {
 
 const ExecutionTerminal = () => {
   const [trades, setTrades] = useState([
-    { id: 1, type: "BUY", token: "BONK", amount: "50K", price: "0.00024", time: "14:23:45", pnl: null },
-    { id: 2, type: "SELL", token: "JTO", amount: "500", price: "2.15", time: "14:20:12", pnl: "+$45.20" },
-    { id: 3, type: "BUY", token: "ORCA", amount: "100", price: "1.23", time: "14:18:30", pnl: null },
+    { id: 1, type: "BUY", token: "BONK", amount: "50K", price: "0.00024", time: "14:23:45", pnl: null, confidence: 92 },
+    { id: 2, type: "SELL", token: "JTO", amount: "500", price: "2.15", time: "14:20:12", pnl: "+$45.20", confidence: 87 },
+    { id: 3, type: "BUY", token: "ORCA", amount: "100", price: "1.23", time: "14:18:30", pnl: null, confidence: 78 },
   ]);
   const [stats, setStats] = useState({
     winRate: 68.5,
@@ -733,6 +1013,7 @@ const ExecutionTerminal = () => {
         price: (Math.random() * 3).toFixed(4),
         time: new Date().toLocaleTimeString(),
         pnl: Math.random() > 0.6 ? `+$${(Math.random() * 100).toFixed(2)}` : null,
+        confidence: Math.floor(Math.random() * 25) + 70,
       };
       setTrades((prev) => [newTrade, ...prev.slice(0, 11)]);
       setStats((prev) => ({
@@ -763,11 +1044,12 @@ const ExecutionTerminal = () => {
       <div className="grid grid-cols-12 gap-4 p-8">
         <div className="col-span-12 xl:col-span-8">
           <div className="border rounded-lg bg-black/40 overflow-hidden" style={{ borderColor: "rgba(34,211,238,0.06)" }}>
-            <div className="grid grid-cols-6 gap-4 px-6 py-3 bg-black/60 border-b border-cyan-500/20 text-xs font-mono text-gray-400 font-bold">
+            <div className="grid grid-cols-7 gap-4 px-6 py-3 bg-black/60 border-b border-cyan-500/20 text-xs font-mono text-gray-400 font-bold">
               <div>TYPE</div>
               <div>TOKEN</div>
               <div>AMOUNT</div>
               <div>PRICE</div>
+              <div>CONFIDENCE</div>
               <div>TIME</div>
               <div>P&L</div>
             </div>
@@ -777,7 +1059,7 @@ const ExecutionTerminal = () => {
                   key={trade.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="grid grid-cols-6 gap-4 px-6 py-3 text-xs font-mono border-b border-cyan-500/10 hover:bg-black/60 transition-colors"
+                  className="grid grid-cols-7 gap-4 px-6 py-3 text-xs font-mono border-b border-cyan-500/10 hover:bg-black/60 transition-colors"
                 >
                   <div className={trade.type === "BUY" ? "text-[#00FF9D] font-bold" : "text-[#FF3B3B] font-bold"}>
                     {trade.type}
@@ -785,6 +1067,13 @@ const ExecutionTerminal = () => {
                   <div className="text-cyan-300">{trade.token}</div>
                   <div className="text-gray-300">{trade.amount}</div>
                   <div className="text-amber-300">${trade.price}</div>
+                  <div className={`font-bold px-2 py-1 rounded ${
+                    trade.confidence >= 90 ? "bg-green-500/20 text-green-400" : 
+                    trade.confidence >= 80 ? "bg-cyan-500/20 text-cyan-400" : 
+                    "bg-amber-500/20 text-amber-400"
+                  }`}>
+                    {trade.confidence}%
+                  </div>
                   <div className="text-gray-400">{trade.time}</div>
                   <div className={trade.pnl ? "text-[#00FF9D] font-bold" : "text-gray-500"}>{trade.pnl || "-"}</div>
                 </motion.div>
@@ -1103,24 +1392,28 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           </div>
 
           {dashboardConfig.showStatsCards && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
               {statsCards.map((card, index) => (
                 <motion.div
                   key={card.label}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-black/30 backdrop-blur-3xl border border-white/10 rounded-[28px] p-4 transition-all duration-200 hover:border-cyan-400/20 hover:shadow-[0_18px_80px_rgba(34,211,238,0.08)]"
-                  whileHover={{ scale: 1.02 }}
+                  transition={{ delay: index * 0.08, duration: 0.4 }}
+                  className="group relative bg-gradient-to-br from-black/50 via-black/30 to-black/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 transition-all duration-300 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(34,211,238,0.15)]"
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <card.icon className={`w-5 h-5 ${card.color}`} />
-                    <span className={`text-xs ${card.change.startsWith("+") ? "text-green-400" : card.change.startsWith("-") ? "text-red-400" : "text-cyan-400"}`}>
-                      {card.change}
-                    </span>
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <card.icon className={`w-5 h-5 ${card.color} transition-transform group-hover:scale-110`} />
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${card.change.startsWith("+") ? "bg-green-500/20 text-green-300" : card.change.startsWith("-") ? "bg-red-500/20 text-red-300" : "bg-cyan-500/20 text-cyan-300"}`}>
+                        {card.change}
+                      </span>
+                    </div>
+                    <div className="text-xl font-bold text-white mb-1 transition-colors group-hover:text-cyan-300">{card.value}</div>
+                    <div className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">{card.label}</div>
                   </div>
-                  <div className="text-2xl font-bold text-white mb-1">{card.value}</div>
-                  <div className="text-xs text-gray-400">{card.label}</div>
                 </motion.div>
               ))}
             </div>
@@ -1181,7 +1474,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                 </div>
               </div>
             </motion.div>
-          )
+          )}
 
           {dashboardConfig.showActiveTrades && (
             <motion.div className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
@@ -1253,7 +1546,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           )}
         </div>
 
-        <div className="p-6">
+        <div className="px-6">
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12 xl:col-span-3">
               <ControlPanel />
@@ -1263,6 +1556,20 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
             </div>
             <div className="col-span-12 xl:col-span-3">
               <LiveDataStream />
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-6">
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-4">
+              <MempoolTransactionViewer />
+            </div>
+            <div className="col-span-12 lg:col-span-4">
+              <CopyTradingSignalFeed />
+            </div>
+            <div className="col-span-12 lg:col-span-4">
+              <NetworkCongestionVisualizer />
             </div>
           </div>
         </div>
