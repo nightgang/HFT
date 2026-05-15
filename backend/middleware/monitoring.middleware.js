@@ -3,6 +3,12 @@ const logger = require('../utils/logger');
 const monitoringService = require('../services/monitoring/monitoring.service');
 const { query } = require('../db/connection');
 
+const sanitizePath = (path) => {
+  return path
+    .replace(/\/[0-9a-fA-F-]{8,36}/g, '/:id')
+    .replace(/\/[0-9]+(\/|$)/g, '/:id$1')
+    .replace(/\/[^\/]+\.[^\/]+/g, '/:resource');
+};
 // Request ID middleware
 function requestIdMiddleware(req, res, next) {
   req.id = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -13,48 +19,42 @@ function requestIdMiddleware(req, res, next) {
 // Request logging middleware
 function requestLoggingMiddleware(req, res, next) {
   const start = Date.now();
+  const sanitizedPath = sanitizePath(req.path);
 
-  // Override res.json to capture response
-  const originalJson = res.json.bind(res);
-  res.json = function(data) {
+  res.on('finish', async () => {
     const duration = Date.now() - start;
     const statusCode = res.statusCode;
 
-    // Log request
     logger.info('HTTP Request', {
       request_id: req.id,
       method: req.method,
       path: req.path,
+      sanitized_path: sanitizedPath,
       status: statusCode,
       duration_ms: duration,
       user_agent: req.get('user-agent'),
       client_ip: req.ip
     });
 
-    // Record metrics
     try {
-      monitoringService.recordAPIRequest(req.method, req.path, statusCode, duration);
+      monitoringService.recordAPIRequest(req.method, sanitizedPath, statusCode, duration);
     } catch (error) {
       logger.debug('Failed to record metrics:', error.message);
     }
 
-    // Store in database - with better error handling
     if (res.storeRequestLog) {
-      res.storeRequestLog(req, statusCode, duration).catch(err => {
+      try {
+        await res.storeRequestLog(req, statusCode, duration);
+      } catch (err) {
         logger.debug('Failed to store request log:', err.message);
-      });
+      }
     }
+  });
 
-    return originalJson(data);
-  };
-
-  // Store request log method
   res.storeRequestLog = async function(req, statusCode, duration) {
     try {
-      // Check if request log table exists and is writable
-      // Skip logging for very frequent endpoints to prevent log table from growing too fast
-      if (req.path === '/health' || req.path === '/metrics' || req.path === '/healthz/live' || req.path === '/healthz/ready') {
-        return; // Don't log health checks
+      if (['/health', '/metrics', '/healthz/live', '/healthz/ready'].includes(req.path)) {
+        return;
       }
 
       await query(`
@@ -69,7 +69,6 @@ function requestLoggingMiddleware(req, res, next) {
         req.get('user-agent')
       ]);
     } catch (error) {
-      // Log table might not exist or query might fail - don't crash
       logger.debug('Could not store request log:', error.message);
     }
   };

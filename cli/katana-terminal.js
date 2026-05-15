@@ -49,10 +49,14 @@ const STYLES = {
   bold: '\x1b[1m',
   dim: '\x1b[2m',
   purple: '\x1b[35m',
+  purpleBright: '\x1b[95m',
   cyan: '\x1b[36m',
+  cyanBright: '\x1b[96m',
   white: '\x1b[97m',
   gray: '\x1b[90m',
-  red: '\x1b[31m'
+  green: '\x1b[32m',
+  red: '\x1b[31m',
+  yellow: '\x1b[33m'
 };
 
 function colorText(text, color) {
@@ -61,6 +65,20 @@ function colorText(text, color) {
 
 function styleText(text, ...styles) {
   return `${styles.join('')}${text}${STYLES.reset}`;
+}
+
+function panelLine(label, value) {
+  return `${styleText(label.padEnd(18), STYLES.purple)} ${styleText(':', STYLES.gray)} ${styleText(value, STYLES.white)}`;
+}
+
+function renderPanel(title, rows) {
+  const width = 72;
+  const top = `${STYLES.purple}╭${'─'.repeat(width)}╮${STYLES.reset}`;
+  const titleLine = `${STYLES.purple}│${STYLES.reset} ${styleText(title, STYLES.bold, STYLES.cyan)}${' '.repeat(Math.max(0, width - title.length - 1))}${STYLES.purple}│${STYLES.reset}`;
+  const separator = `${STYLES.purple}├${'─'.repeat(width)}┤${STYLES.reset}`;
+  const content = rows.map((line) => `${STYLES.purple}│${STYLES.reset} ${line.padEnd(width - 1)} ${STYLES.purple}│${STYLES.reset}`);
+  const bottom = `${STYLES.purple}╰${'─'.repeat(width)}╯${STYLES.reset}`;
+  return [top, titleLine, separator, ...content, bottom].join('\n');
 }
 
 // Messages
@@ -153,7 +171,7 @@ class KatanaTerminal {
   }
 
   makePrompt() {
-    return `${STYLES.purple}${EMOJIS.SWORD} ${STYLES.cyan}katana${STYLES.reset}${STYLES.white}> ${STYLES.reset}`;
+    return `${styleText(`${EMOJIS.SWORD} katana`, STYLES.purple, STYLES.bold)} ${styleText('>', STYLES.cyan)} `;
   }
 
   question(promptText) {
@@ -169,12 +187,16 @@ class KatanaTerminal {
    */
   async start() {
     console.clear();
-    console.log(STYLES.purple + '╔══════════════════════════════════════════════════════════════════╗' + STYLES.reset);
-    console.log(STYLES.purple + '║' + STYLES.reset + ' ' + styleText('HFT-SYSTEM', STYLES.bold, STYLES.cyan) + ' ' + STYLES.white + '|' + STYLES.reset + ' ' + styleText('KATANA MODE TERMINAL', STYLES.bold, STYLES.purple) + ' ' + STYLES.purple + '║' + STYLES.reset);
-    console.log(STYLES.purple + '╚══════════════════════════════════════════════════════════════════╝' + STYLES.reset + '\n');
+    console.log(renderPanel('HFT KATANA TERMINAL', [
+      styleText('Dark terminal UI aligned to frontend trading dashboard', STYLES.gray),
+      '',
+      panelLine('Environment', this.demoMode ? 'DEMO MODE' : 'CLI'),
+      panelLine('Backend', API_BASE),
+      panelLine('Realtime WS', KATANA_WS_URL)
+    ]) + '\n');
 
     if (!this.demoMode && !process.stdin.isTTY) {
-      console.log('⚠️  No interactive terminal detected. Starting in demo mode.');
+      console.log(styleText('⚠️  No interactive terminal detected. Starting in demo mode.', STYLES.yellow));
       this.demoMode = true;
     }
 
@@ -382,46 +404,38 @@ class KatanaTerminal {
     const tokenDisplay = this.selectedToken || 'None';
     const demoDisplay = this.demoMode ? ` ${styleText('(DEMO MODE)', STYLES.cyan)}` : '';
 
-    console.log('\n' + STYLES.purple + '╔══════════════════════════════════════════════════════════════════╗' + STYLES.reset);
-    console.log(STYLES.purple + '║' + STYLES.reset + ' ' + styleText('KATANA DASHBOARD', STYLES.bold, STYLES.white) + ' ' + STYLES.gray + '| Frontend-aligned terminal experience' + STYLES.reset + ' ' + STYLES.purple + '║' + STYLES.reset);
-    console.log(STYLES.purple + '╚══════════════════════════════════════════════════════════════════╝' + STYLES.reset + '\n');
-    console.log(this.getAutoTradeDisplay() + demoDisplay);
-    console.log(styleText('SYSTEM STATUS', STYLES.bold, STYLES.cyan));
-    console.log(` ${styleText('MODE', STYLES.purple)}       : ${styleText('KATANA', STYLES.white)}`);
-    console.log(` ${styleText('STATUS', STYLES.purple)}     : ${this.katanaActive ? styleText('RUNNING', STYLES.cyan) : styleText('STOPPED', STYLES.red)}
-`);
-    console.log(` ${styleText('TOKEN', STYLES.purple)}      : ${styleText(tokenDisplay, STYLES.white)}`);
-    console.log(` ${styleText('WALLET', STYLES.purple)}     : ${styleText(walletDisplay, STYLES.white)}\n`);
-    console.log(styleText('Available commands:', STYLES.bold, STYLES.white));
-    const commandLine = (cmd, description) =>
-      `  ${styleText(cmd.padEnd(25), STYLES.cyan)} - ${styleText(description, STYLES.gray)}`;
+    console.log('\n' + renderPanel('KATANA TRADING SUITE', [
+      styleText('Fast analytics and smart trading tools in one dashboard.', STYLES.gray),
+      '',
+      panelLine('Mode', 'KATANA'),
+      panelLine('Status', this.katanaActive ? styleText('RUNNING', STYLES.cyan) : styleText('STOPPED', STYLES.red)),
+      panelLine('Token', tokenDisplay),
+      panelLine('Wallet', walletDisplay),
+      panelLine('Auto Trade', this.autoTradeEnabled ? styleText('ENABLED', STYLES.green) : styleText('DISABLED', STYLES.red))
+    ]) + demoDisplay);
 
-    console.log(commandLine('start', 'Start Katana Mode'));
-    console.log(commandLine('stop', 'Stop Katana Mode'));
-    console.log(commandLine('status', 'Show current status'));
-    console.log(commandLine('buy <amount>', 'Buy selected token'));
-    console.log(commandLine('sell <amount>', 'Sell selected token'));
-    console.log(commandLine('select <mint>', 'Select token for trading'));
-    console.log(commandLine('wallets', 'List configured wallets'));
-    console.log(commandLine('usewallet <pk>', 'Select wallet for trades'));
-    console.log(commandLine('predict <mint>', 'Request AI signal for token'));
-    console.log(commandLine('positions', 'Show active positions'));
-    console.log(commandLine('tokens', 'Show recent token detections'));
-    console.log(commandLine('history / trades', 'Show trade history for selected wallet'));
-    console.log(commandLine('orders', 'Show advanced orders for selected wallet'));
-    console.log(commandLine('cancel-order <id>', 'Cancel an advanced order'));
-    console.log(commandLine('risk-heatmap', 'Show portfolio risk heatmap'));
-    console.log(commandLine('risk-correlation', 'Show portfolio correlation data'));
-    console.log(commandLine('alerts', 'Show active predictive alerts'));
-    console.log(commandLine('ack-alert <id>', 'Acknowledge an alert'));
-    console.log(commandLine('sentiment bullish', 'Show bullish sentiment opportunities'));
-    console.log(commandLine('sentiment token <mint>', 'Show sentiment for a token'));
-    console.log(commandLine('pnl', 'Show P&L dashboard summary'));
-    console.log(commandLine('portfolio', 'Show portfolio summary for selected wallet'));
-    console.log(commandLine('settings show <wallet>', 'Show wallet limits'));
-    console.log(commandLine('settings set <wallet> <spendingLimitUsd> [dailySpendingUsd]', 'Update wallet limits'));
-    console.log(commandLine('help', 'Show this help'));
-    console.log(commandLine('exit', 'Exit terminal'));
+    console.log('\n' + renderPanel('COMMAND CENTER', [
+      `${styleText('start', STYLES.cyan)} ${styleText('- Start Katana Mode', STYLES.gray)}`,
+      `${styleText('stop', STYLES.cyan)}  ${styleText('- Stop Katana Mode', STYLES.gray)}`,
+      `${styleText('status', STYLES.cyan)} ${styleText('- Show current status', STYLES.gray)}`,
+      `${styleText('buy <amount>', STYLES.cyan)} ${styleText('- Buy selected token', STYLES.gray)}`,
+      `${styleText('sell <amount>', STYLES.cyan)} ${styleText('- Sell selected token', STYLES.gray)}`,
+      `${styleText('select <mint>', STYLES.cyan)} ${styleText('- Select token for trading', STYLES.gray)}`,
+      `${styleText('wallets', STYLES.cyan)} ${styleText('- List configured wallets', STYLES.gray)}`,
+      `${styleText('usewallet <pk>', STYLES.cyan)} ${styleText('- Select wallet for trades', STYLES.gray)}`,
+      `${styleText('predict <mint>', STYLES.cyan)} ${styleText('- Request AI signal for token', STYLES.gray)}`,
+      `${styleText('positions', STYLES.cyan)} ${styleText('- Show active positions', STYLES.gray)}`,
+      `${styleText('tokens', STYLES.cyan)} ${styleText('- Show recent token detections', STYLES.gray)}`,
+      `${styleText('history / trades', STYLES.cyan)} ${styleText('- Show trade history', STYLES.gray)}`,
+      `${styleText('orders', STYLES.cyan)} ${styleText('- Show advanced orders', STYLES.gray)}`,
+      `${styleText('cancel-order <id>', STYLES.cyan)} ${styleText('- Cancel an advanced order', STYLES.gray)}`,
+      `${styleText('risk-heatmap', STYLES.cyan)} ${styleText('- Show portfolio risk heatmap', STYLES.gray)}`,
+      `${styleText('alerts', STYLES.cyan)} ${styleText('- Show active predictive alerts', STYLES.gray)}`,
+      `${styleText('pnl', STYLES.cyan)} ${styleText('- Show P&L dashboard summary', STYLES.gray)}`,
+      `${styleText('portfolio', STYLES.cyan)} ${styleText('- Show portfolio summary', STYLES.gray)}`,
+      `${styleText('settings', STYLES.cyan)} ${styleText('- Show or update wallet limits', STYLES.gray)}`,
+      `${styleText('help', STYLES.cyan)} ${styleText('- Show this help', STYLES.gray)}`
+    ]));
 
     console.log('\n' + styleText('Keyboard shortcuts:', STYLES.bold, STYLES.white));
     console.log(`  ${styleText('T', STYLES.cyan)}  - ${styleText('Toggle AUTO TRADE ON/OFF', STYLES.gray)}`);
@@ -569,13 +583,15 @@ class KatanaTerminal {
   }
 
   async showStatus() {
+    const statusLines = [];
+
     if (this.demoMode) {
-      console.log('\n📊 Katana Status (DEMO):');
-      console.log(`   Active: ${this.katanaActive ? '✅' : '❌'}`);
-      console.log(`   Active Trades: ${Math.floor(Math.random() * 5)}`);
-      console.log(`   Watched Tokens: ${Math.floor(Math.random() * 20)}`);
-      console.log(`   Total PnL: ${this.formatPnL(this.pnlData.totalPnL)}`);
-      console.log(`   PnL %: ${this.formatPercentage(this.pnlData.pnlPercentage)}%`);
+      statusLines.push(panelLine('Active', this.katanaActive ? styleText('YES', STYLES.green) : styleText('NO', STYLES.red)));
+      statusLines.push(panelLine('Active Trades', String(Math.floor(Math.random() * 5))));
+      statusLines.push(panelLine('Watched Tokens', String(Math.floor(Math.random() * 20))));
+      statusLines.push(panelLine('Total PnL', this.formatPnL(this.pnlData.totalPnL)));
+      statusLines.push(panelLine('P&L %', `${this.formatPercentage(this.pnlData.pnlPercentage)}%`));
+      console.log('\n' + renderPanel('KATANA STATUS (DEMO)', statusLines));
       return;
     }
 
@@ -583,15 +599,15 @@ class KatanaTerminal {
       const response = await axios.get(`${API_BASE}/api/katana/status`);
       const status = response.data.data;
 
-      console.log('\n📊 Katana Status:');
-      console.log(`   Active: ${status.isActive ? '✅' : '❌'}`);
-      console.log(`   Active Trades: ${status.activeTrades}`);
-      console.log(`   Watched Tokens: ${status.watchedTokens}`);
-      console.log(`   Total PnL: ${this.formatPnL(this.pnlData.totalPnL)}`);
-      console.log(`   PnL %: ${this.formatPercentage(this.pnlData.pnlPercentage)}%`);
+      statusLines.push(panelLine('Active', status.isActive ? styleText('YES', STYLES.green) : styleText('NO', STYLES.red)));
+      statusLines.push(panelLine('Active Trades', String(status.activeTrades)));
+      statusLines.push(panelLine('Watched Tokens', String(status.watchedTokens)));
+      statusLines.push(panelLine('Total PnL', this.formatPnL(this.pnlData.totalPnL)));
+      statusLines.push(panelLine('P&L %', `${this.formatPercentage(this.pnlData.pnlPercentage)}%`));
 
+      console.log('\n' + renderPanel('KATANA STATUS', statusLines));
     } catch (error) {
-      console.log('❌ Failed to get status:', error.response?.data?.error || error.message);
+      console.log(styleText('❌ Failed to get status:', STYLES.red), error.response?.data?.error || error.message);
     }
   }
 

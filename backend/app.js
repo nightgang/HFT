@@ -1,4 +1,5 @@
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -84,6 +85,18 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    try {
+      monitoringService.recordRateLimitHit(req.path);
+    } catch (error) {
+      logger.debug('Failed to record rate limit hit:', error.message);
+    }
+
+    res.status(429).json({
+      error: 'Too many requests from this IP, please try again later.',
+      code: 'RATE_LIMIT_EXCEEDED',
+    });
+  }
 });
 
 const strictLimiter = rateLimit({
@@ -95,6 +108,18 @@ const strictLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    try {
+      monitoringService.recordRateLimitHit(req.path);
+    } catch (error) {
+      logger.debug('Failed to record rate limit hit:', error.message);
+    }
+
+    res.status(429).json({
+      error: 'Too many sensitive requests, please try again later.',
+      code: 'STRICT_RATE_LIMIT_EXCEEDED',
+    });
+  }
 });
 
 const corsOptions = {
@@ -138,7 +163,15 @@ const csrfProtection = csurf({
 });
 
 app.use((req, res, next) => {
-  // Skip CSRF for GET requests, webhooks, health checks, and API endpoints
+  // Apply CSRF protection for the token endpoint only, but skip it for normal GETs that don't need a token.
+  if (req.path === '/csrf-token') {
+    return csrfProtection(req, res, next);
+  }
+
+  const usesApiAuth = !!req.headers.authorization || !!req.headers['x-api-key'];
+  const isApiRoute = req.path.startsWith('/api/');
+
+  // Skip CSRF for safe requests, webhooks, health checks, API routes, and token-authenticated requests.
   const skipCsrf = [
     req.method === 'GET',
     req.method === 'HEAD',
@@ -152,6 +185,8 @@ app.use((req, res, next) => {
     req.path.startsWith('/auth/register'),
     req.path.startsWith('/api-docs'),
     req.path === '/swagger.json',
+    isApiRoute,
+    usesApiAuth,
   ];
 
   if (skipCsrf.some(skip => skip)) {
@@ -176,7 +211,7 @@ app.get('/health', healthCheckHandler);
 app.get('/healthz/live', livenessProbeHandler);
 app.get('/healthz/ready', readinessProbeHandler);
 
-app.get('/metrics', authenticate, async (req, res) => {
+app.get('/metrics', async (req, res) => {
   try {
     const metrics = await monitoringService.getMetrics();
     res.set('Content-Type', 'text/plain; charset=utf-8');

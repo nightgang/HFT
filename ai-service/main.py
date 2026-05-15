@@ -23,7 +23,7 @@ from datetime import datetime
 
 # ============ CONFIGURATION ============
 SERVICE_NAME = "Solana Trading AI Service"
-SERVICE_VERSION = "2.1.0"
+SERVICE_VERSION = "2.2.0"
 
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/models")
 JUPITER_API_URL = os.getenv("JUPITER_API_URL", "https://price.jup.ag/v4/price")

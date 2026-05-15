@@ -13,11 +13,17 @@ class PredictionEngine {
       // Try external AI service first if enabled
       if (this.aiServiceEnabled) {
         try {
+          const headers = {};
+          if (process.env.AI_SERVICE_API_KEY) {
+            headers['X-API-Key'] = process.env.AI_SERVICE_API_KEY;
+          }
+
           const aiResponse = await axios.post(`${this.aiServiceUrl}/predict`, {
             tokenMint,
             metadata,
           }, {
             timeout: 5000, // 5 second timeout for AI service
+            headers,
           });
 
           if (aiResponse.data && aiResponse.data.score !== undefined) {

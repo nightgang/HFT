@@ -1,7 +1,8 @@
 // Monitoring and Metrics Service for HFT System
 const promClient = require('prom-client');
 const logger = require('../../utils/logger');
-const { query } = require('../../db/connection');
+const metricsService = require('./metrics.service');
+const { query, pool } = require('../../db/connection');
 
 class MonitoringService {
   constructor() {
@@ -127,7 +128,12 @@ class MonitoringService {
       const uptime = process.uptime();
       this.metrics.systemUptime.set(uptime);
 
-      // Update health status
+      // Update database pool size if available
+      if (pool && typeof pool.totalCount === 'number') {
+        this.metrics.dbConnectionPoolSize.set(pool.totalCount);
+      }
+
+      // Update health status and associated metrics
       await this.checkHealth();
     } catch (error) {
       logger.error('Failed to update system metrics:', error);
@@ -143,12 +149,24 @@ class MonitoringService {
       timestamp: new Date().toISOString()
     };
 
+    // Determine overall status
+    health.status = health.database.status === 'healthy' && health.memory.status === 'healthy' && health.api.status === 'healthy'
+      ? 'healthy'
+      : 'degraded';
+
+    this.healthStatus = health;
+
+    metricsService.updateHealthCheckStatus('database', health.database.status === 'healthy');
+    metricsService.updateHealthCheckStatus('memory', health.memory.status === 'healthy');
+    metricsService.updateHealthCheckStatus('api', health.api.status === 'healthy');
+    metricsService.updateHealthCheckStatus('overall', health.status === 'healthy');
+
     // Store health check in database
     try {
       await query(`
         INSERT INTO health_checks (service_name, status, details)
         VALUES ($1, $2, $3)
-      `, ['system', health.database.status, JSON.stringify(health)]);
+      `, ['system', health.status, JSON.stringify(health)]);
     } catch (error) {
       logger.debug('Could not store health check:', error.message);
     }
@@ -162,12 +180,15 @@ class MonitoringService {
     try {
       const result = await query('SELECT 1');
       const latency = Date.now() - start;
+      this.metrics.dbQueryDuration.observe({ operation: 'health_check', status: 'success' }, latency);
       return {
         status: 'healthy',
         latency_ms: latency,
         message: 'Database connection successful'
       };
     } catch (error) {
+      const latency = Date.now() - start;
+      this.metrics.dbQueryDuration.observe({ operation: 'health_check', status: 'error' }, latency);
       return {
         status: 'unhealthy',
         error: error.message,

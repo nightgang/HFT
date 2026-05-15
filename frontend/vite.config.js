@@ -66,7 +66,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ["@tanstack/react-table"],
-    esbuild: {
+    oxc: {
       drop: ["console"],
     },
   },
