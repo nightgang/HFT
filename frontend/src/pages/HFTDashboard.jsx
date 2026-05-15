@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { createChart } from "lightweight-charts";
 import TerminalConsole from "../components/TerminalConsole";
+import KatanaLiveFeed from "../components/KatanaLiveFeed";
+import KatanaWalletTracker from "../components/KatanaWalletTracker";
+import KatanaTradePanel from "../components/KatanaTradePanel";
 import {
   // Navigation Icons
   LayoutDashboard,
@@ -46,26 +49,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-// Mock data for demonstration
-const mockTrades = [
-  { id: 1, token: "KAT", type: "BUY", amount: "1000", entry: "0.000842", current: "0.000956", pnl: "+$114", pnlPercent: "+13.5%", status: "ACTIVE" },
-  { id: 2, token: "SOL", type: "SELL", amount: "50", entry: "142.50", current: "138.20", pnl: "+$215", pnlPercent: "+3.0%", status: "ACTIVE" },
-  { id: 3, token: "RAY", type: "BUY", amount: "200", entry: "2.145", current: "2.312", pnl: "+$334", pnlPercent: "+7.8%", status: "ACTIVE" },
-];
-
-const mockLiveFeed = [
-  { id: 1, type: "LAUNCH", message: "New token $NEON launched on Raydium", time: "2s ago", color: "text-purple-400" },
-  { id: 2, type: "TRADE", message: "Smart wallet bought 500K $KAT", time: "5s ago", color: "text-green-400" },
-  { id: 3, type: "LIQUIDITY", message: "Raydium pool added $50K liquidity", time: "12s ago", color: "text-cyan-400" },
-  { id: 4, type: "PRICE", message: "$KAT price: $0.000956 (+211%)", time: "18s ago", color: "text-emerald-400" },
-];
-
-const mockWallets = [
-  { address: "7xKX...9mL2", pnl: "+$2,450", balance: "$15,230", status: "PROFIT" },
-  { address: "3pQ8...4nR9", pnl: "+$890", balance: "$8,120", status: "PROFIT" },
-  { address: "9wL5...2kT7", pnl: "-$320", balance: "$4,890", status: "LOSS" },
-];
-
 const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -78,6 +61,9 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     showWalletTracker: true,
     showActiveTrades: true,
   });
+  const [activeTrades, setActiveTrades] = useState([]);
+  const [tradesLoading, setTradesLoading] = useState(true);
+  const [tradesError, setTradesError] = useState(null);
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -107,6 +93,36 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
       }));
     }
   }, [dashboardConfigProp]);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchActiveTrades = async () => {
+      setTradesLoading(true);
+      try {
+        const response = await fetch("/api/trading/trades?limit=12");
+        const data = await response.json();
+        if (!mounted) return;
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load active trades");
+        }
+        setActiveTrades(data.trades || []);
+        setTradesError(null);
+      } catch (error) {
+        if (!mounted) return;
+        setTradesError(error.message || "Failed to load trades");
+        setActiveTrades([]);
+      } finally {
+        if (mounted) setTradesLoading(false);
+      }
+    };
+
+    fetchActiveTrades();
+    const intervalId = setInterval(fetchActiveTrades, 10000);
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   // Update time every second
   useEffect(() => {
@@ -191,7 +207,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     { label: "Total PNL", value: "$18,742.60", change: "+7.8%", icon: TrendingUp, color: "text-emerald-400" },
     { label: "Win Rate", value: "86.3%", change: "+4.2%", icon: Activity, color: "text-emerald-400" },
     { label: "Total Volume", value: "$127.4K", change: "+12.5%", icon: DollarSign, color: "text-cyan-400" },
-    { label: "Active Trades", value: "14", change: "Realtime", icon: ZapIcon, color: "text-purple-400" },
+    { label: "Active Trades", value: tradesLoading ? "…" : `${activeTrades.length}`, change: "Realtime", icon: ZapIcon, color: "text-purple-400" },
     { label: "Balance", value: "$45,230", change: "+2.1%", icon: Wallet, color: "text-emerald-400" },
     { label: "Priority Fee", value: "0.000005", change: "Optimal", icon: Shield, color: "text-orange-400" },
   ];
@@ -374,89 +390,13 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           {/* Trade Panel - 20% width */}
           {dashboardConfig.showTradePanel && (
             <motion.div
-              className="col-span-12 lg:col-span-2 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4"
+              className="col-span-12 lg:col-span-2"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-            <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
-              KATANA TRADE PANEL
-            </h3>
-
-            {/* Buy/Sell Tabs */}
-            <div className="flex mb-4">
-              <button className="flex-1 bg-green-500/20 text-green-400 py-2 px-4 rounded-l-lg border border-green-500/30">
-                BUY
-              </button>
-              <button className="flex-1 bg-red-500/20 text-red-400 py-2 px-4 rounded-r-lg border border-red-500/30">
-                SELL
-              </button>
-            </div>
-
-            {/* Trade Form */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Strategy</label>
-                <select className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm">
-                  <option>Market Order</option>
-                  <option>Limit Order</option>
-                  <option>Stop Loss</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Amount (SOL)</label>
-                <input
-                  type="number"
-                  placeholder="0.1"
-                  className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Slippage (%)</label>
-                <select className="w-full bg-slate-800 border border-purple-500/30 rounded px-3 py-2 text-white text-sm">
-                  <option>0.5%</option>
-                  <option>1%</option>
-                  <option>2%</option>
-                </select>
-              </div>
-
-              {/* Toggles */}
-              <div className="space-y-2">
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Jito Bundle</span>
-                  <div className="w-10 h-5 bg-green-500/20 rounded-full relative">
-                    <div className="w-4 h-4 bg-green-400 rounded-full absolute right-0.5 top-0.5"></div>
-                  </div>
-                </label>
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">MEV Protection</span>
-                  <div className="w-10 h-5 bg-green-500/20 rounded-full relative">
-                    <div className="w-4 h-4 bg-green-400 rounded-full absolute right-0.5 top-0.5"></div>
-                  </div>
-                </label>
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Auto Buy</span>
-                  <div className="w-10 h-5 bg-purple-500/20 rounded-full relative">
-                    <div className="w-4 h-4 bg-purple-400 rounded-full absolute left-0.5 top-0.5"></div>
-                  </div>
-                </label>
-              </div>
-
-              {/* Execute Button */}
-              <motion.button
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-500/30 border border-green-400/30"
-                whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(0, 255, 136, 0.4)" }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  <span>EXECUTE BUY</span>
-                </div>
-              </motion.button>
-            </div>
-          </motion.div>
+              <KatanaTradePanel />
+            </motion.div>
           )}
 
           {(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) && (
@@ -466,53 +406,8 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
             >
-              {dashboardConfig.showLiveFeed && (
-                <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
-                    LIVE FEED
-                  </h3>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    <AnimatePresence>
-                      {mockLiveFeed.map((feed) => (
-                        <motion.div
-                          key={feed.id}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -20 }}
-                          className="flex items-center gap-3 p-2 bg-slate-800/50 rounded border border-purple-500/10"
-                        >
-                          <div className={`w-2 h-2 rounded-full ${feed.color.replace('text-', 'bg-')}`}></div>
-                          <div className="flex-1">
-                            <div className={`text-sm ${feed.color}`}>{feed.message}</div>
-                            <div className="text-xs text-gray-500">{feed.time}</div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              )}
-
-              {dashboardConfig.showWalletTracker && (
-                <div className="bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-white mb-4 border-b border-purple-500/20 pb-2">
-                    WALLET TRACKER
-                  </h3>
-                  <div className="space-y-3">
-                    {mockWallets.map((wallet) => (
-                      <div key={wallet.address} className="p-3 bg-slate-800/50 rounded border border-purple-500/10">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-mono text-gray-400">{wallet.address}</span>
-                          <span className={`text-xs ${wallet.pnl.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
-                            {wallet.pnl}
-                          </span>
-                        </div>
-                        <div className="text-sm text-white">{wallet.balance}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {dashboardConfig.showLiveFeed && <KatanaLiveFeed />}
+              {dashboardConfig.showWalletTracker && <KatanaWalletTracker />}
             </motion.div>
           )}
 
@@ -523,55 +418,78 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-            <div className="p-4 border-b border-purple-500/20">
-              <h3 className="text-lg font-bold text-white">ACTIVE TRADES</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-purple-500/10">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Token</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Entry</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Current</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL %</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockTrades.map((trade) => (
-                    <motion.tr
-                      key={trade.id}
-                      className="border-b border-purple-500/5 hover:bg-purple-500/5 transition-colors"
-                      whileHover={{ backgroundColor: 'rgba(168, 85, 247, 0.05)' }}
-                    >
-                      <td className="px-4 py-3 text-sm text-white font-medium">{trade.token}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          trade.type === 'BUY' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {trade.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-300">{trade.amount}</td>
-                      <td className="px-4 py-3 text-sm text-gray-300">${trade.entry}</td>
-                      <td className="px-4 py-3 text-sm text-white">${trade.current}</td>
-                      <td className="px-4 py-3 text-sm text-green-400 font-medium">{trade.pnl}</td>
-                      <td className="px-4 py-3 text-sm text-green-400 font-medium">{trade.pnlPercent}</td>
-                      <td className="px-4 py-3">
-                        <button className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs transition-colors">
-                          Close
-                        </button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        )}
+              <div className="p-4 border-b border-purple-500/20">
+                <h3 className="text-lg font-bold text-white">ACTIVE TRADES</h3>
+              </div>
+              <div className="overflow-x-auto">
+                {tradesLoading ? (
+                  <div className="p-6 text-center text-sm text-gray-400">
+                    Loading active trades...
+                  </div>
+                ) : tradesError ? (
+                  <div className="p-6 text-center text-sm text-red-400">
+                    {tradesError}
+                  </div>
+                ) : activeTrades.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-gray-400">
+                    No active trades available right now.
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-purple-500/10">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Token</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Amount</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Entry</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Current</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL %</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeTrades.map((trade, index) => {
+                        const type = trade.side?.toUpperCase?.() || trade.type || "BUY";
+                        const token = trade.token || trade.market || trade.symbol || "UNKNOWN";
+                        const amount = trade.amount || trade.quantity || "-";
+                        const entry = trade.entryPrice || trade.price || trade.entry || "-";
+                        const current = trade.currentPrice || trade.current || "-";
+                        const pnl = trade.pnl || trade.profit || "-";
+                        const pnlPercent = trade.pnlPercent || trade.returnPercent || "-";
+                        return (
+                          <motion.tr
+                            key={trade.id || `${token}-${index}`}
+                            className="border-b border-purple-500/5 hover:bg-purple-500/5 transition-colors"
+                            whileHover={{ backgroundColor: "rgba(168, 85, 247, 0.05)" }}
+                          >
+                            <td className="px-4 py-3 text-sm text-white font-medium">{token}</td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                type === "BUY" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                              }`}>
+                                {type}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-300">{amount}</td>
+                            <td className="px-4 py-3 text-sm text-gray-300">${entry}</td>
+                            <td className="px-4 py-3 text-sm text-white">${current}</td>
+                            <td className="px-4 py-3 text-sm text-green-400 font-medium">{pnl}</td>
+                            <td className="px-4 py-3 text-sm text-green-400 font-medium">{pnlPercent}</td>
+                            <td className="px-4 py-3">
+                              <button className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs transition-colors">
+                                Close
+                              </button>
+                            </td>
+                          </motion.tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* KATANA TERMINAL */}

@@ -44,6 +44,25 @@ const EMOJIS = {
   GEAR: '⚙️'
 };
 
+const STYLES = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  purple: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[97m',
+  gray: '\x1b[90m',
+  red: '\x1b[31m'
+};
+
+function colorText(text, color) {
+  return `${color}${text}${STYLES.reset}`;
+}
+
+function styleText(text, ...styles) {
+  return `${styles.join('')}${text}${STYLES.reset}`;
+}
+
 // Messages
 const MESSAGES = {
   AUTH_SUCCESS: '✅ Authentication successful',
@@ -111,7 +130,7 @@ class KatanaTerminal {
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: '⚔️ katana> ',
+      prompt: this.makePrompt(),
       historySize: 100,
       completer: this.completer.bind(this)
     });
@@ -133,6 +152,10 @@ class KatanaTerminal {
     return [commands.length ? commands : this.availableCommands, line];
   }
 
+  makePrompt() {
+    return `${STYLES.purple}${EMOJIS.SWORD} ${STYLES.cyan}katana${STYLES.reset}${STYLES.white}> ${STYLES.reset}`;
+  }
+
   question(promptText) {
     return new Promise((resolve) => {
       this.rl.question(promptText, (answer) => {
@@ -146,8 +169,9 @@ class KatanaTerminal {
    */
   async start() {
     console.clear();
-    console.log('⚔️  KATANA MODE TERMINAL');
-    console.log('========================');
+    console.log(STYLES.purple + '╔══════════════════════════════════════════════════════════════════╗' + STYLES.reset);
+    console.log(STYLES.purple + '║' + STYLES.reset + ' ' + styleText('HFT-SYSTEM', STYLES.bold, STYLES.cyan) + ' ' + STYLES.white + '|' + STYLES.reset + ' ' + styleText('KATANA MODE TERMINAL', STYLES.bold, STYLES.purple) + ' ' + STYLES.purple + '║' + STYLES.reset);
+    console.log(STYLES.purple + '╚══════════════════════════════════════════════════════════════════╝' + STYLES.reset + '\n');
 
     if (!this.demoMode && !process.stdin.isTTY) {
       console.log('⚠️  No interactive terminal detected. Starting in demo mode.');
@@ -155,7 +179,7 @@ class KatanaTerminal {
     }
 
     if (this.demoMode) {
-      console.log(MESSAGES.DEMO_MODE);
+      console.log(styleText(MESSAGES.DEMO_MODE, STYLES.cyan));
       console.log('');
       this.authToken = 'demo-token';
       this.isConnected = true;
@@ -166,7 +190,7 @@ class KatanaTerminal {
       return;
     }
 
-    console.log('Ultra-fast Solana trading system');
+    console.log(styleText('Ultra-fast Solana trading system', STYLES.gray));
     console.log('');
 
     // Login first
@@ -356,48 +380,53 @@ class KatanaTerminal {
   showWelcome() {
     const walletDisplay = this.selectedWallet || 'None';
     const tokenDisplay = this.selectedToken || 'None';
-    const demoDisplay = this.demoMode ? ' (DEMO)' : '';
+    const demoDisplay = this.demoMode ? ` ${styleText('(DEMO MODE)', STYLES.cyan)}` : '';
 
-    console.log('\n========================================');
-    console.log('      HFT SYSTEM - KATANA MODE TERMINAL');
-    console.log('========================================\n');
-    console.log(`${this.getAutoTradeDisplay()}${demoDisplay}`);
-    console.log(`   MODE       : KATANA`);
-    console.log(`   STATUS     : ${this.katanaActive ? '🟢 RUNNING' : '🔴 STOPPED'}`);
-    console.log(`   TOKEN      : ${tokenDisplay}`);
-    console.log(`   WALLET     : ${walletDisplay}\n`);
+    console.log('\n' + STYLES.purple + '╔══════════════════════════════════════════════════════════════════╗' + STYLES.reset);
+    console.log(STYLES.purple + '║' + STYLES.reset + ' ' + styleText('KATANA DASHBOARD', STYLES.bold, STYLES.white) + ' ' + STYLES.gray + '| Frontend-aligned terminal experience' + STYLES.reset + ' ' + STYLES.purple + '║' + STYLES.reset);
+    console.log(STYLES.purple + '╚══════════════════════════════════════════════════════════════════╝' + STYLES.reset + '\n');
+    console.log(this.getAutoTradeDisplay() + demoDisplay);
+    console.log(styleText('SYSTEM STATUS', STYLES.bold, STYLES.cyan));
+    console.log(` ${styleText('MODE', STYLES.purple)}       : ${styleText('KATANA', STYLES.white)}`);
+    console.log(` ${styleText('STATUS', STYLES.purple)}     : ${this.katanaActive ? styleText('RUNNING', STYLES.cyan) : styleText('STOPPED', STYLES.red)}
+`);
+    console.log(` ${styleText('TOKEN', STYLES.purple)}      : ${styleText(tokenDisplay, STYLES.white)}`);
+    console.log(` ${styleText('WALLET', STYLES.purple)}     : ${styleText(walletDisplay, STYLES.white)}\n`);
+    console.log(styleText('Available commands:', STYLES.bold, STYLES.white));
+    const commandLine = (cmd, description) =>
+      `  ${styleText(cmd.padEnd(25), STYLES.cyan)} - ${styleText(description, STYLES.gray)}`;
 
-    console.log('Available commands:');
-    console.log('  start                   - Start Katana Mode');
-    console.log('  stop                    - Stop Katana Mode');
-    console.log('  status                  - Show current status');
-    console.log('  buy <amount>            - Buy selected token');
-    console.log('  sell <amount>           - Sell selected token');
-    console.log('  select <mint>           - Select token for trading');
-    console.log('  wallets                 - List configured wallets');
-    console.log('  usewallet <pk>          - Select wallet for trades');
-    console.log('  predict <mint>          - Request AI signal for token');
-    console.log('  positions               - Show active positions');
-    console.log('  tokens                  - Show recent token detections');
-    console.log('  history / trades        - Show trade history for selected wallet');
-    console.log('  orders                  - Show advanced orders for selected wallet');
-    console.log('  cancel-order <id>       - Cancel an advanced order');
-    console.log('  risk-heatmap            - Show portfolio risk heatmap');
-    console.log('  risk-correlation        - Show portfolio correlation data');
-    console.log('  alerts                  - Show active predictive alerts');
-    console.log('  ack-alert <id>          - Acknowledge an alert');
-    console.log('  sentiment bullish       - Show bullish sentiment opportunities');
-    console.log('  sentiment token <mint>  - Show sentiment for a token');
-    console.log('  pnl                     - Show P&L dashboard summary');
-    console.log('  portfolio               - Show portfolio summary for selected wallet');
-    console.log('  settings show <wallet>  - Show wallet limits');
-    console.log('  settings set <wallet> <spendingLimitUsd> [dailySpendingUsd] - Update wallet limits');
-    console.log('  help                    - Show this help');
-    console.log('  exit                    - Exit terminal\n');
-    console.log('Keyboard shortcuts:');
-    console.log('  T  - Toggle AUTO TRADE ON/OFF');
-    console.log('  H  - Show help');
-    console.log('  Q  - Quick exit\n');
+    console.log(commandLine('start', 'Start Katana Mode'));
+    console.log(commandLine('stop', 'Stop Katana Mode'));
+    console.log(commandLine('status', 'Show current status'));
+    console.log(commandLine('buy <amount>', 'Buy selected token'));
+    console.log(commandLine('sell <amount>', 'Sell selected token'));
+    console.log(commandLine('select <mint>', 'Select token for trading'));
+    console.log(commandLine('wallets', 'List configured wallets'));
+    console.log(commandLine('usewallet <pk>', 'Select wallet for trades'));
+    console.log(commandLine('predict <mint>', 'Request AI signal for token'));
+    console.log(commandLine('positions', 'Show active positions'));
+    console.log(commandLine('tokens', 'Show recent token detections'));
+    console.log(commandLine('history / trades', 'Show trade history for selected wallet'));
+    console.log(commandLine('orders', 'Show advanced orders for selected wallet'));
+    console.log(commandLine('cancel-order <id>', 'Cancel an advanced order'));
+    console.log(commandLine('risk-heatmap', 'Show portfolio risk heatmap'));
+    console.log(commandLine('risk-correlation', 'Show portfolio correlation data'));
+    console.log(commandLine('alerts', 'Show active predictive alerts'));
+    console.log(commandLine('ack-alert <id>', 'Acknowledge an alert'));
+    console.log(commandLine('sentiment bullish', 'Show bullish sentiment opportunities'));
+    console.log(commandLine('sentiment token <mint>', 'Show sentiment for a token'));
+    console.log(commandLine('pnl', 'Show P&L dashboard summary'));
+    console.log(commandLine('portfolio', 'Show portfolio summary for selected wallet'));
+    console.log(commandLine('settings show <wallet>', 'Show wallet limits'));
+    console.log(commandLine('settings set <wallet> <spendingLimitUsd> [dailySpendingUsd]', 'Update wallet limits'));
+    console.log(commandLine('help', 'Show this help'));
+    console.log(commandLine('exit', 'Exit terminal'));
+
+    console.log('\n' + styleText('Keyboard shortcuts:', STYLES.bold, STYLES.white));
+    console.log(`  ${styleText('T', STYLES.cyan)}  - ${styleText('Toggle AUTO TRADE ON/OFF', STYLES.gray)}`);
+    console.log(`  ${styleText('H', STYLES.cyan)}  - ${styleText('Show help', STYLES.gray)}`);
+    console.log(`  ${styleText('Q', STYLES.cyan)}  - ${styleText('Quick exit', STYLES.gray)}\n`);
   }
 
   /**
