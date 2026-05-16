@@ -348,7 +348,6 @@ export const useDeleteAPIKey = () => {
 export const useGetMarketData = useMarketData;
 export const useCreateApiKey = useCreateAPIKey;
 export const useDeleteApiKey = useDeleteAPIKey;
-export const useRegenerateApiKey = useRegenerateAPIKey;
 
 export const useGetWebhooks = (options = {}) => {
   return useQuery({
@@ -413,3 +412,5 @@ export const useRegenerateAPIKey = () => {
     },
   });
 };
+
+export const useRegenerateApiKey = useRegenerateAPIKey;

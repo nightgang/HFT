@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 
 import {
-  HFTDashboard,
   Dashboard,
   AdvancedOrders,
   Monitoring,
@@ -53,7 +52,7 @@ const routes = [
     path: "/terminal",
     label: "HFT Terminal",
     icon: Zap,
-    component: HFTDashboard,
+    component: Dashboard,
     needsDarkMode: true,
   },
   {

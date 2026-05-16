@@ -31,7 +31,7 @@ const rootElement = document.getElementById("root");
 
 if (!rootElement) {
   console.error('Root element not found');
-  process.exit(1);
+  throw new Error('Root element #root not found in DOM');
 }
 
 const renderError = ({ message, filename, lineno, colno, error }) => {
