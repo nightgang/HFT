@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Copy, Settings } from "lucide-react";
 
-function KatanaTerminal() {
+function HFTTerminal() {
   const [logs, setLogs] = useState([]);
   const [activePanel, setActivePanel] = useState("live-feed");
   const logEndRef = useRef(null);
@@ -276,4 +276,4 @@ function KatanaTerminal() {
   );
 }
 
-export default KatanaTerminal;
+export default HFTTerminal;

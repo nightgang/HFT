@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-function KatanaSidebar({ menuItems, activeTab, onTabChange }) {
+function HFTSidebar({ menuItems, activeTab, onTabChange }) {
   const [expandedItem, setExpandedItem] = useState(null);
 
   const emojis = {
@@ -40,7 +40,7 @@ function KatanaSidebar({ menuItems, activeTab, onTabChange }) {
         >
           ⚔️ HFT
         </motion.div>
-        <p className="text-xs text-gray-500">KATANA MODE v1.0</p>
+<p className="text-xs text-gray-500">HFT MODE v1.0</p>
         <motion.div
           className="pt-2 px-2 py-1 bg-purple-500/20 rounded border border-purple-400/30 text-xs text-purple-300 font-mono"
           whileHover={{ scale: 1.02 }}
@@ -125,4 +125,4 @@ function KatanaSidebar({ menuItems, activeTab, onTabChange }) {
   );
 }
 
-export default KatanaSidebar;
+export default HFTSidebar;

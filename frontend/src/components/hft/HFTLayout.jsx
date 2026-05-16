@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Menu,
   X,
@@ -15,25 +15,9 @@ import HFTSidebar from "./HFTSidebar";
 import HFTChart from "./HFTChart";
 import HFTTradePanel from "./HFTTradePanel";
 import HFTLiveFeed from "./HFTLiveFeed";
-              <HFTSidebar
 import HFTTerminal from "./HFTTerminal";
 import HFTActiveTrades from "./HFTActiveTrades";
-
-// EventEmitter polyfill for components that need it
-class EventEmitter {
-  constructor() {
-    this.events = {};
-  }
-  on(event, callback) {
-    if (!this.events[event]) this.events[event] = [];
-    this.events[event].push(callback);
-  }
-  emit(event, data) {
-    if (this.events[event]) {
-      this.events[event].forEach((callback) => callback(data));
-    }
-            <HFTHeader
-}
+import HFTWalletTracker from "./HFTWalletTracker";
 
 function HFTLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -60,13 +44,11 @@ function HFTLayout() {
         ),
       }));
     }, 2000);
-                    <HFTChart />
+
     return () => clearInterval(interval);
   }, []);
 
   const menuItems = [
-                    <HFTTradePanel />
-                    <HFTWalletTracker />
     { id: "trade", label: "Trade", icon: "💰" },
     { id: "wallets", label: "Wallets", icon: "🔑" },
     { id: "sniper", label: "Sniper", icon: "🎯" },
@@ -77,8 +59,8 @@ function HFTLayout() {
     { id: "strategies", label: "Strategies", icon: "🧠" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ];
-                  <HFTActiveTrades />
-                  <HFTLiveFeed />
+
+  return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -95,9 +77,9 @@ function HFTLayout() {
               "radial-gradient(ellipse_80%_80%_at_60%_-10%,rgba(120,40,200,0.4),rgba(10,10,40,0))",
               "radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,200,0.3),rgba(10,10,40,0))",
             ],
-                      <h3 className="text-sm font-bold text-purple-400">
-                        ⌨️ HFT-SYSTEM TERMINAL - ULTRA FAST EXECUTION
-                      </h3>
+          }}
+        />
+
         <motion.div
           className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))]"
           animate={{
@@ -106,14 +88,16 @@ function HFTLayout() {
               "radial-gradient(ellipse_80%_80%_at_70%_90%,rgba(0,200,150,0.3),rgba(10,10,40,0))",
               "radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))",
             ],
-                      <HFTTerminal />
+          }}
           transition={{
             duration: 6,
             repeat: Infinity,
             ease: "easeInOut",
             delay: 1,
           }}
-        />
+        >
+          <HFTTerminal />
+        </motion.div>
       </div>
 
       <div className="flex h-screen overflow-hidden">
@@ -127,7 +111,7 @@ function HFTLayout() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="w-64 transition-all duration-300 ease-in-out overflow-hidden"
             >
-              <KatanaSidebar
+              <HFTSidebar
                 menuItems={menuItems}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
@@ -144,7 +128,7 @@ function HFTLayout() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <KatanaHeader
+            <HFTHeader
               onMenuClick={() => setSidebarOpen(!sidebarOpen)}
               sidebarOpen={sidebarOpen}
               stats={stats}
@@ -223,13 +207,13 @@ function HFTLayout() {
                 >
                   {/* Chart */}
                   <div className="lg:col-span-2">
-                    <KatanaChart />
+                    <HFTChart />
                   </div>
 
                   {/* Right Panels */}
                   <div className="flex flex-col gap-4">
-                    <KatanaTradePanel />
-                    <KatanaWalletTracker />
+                    <HFTTradePanel />
+                    <HFTWalletTracker />
                   </div>
                 </motion.div>
 
@@ -240,8 +224,8 @@ function HFTLayout() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.0, duration: 0.6 }}
                 >
-                  <KatanaActiveTrades />
-                  <KatanaLiveFeed />
+                  <HFTActiveTrades />
+                  <HFTLiveFeed />
                 </motion.div>
               </div>
             </motion.div>
@@ -259,7 +243,7 @@ function HFTLayout() {
                   <div className="h-full flex flex-col">
                     <div className="px-4 py-2 bg-black/40 border-b border-purple-500/20 flex items-center justify-between">
                       <h3 className="text-sm font-bold text-purple-400">
-                        ⌨️ KATANA TERMINAL - ULTRA FAST EXECUTION
+                        ⌨️ HFT-SYSTEM TERMINAL - ULTRA FAST EXECUTION
                       </h3>
                       <button
                         onClick={() => setTerminalOpen(false)}
@@ -269,7 +253,7 @@ function HFTLayout() {
                       </button>
                     </div>
                     <div className="flex-1 overflow-hidden">
-                      <KatanaTerminal />
+                      <HFTTerminal />
                     </div>
                   </div>
                 </motion.div>
@@ -351,3 +335,4 @@ function StatCard({ label, value, change, icon, trending }) {
 }
 
 export default HFTLayout;
+

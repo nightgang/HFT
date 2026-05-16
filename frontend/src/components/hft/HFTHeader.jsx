@@ -2,7 +2,7 @@ import { Menu, LogOut, Zap, Wifi } from "lucide-react";
 import { motion } from "framer-motion";
 import AutoTradeToggle from "./AutoTradeToggle";
 
-function KatanaHeader({ onMenuClick, sidebarOpen, stats }) {
+function HFTHeader({ onMenuClick, sidebarOpen, stats }) {
   return (
     <motion.header
       initial={{ y: -50, opacity: 0 }}
@@ -96,4 +96,4 @@ function KatanaHeader({ onMenuClick, sidebarOpen, stats }) {
   );
 }
 
-export default KatanaHeader;
+export default HFTHeader;
