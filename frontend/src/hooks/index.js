@@ -1,5 +1,11 @@
-// Central hook exports for HFT-SYSTEM
-export * from "./hft/useApi";
-export * from "./hft/useWebSocket";
-export * from "./hft/useTable";
-export * from "./hft/useLocalStorage";
+// API hooks
+export * from "./useApi";
+
+// WebSocket hooks
+export * from "./useWebSocket";
+
+// Table hooks
+export * from "./useTable";
+
+// Local storage hooks
+export * from "./useLocalStorage";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, NavLink, Routes, Route } from "react-router-dom";
 import routes from "./routeConfig";
-import NotFound from "./pages/hft/NotFound";
+import NotFound from "./pages/NotFound";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);

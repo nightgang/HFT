@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createChart } from "lightweight-charts";
 import TerminalConsole from "../components/TerminalConsole";
-import HFTLiveFeed from "../components/hft/HFTLiveFeed";
-import HFTWalletTracker from "../components/hft/HFTWalletTracker";
-import HFTTradePanel from "../components/hft/HFTTradePanel";
+import HFTLiveFeed from "../components/HFTLiveFeed";
+import HFTWalletTracker from "../components/HFTWalletTracker";
+import HFTTradePanel from "../components/HFTTradePanel";
 import {
   LayoutDashboard,
   Terminal,
