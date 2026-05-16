@@ -4,9 +4,14 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PageContainer, GridContainer, Card } from '../components/layouts';
-import { LoadingSpinner, ErrorState } from '../components/common';
-import { TradingPanel } from '../components/trading';
+import {
+  PageContainer,
+  GridContainer,
+  Card,
+  LoadingSpinner,
+  ErrorState,
+  TradingPanel,
+} from '../components';
 import { useGetTrades, useGetOrders, useGetMarketData } from '../hooks';
 import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
 

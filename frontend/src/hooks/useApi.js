@@ -10,6 +10,7 @@ import {
   ordersService,
   portfolioService,
   analyticsService,
+  tradeHistoryService,
   alertsService,
   notificationsService,
   monitoringService,
@@ -211,6 +212,15 @@ export const useGetTradeAnalytics = (filters = {}, options = {}) => {
   });
 };
 
+export const useTradeHistory = (filters = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['tradeHistory', filters],
+    queryFn: () => tradeHistoryService.getAllTrades(filters),
+    refetchInterval: 30000,
+    ...options,
+  });
+};
+
 // Alerts Hooks
 export const useGetAlerts = (filters = {}, options = {}) => {
   return useQuery({
@@ -325,7 +335,7 @@ export const useCreateAPIKey = () => {
   });
 };
 
-export const useDeleteAPIKey = () => {
+export const useRegenerateApiKey = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (keyId) => systemService.deleteAPIKey(keyId),
@@ -334,6 +344,10 @@ export const useDeleteAPIKey = () => {
     },
   });
 };
+
+export const useGetMarketData = useMarketData;
+export const useCreateApiKey = useCreateAPIKey;
+export const useDeleteApiKey = useDeleteAPIKey;
 
 export const useGetWebhooks = (options = {}) => {
   return useQuery({
@@ -362,4 +376,39 @@ export const useDeleteWebhook = () => {
     },
   });
 };
+
+export const useApiKeys = useGetAPIKeys;
+export const useNotifications = useGetNotifications;
+export const useMarkNotificationRead = useMarkNotificationAsRead;
+
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId) => notificationsService.deleteNotification(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+    },
+  });
+};
+
+export const useMarkAllNotificationsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationsService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+    },
+  });
+};
+
+export const useRegenerateAPIKey = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (keyId) => systemService.regenerateAPIKey(keyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+    },
+  });
 };

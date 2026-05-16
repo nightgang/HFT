@@ -7,6 +7,7 @@ import {
   Download,
   Clock,
   DollarSign,
+  RefreshCw,
 } from "lucide-react";
 import { useTradeHistory } from "../hooks";
 import { DataTable, LoadingSpinner, ErrorMessage, Button, Modal } from "../components/ui";

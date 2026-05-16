@@ -20,4 +20,102 @@ check_file() {
   
   if [ ! -f "$file" ]; then
     echo "❌ File not found: $file"
-    ((ERRORS++))\n    return 1\n  fi\n  \n  if grep -q "$pattern" "$file"; then\n    echo "✅ $description"\n    ((SUCCESS++))\n    return 0\n  else\n    echo "❌ $description - pattern not found"\n    ((ERRORS++))\n    return 1\n  fi\n}\n\ncheck_not_exists() {\n  local file=$1\n  local pattern=$2\n  local description=$3\n  \n  if [ ! -f "$file\" ]; then\n    echo \"⚠️ File not found: $file\"\n    ((WARNINGS++))\n    return 1\n  fi\n  \n  if ! grep -q \"$pattern\" \"$file\"; then\n    echo \"✅ $description (vulnerability removed)\"\n    ((SUCCESS++))\n    return 0\n  else\n    echo \"⚠️ $description - vulnerability still present\"\n    ((WARNINGS++))\n    return 1\n  fi\n}\n\necho \"📋 Checking Backend Fixes...\"\ncheck_file \"backend/db/connection.js\" \"Don't exit process immediately\" \"Database: Graceful shutdown handling\"\ncheck_file \"backend/middleware/auth.js\" \"getEncryptionKey\" \"Backend: Encryption key caching\"\ncheck_file \"backend/middleware/auth.js\" \"revoked|expires_at\" \"Backend: API key expiration checks\"\ncheck_file \"backend/app.js\" \"crypto.timingSafeEqual\" \"Backend: Timing-safe comparison\"\ncheck_not_exists \"backend/app.js\" \"|| 'admin'\" \"Backend: Remove default credentials\"\ncheck_file \"backend/app.js\" \"authenticate.*metrics\" \"Backend: Metrics endpoint authentication\"\necho \"\"\n\necho \"📋 Checking Frontend Fixes...\"\ncheck_file \"frontend/vite.config.js\" \"process.env.NODE_ENV\" \"Frontend: Conditional sourcemaps\"\ncheck_file \"frontend/src/main.jsx\" \"textContent\" \"Frontend: XSS prevention in error rendering\"\ncheck_not_exists \"frontend/src/main.jsx\" \"innerHTML.*=.*\\`\" \"Frontend: Remove innerHTML template strings\"\necho \"\"\n\necho \"📋 Checking AI Service Fixes...\"\nif [ -f \"ai-service/main.py\" ]; then\n  check_file \"ai-service/main.py\" \"CORSMiddleware\" \"AI Service: CORS middleware\"\n  check_file \"ai-service/main.py\" \"verify_api_key\" \"AI Service: API key authentication\"\n  check_file \"ai-service/main.py\" \"limiter.limit\" \"AI Service: Rate limiting\"\n  check_file \"ai-service/main.py\" \"os.getenv\" \"AI Service: Environment variables\"\n  check_not_exists \"ai-service/main.py\" \"def health_check.*def health_check\" \"AI Service: No duplicate endpoints\"\nelse\n  echo \"⚠️ AI Service main.py not found\"\n  ((WARNINGS++))\nfi\necho \"\"\n\necho \"📋 Checking CLI Fixes...\"\ncheck_file \"cli/katana-terminal.js\" \"process.env.API_BASE\" \"CLI: API_BASE from environment\"\ncheck_file \"cli/katana-terminal.js\" \"REQUEST_TIMEOUT\" \"CLI: Configurable timeout\"\ncheck_file \"cli/katana-terminal.js\" \"makeApiCall\" \"CLI: API helper function\"\ncheck_file \"cli/katana-terminal.js\" \"timeout.*aiohttp.ClientTimeout\" \"CLI: Timeout handling\"\necho \"\"\n\necho \"📋 Checking Environment Variables...\"\nif [ -f \".env\" ] || [ -f \".env.example\" ]; then\n  echo \"✅ Environment file exists\"\n  ((SUCCESS++))\nelse\n  echo \"⚠️ No .env or .env.example file found - ensure to create it\"\n  ((WARNINGS++))\nfi\necho \"\"\n\necho \"📋 Checking Documentation...\"\ncheck_file \"SECURITY_PRODUCTION_FIXES.md\" \"Production Security\" \"Documentation: Security fixes documented\"\necho \"\"\n\necho \"=================================\"\necho \"Results:\"\necho \"✅ Passed: $SUCCESS\"\necho \"⚠️ Warnings: $WARNINGS\"\necho \"❌ Errors: $ERRORS\"\necho \"=================================\"\n\nif [ $ERRORS -eq 0 ]; then\n  echo \"\"\n  echo \"✅ All critical checks passed!\"\n  echo \"\"\n  echo \"Next steps for production:\"\n  echo \"1. Review SECURITY_PRODUCTION_FIXES.md\"\n  echo \"2. Set up proper environment variables\"\n  echo \"3. Run database migrations: npm run migrate\"\n  echo \"4. Test authentication flow\"\n  echo \"5. Verify rate limiting works\"\n  echo \"6. Test graceful shutdown\"\n  echo \"7. Set up monitoring and alerts\"\n  echo \"\"\n  exit 0\nelse\n  echo \"\"\n  echo \"❌ Please fix the errors above before deploying to production\"\n  echo \"\"\n  exit 1\nfi\n
+    ((ERRORS++))
+    return 1
+  fi
+  
+  if grep -q "$pattern" "$file"; then
+    echo "✅ $description"
+    ((SUCCESS++))
+    return 0
+  else
+    echo "❌ $description - pattern not found"
+    ((ERRORS++))
+    return 1
+  fi
+}
+
+check_not_exists() {
+  local file=$1
+  local pattern=$2
+  local description=$3
+  
+  if [ ! -f "$file" ]; then
+    echo "⚠️ File not found: $file"
+    ((WARNINGS++))
+    return 1
+  fi
+  
+  if ! grep -q "$pattern" "$file"; then
+    echo "✅ $description (vulnerability removed)"
+    ((SUCCESS++))
+    return 0
+  else
+    echo "⚠️ $description - vulnerability still present"
+    ((WARNINGS++))
+    return 1
+  fi
+}
+
+echo "📋 Checking Backend Fixes..."
+check_file "backend/db/connection.js" "Don't exit process immediately" "Database: Graceful shutdown handling"
+check_file "backend/middleware/auth.js" "getEncryptionKey" "Backend: Encryption key caching"
+check_file "backend/middleware/auth.js" "revoked" "Backend: API key expiration checks"
+check_file "backend/app.js" "timingSafeEqual" "Backend: Timing-safe comparison"
+check_file "backend/app.js" "authenticate.*metrics" "Backend: Metrics endpoint authentication"
+echo ""
+
+echo "📋 Checking Frontend Fixes..."
+check_file "frontend/vite.config.js" "NODE_ENV.*development" "Frontend: Conditional sourcemaps"
+check_file "frontend/src/main.jsx" "textContent" "Frontend: XSS prevention in error rendering"
+echo ""
+
+echo "📋 Checking AI Service Fixes..."
+if [ -f "ai-service/main.py" ]; then
+  check_file "ai-service/main.py" "CORSMiddleware" "AI Service: CORS middleware"
+  check_file "ai-service/main.py" "verify_api_key" "AI Service: API key authentication"
+  check_file "ai-service/main.py" "limiter" "AI Service: Rate limiting"
+  check_file "ai-service/main.py" "os.getenv" "AI Service: Environment variables"
+else
+  echo "⚠️ AI Service main.py not found"
+  ((WARNINGS++))
+fi
+echo ""
+
+echo "📋 Checking CLI Fixes..."
+check_file "cli/hft-terminal.js" "process.env.API_BASE" "CLI: API_BASE from environment"
+check_file "cli/hft-terminal.js" "REQUEST_TIMEOUT" "CLI: Configurable timeout"
+check_file "cli/hft-terminal.js" "makeApiCall" "CLI: API helper function"
+echo ""
+
+echo "📋 Checking Documentation..."
+check_file "SECURITY_PRODUCTION_FIXES.md" "Production Security" "Documentation: Security fixes documented"
+echo ""
+
+echo "================================="
+echo "Results:"
+echo "✅ Passed: $SUCCESS"
+echo "⚠️ Warnings: $WARNINGS"
+echo "❌ Errors: $ERRORS"
+echo "================================="
+
+if [ $ERRORS -eq 0 ]; then
+  echo ""
+  echo "✅ All critical checks passed!"
+  echo ""
+  echo "Next steps for production:"
+  echo "1. Review SECURITY_PRODUCTION_FIXES.md"
+  echo "2. Set up proper environment variables"
+  echo "3. Run database migrations: npm run migrate"
+  echo "4. Test authentication flow"
+  echo "5. Verify rate limiting works"
+  echo "6. Test graceful shutdown"
+  echo "7. Set up monitoring and alerts"
+  echo ""
+  exit 0
+else
+  echo ""
+  echo "❌ Please fix the errors above before deploying to production"
+  echo ""
+  exit 1
+fi

@@ -2,7 +2,7 @@
  * Custom hooks for common UI patterns and logic
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
  * useFetch - Fetch data with loading and error states

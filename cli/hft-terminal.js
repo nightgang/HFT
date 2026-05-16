@@ -7,17 +7,17 @@ const axios = require('axios');
 // ============ CONFIGURATION FROM ENVIRONMENT ============
 // Use environment variables with fallbacks for development
 const API_BASE = process.env.API_BASE || process.env.BACKEND_URL || 'http://localhost:3001';
-const KATANA_WS_URL = process.env.KATANA_WS_URL || process.env.WS_URL || 'ws://localhost:3002';
+const HFT_WS_URL = process.env.HFT_WS_URL || process.env.KATANA_WS_URL || process.env.WS_URL || 'ws://localhost:3002';
 const REQUEST_TIMEOUT = parseInt(process.env.REQUEST_TIMEOUT || '5000', 10); // 5 seconds default
 const MAX_LOGIN_RETRIES = parseInt(process.env.MAX_LOGIN_RETRIES || '3', 10);
 const WS_CONNECTION_TIMEOUT = parseInt(process.env.WS_CONNECTION_TIMEOUT || '5000', 10);
 
 // Validate configuration
-if (!API_BASE || !KATANA_WS_URL) {
-  console.error('❌ Error: API_BASE or KATANA_WS_URL not configured');
+if (!API_BASE || !HFT_WS_URL) {
+  console.error('❌ Error: API_BASE or HFT_WS_URL not configured');
   console.error('Please set environment variables:');
   console.error('  - API_BASE or BACKEND_URL');
-  console.error('  - KATANA_WS_URL or WS_URL');
+  console.error('  - HFT_WS_URL or WS_URL (legacy KATANA_WS_URL supported)');
   process.exit(1);
 }
 
@@ -87,13 +87,13 @@ const MESSAGES = {
   AUTH_FAILED: '❌ Authentication failed',
   CONNECTION_FAILED: '❌ Cannot connect to backend server. Is it running?',
   DEMO_MODE: '🎭 DEMO MODE - No backend required',
-  KATANA_STARTED: '✅ Katana Mode started',
-  KATANA_STOPPED: '🛑 Katana Mode stopped',
+  SYSTEM_STARTED: '✅ HFT System Mode started',
+  SYSTEM_STOPPED: '🛑 HFT System Mode stopped',
   TRADE_SUBMITTED: '✅ Trade order submitted',
   NO_TOKEN_SELECTED: '❌ No token selected. Use "select <mint>" first.',
   INVALID_AMOUNT: '❌ Invalid amount. Usage: buy/sell <amount>',
   UNKNOWN_COMMAND: '❌ Unknown command. Type "help" for available commands.',
-  EXITING: '⚔️ Exiting Katana Terminal...'
+  EXITING: '⚔️ Exiting HFT SYSTEM TERMINAL...'
 };
 
 // ============ API HELPER FUNCTIONS ============
@@ -140,9 +140,9 @@ async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIME
 }
 
 /**
- * Katana Terminal CLI for HFT Solana Trading System
+ * HFT System Terminal CLI for HFT Solana Trading System
  */
-class KatanaTerminal {
+class HFTSystemTerminal {
   constructor(options = {}) {
     this.demoMode = options.demo || false;
     this.rl = readline.createInterface({
@@ -155,7 +155,7 @@ class KatanaTerminal {
     this.ws = null;
     this.isConnected = false;
     this.authToken = null;
-    this.katanaActive = false;
+    this.systemActive = false;
     this.currentPositions = [];
     this.pnlData = { totalPnL: 0, pnlPercentage: 0, activeTrades: 0 };
     this.autoTradeEnabled = true;
@@ -171,7 +171,7 @@ class KatanaTerminal {
   }
 
   makePrompt() {
-    return `${styleText(`${EMOJIS.SWORD} katana`, STYLES.purple, STYLES.bold)} ${styleText('>', STYLES.cyan)} `;
+    return `${styleText(`${EMOJIS.SWORD} HFT`, STYLES.purple, STYLES.bold)} ${styleText('>', STYLES.cyan)} `;
   }
 
   question(promptText) {
@@ -183,16 +183,16 @@ class KatanaTerminal {
   }
 
   /**
-   * Start the Katana terminal
+   * Start the HFT SYSTEM TERMINAL
    */
   async start() {
     console.clear();
-    console.log(renderPanel('HFT KATANA TERMINAL', [
+    console.log(renderPanel('HFT SYSTEM TERMINAL', [
       styleText('Dark terminal UI aligned to frontend trading dashboard', STYLES.gray),
       '',
       panelLine('Environment', this.demoMode ? 'DEMO MODE' : 'CLI'),
       panelLine('Backend', API_BASE),
-      panelLine('Realtime WS', KATANA_WS_URL)
+      panelLine('Realtime WS', HFT_WS_URL)
     ]) + '\n');
 
     if (!this.demoMode && !process.stdin.isTTY) {
@@ -218,7 +218,7 @@ class KatanaTerminal {
     // Login first
     await this.login();
 
-    // Connect to Katana WebSocket
+    // Connect to HFT WebSocket
     await this.connectWebSocket();
 
     // Start command loop
@@ -259,7 +259,7 @@ class KatanaTerminal {
       } catch (error) {
         console.log('❌ Login error:', error.message);
         if (error.message.includes('Cannot connect') || error.message.includes('timeout')) {
-          console.log('💡 Try running in demo mode: node katana-terminal.js --demo');
+          console.log('💡 Try running in demo mode: node hft-terminal.js --demo');
           process.exit(1);
         }
         retryCount++;
@@ -274,17 +274,17 @@ class KatanaTerminal {
   }
 
   /**
-   * Establish WebSocket connection to Katana engine
+   * Establish WebSocket connection to HFT system engine
    */
   async connectWebSocket() {
     if (this.demoMode) return;
 
     try {
-      console.log('🔌 Connecting to Katana engine...');
-      this.ws = new WebSocket(`${KATANA_WS_URL}?token=${this.authToken}`);
+      console.log('🔌 Connecting to HFT system engine...');
+      this.ws = new WebSocket(`${HFT_WS_URL}?token=${this.authToken}`);
 
       this.ws.on('open', () => {
-        console.log('🔌 Connected to Katana engine');
+        console.log('🔌 Connected to HFT system engine');
         this.isConnected = true;
 
         // Subscribe to channels
@@ -304,7 +304,7 @@ class KatanaTerminal {
       });
 
       this.ws.on('close', () => {
-        console.log('🔌 Disconnected from Katana engine');
+        console.log('🔌 Disconnected from HFT system engine');
         this.isConnected = false;
       });
 
@@ -336,7 +336,7 @@ class KatanaTerminal {
       await this.fetchAutoTradeStatus();
 
     } catch (error) {
-      console.error('Failed to connect to Katana WebSocket:', error.message);
+      console.error('Failed to connect to HFT WebSocket:', error.message);
       console.log('⚠️  Continuing in offline mode...');
       this.isConnected = false;
     }
@@ -393,7 +393,7 @@ class KatanaTerminal {
     // Update terminal title/status if possible
     const pnl = this.formatPnL(this.pnlData.totalPnL);
     const percent = this.formatPercentage(this.pnlData.pnlPercentage);
-    process.title = `Katana Terminal | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades}`;
+    process.title = `HFT SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades}`;
   }
 
   /**
@@ -404,19 +404,19 @@ class KatanaTerminal {
     const tokenDisplay = this.selectedToken || 'None';
     const demoDisplay = this.demoMode ? ` ${styleText('(DEMO MODE)', STYLES.cyan)}` : '';
 
-    console.log('\n' + renderPanel('KATANA TRADING SUITE', [
+    console.log('\n' + renderPanel('HFT SYSTEM SUITE', [
       styleText('Fast analytics and smart trading tools in one dashboard.', STYLES.gray),
       '',
-      panelLine('Mode', 'KATANA'),
-      panelLine('Status', this.katanaActive ? styleText('RUNNING', STYLES.cyan) : styleText('STOPPED', STYLES.red)),
+      panelLine('Mode', 'HFT SYSTEM'),
+      panelLine('Status', this.systemActive ? styleText('RUNNING', STYLES.cyan) : styleText('STOPPED', STYLES.red)),
       panelLine('Token', tokenDisplay),
       panelLine('Wallet', walletDisplay),
       panelLine('Auto Trade', this.autoTradeEnabled ? styleText('ENABLED', STYLES.green) : styleText('DISABLED', STYLES.red))
     ]) + demoDisplay);
 
     console.log('\n' + renderPanel('COMMAND CENTER', [
-      `${styleText('start', STYLES.cyan)} ${styleText('- Start Katana Mode', STYLES.gray)}`,
-      `${styleText('stop', STYLES.cyan)}  ${styleText('- Stop Katana Mode', STYLES.gray)}`,
+      `${styleText('start', STYLES.cyan)} ${styleText('- Start HFT System Mode', STYLES.gray)}`,
+      `${styleText('stop', STYLES.cyan)}  ${styleText('- Stop HFT System Mode', STYLES.gray)}`,
       `${styleText('status', STYLES.cyan)} ${styleText('- Show current status', STYLES.gray)}`,
       `${styleText('buy <amount>', STYLES.cyan)} ${styleText('- Buy selected token', STYLES.gray)}`,
       `${styleText('sell <amount>', STYLES.cyan)} ${styleText('- Sell selected token', STYLES.gray)}`,
@@ -462,10 +462,10 @@ class KatanaTerminal {
           await this.setAutoTrade(args[0] === 'on');
           break;
         case 'start':
-          await this.startKatana();
+          await this.startSystem();
           break;
         case 'stop':
-          await this.stopKatana();
+          await this.stopSystem();
           break;
         case 'status':
           await this.showStatus();
@@ -546,39 +546,39 @@ class KatanaTerminal {
     this.rl.prompt();
   }
 
-  async startKatana() {
+  async startSystem() {
     if (this.demoMode) {
-      this.katanaActive = true;
-      console.log(`${MESSAGES.KATANA_STARTED} (DEMO)`);
+      this.systemActive = true;
+      console.log(`${MESSAGES.SYSTEM_STARTED} (DEMO)`);
       return;
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/api/katana/start`);
+      const response = await axios.post(`${API_BASE}/api/hft/start`);
       if (response.data.success) {
-        console.log(MESSAGES.KATANA_STARTED);
-        this.katanaActive = true;
+        console.log(MESSAGES.SYSTEM_STARTED);
+        this.systemActive = true;
       }
     } catch (error) {
-      console.log('❌ Failed to start Katana:', error.response?.data?.error || error.message);
+      console.log('❌ Failed to start HFT System Mode:', error.response?.data?.error || error.message);
     }
   }
 
-  async stopKatana() {
+  async stopSystem() {
     if (this.demoMode) {
-      this.katanaActive = false;
-      console.log(`${MESSAGES.KATANA_STOPPED} (DEMO)`);
+      this.systemActive = false;
+      console.log(`${MESSAGES.SYSTEM_STOPPED} (DEMO)`);
       return;
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/api/katana/stop`);
+      const response = await axios.post(`${API_BASE}/api/hft/stop`);
       if (response.data.success) {
-        console.log(MESSAGES.KATANA_STOPPED);
-        this.katanaActive = false;
+        console.log(MESSAGES.SYSTEM_STOPPED);
+        this.systemActive = false;
       }
     } catch (error) {
-      console.log('❌ Failed to stop Katana:', error.response?.data?.error || error.message);
+      console.log('❌ Failed to stop HFT System Mode:', error.response?.data?.error || error.message);
     }
   }
 
@@ -586,17 +586,17 @@ class KatanaTerminal {
     const statusLines = [];
 
     if (this.demoMode) {
-      statusLines.push(panelLine('Active', this.katanaActive ? styleText('YES', STYLES.green) : styleText('NO', STYLES.red)));
+      statusLines.push(panelLine('Active', this.systemActive ? styleText('YES', STYLES.green) : styleText('NO', STYLES.red)));
       statusLines.push(panelLine('Active Trades', String(Math.floor(Math.random() * 5))));
       statusLines.push(panelLine('Watched Tokens', String(Math.floor(Math.random() * 20))));
       statusLines.push(panelLine('Total PnL', this.formatPnL(this.pnlData.totalPnL)));
       statusLines.push(panelLine('P&L %', `${this.formatPercentage(this.pnlData.pnlPercentage)}%`));
-      console.log('\n' + renderPanel('KATANA STATUS (DEMO)', statusLines));
+      console.log('\n' + renderPanel('HFT SYSTEM STATUS (DEMO)', statusLines));
       return;
     }
 
     try {
-      const response = await axios.get(`${API_BASE}/api/katana/status`);
+      const response = await axios.get(`${API_BASE}/api/hft/status`);
       const status = response.data.data;
 
       statusLines.push(panelLine('Active', status.isActive ? styleText('YES', STYLES.green) : styleText('NO', STYLES.red)));
@@ -605,7 +605,7 @@ class KatanaTerminal {
       statusLines.push(panelLine('Total PnL', this.formatPnL(this.pnlData.totalPnL)));
       statusLines.push(panelLine('P&L %', `${this.formatPercentage(this.pnlData.pnlPercentage)}%`));
 
-      console.log('\n' + renderPanel('KATANA STATUS', statusLines));
+      console.log('\n' + renderPanel('HFT SYSTEM STATUS', statusLines));
     } catch (error) {
       console.log(styleText('❌ Failed to get status:', STYLES.red), error.response?.data?.error || error.message);
     }
@@ -632,7 +632,7 @@ class KatanaTerminal {
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/api/katana/trade`, {
+      const response = await axios.post(`${API_BASE}/api/hft/trade`, {
         side,
         tokenMint: this.selectedToken,
         amount: parseFloat(amount),
@@ -755,7 +755,7 @@ class KatanaTerminal {
     }
 
     try {
-      const response = await axios.get(`${API_BASE}/api/katana/positions`);
+      const response = await axios.get(`${API_BASE}/api/hft/positions`);
       const positions = response.data.data.positions;
 
       console.log('\n📈 Active Positions:');
@@ -787,7 +787,7 @@ class KatanaTerminal {
     }
 
     try {
-      const response = await axios.get(`${API_BASE}/api/katana/detections`);
+      const response = await axios.get(`${API_BASE}/api/hft/detections`);
       const detections = response.data.data.detections || [];
 
       console.log('\n🎯 Recent Token Detections:');
@@ -1288,14 +1288,14 @@ if (require.main === module) {
   const showHelp = args.includes('--help') || args.includes('-h');
 
   if (showHelp) {
-    console.log('Usage: node katana-terminal.js [--demo] [--help]');
+    console.log('Usage: node hft-terminal.js [--demo] [--help]');
     console.log('  --demo      Start in demo mode without backend authentication');
     console.log('  --help, -h  Show this help message');
     process.exit(0);
   }
 
-  const terminal = new KatanaTerminal({ demo: demoMode });
+  const terminal = new HFTSystemTerminal({ demo: demoMode });
   terminal.start().catch(console.error);
 }
 
-module.exports = KatanaTerminal;
+module.exports = HFTSystemTerminal;

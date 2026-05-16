@@ -83,9 +83,9 @@ fi
 echo ""
 
 echo "📋 Checking CLI Fixes..."
-check_file "cli/katana-terminal.js" "process.env.API_BASE" "CLI: API_BASE from environment"
-check_file "cli/katana-terminal.js" "REQUEST_TIMEOUT" "CLI: Configurable timeout"
-check_file "cli/katana-terminal.js" "makeApiCall" "CLI: API helper function"
+check_file "cli/hft-terminal.js" "process.env.API_BASE" "CLI: API_BASE from environment"
+check_file "cli/hft-terminal.js" "REQUEST_TIMEOUT" "CLI: Configurable timeout"
+check_file "cli/hft-terminal.js" "makeApiCall" "CLI: API helper function"
 echo ""
 
 echo "📋 Checking Documentation..."

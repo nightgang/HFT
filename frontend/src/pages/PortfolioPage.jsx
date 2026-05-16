@@ -4,8 +4,13 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PageContainer, GridContainer, Card } from '../components/layouts';
-import { LoadingSpinner, ErrorState } from '../components/common';
+import {
+  PageContainer,
+  GridContainer,
+  Card,
+  LoadingSpinner,
+  ErrorState,
+} from '../components';
 import { useGetHoldings, useGetAllocation, useGetPortfolioPerformance } from '../hooks';
 import { Wallet, TrendingUp, BarChart3 } from 'lucide-react';
 

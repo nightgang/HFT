@@ -17,30 +17,35 @@ import {
   Activity,
 } from "lucide-react";
 
-import HFTDashboard from "./pages/HFTDashboard";
-import AdvancedOrders from "./pages/AdvancedOrders";
-import Monitoring from "./pages/Monitoring";
-import PnLDashboard from "./pages/PnLDashboard";
-import RiskHeatmap from "./pages/RiskHeatmap";
-import PredictiveAlerts from "./pages/PredictiveAlerts";
-import SentimentAnalysis from "./pages/SentimentAnalysis";
-import CrossChainBridge from "./pages/CrossChainBridge";
-import LiquidityPools from "./pages/LiquidityPools";
-import JitoBundles from "./pages/JitoBundles";
-import Settings from "./pages/Settings";
-import PortfolioDashboard from "./pages/PortfolioDashboard";
-import TradeHistory from "./pages/TradeHistory";
-import MarketScreener from "./pages/MarketScreener";
-import PerformanceAnalytics from "./pages/PerformanceAnalytics";
-import NotificationsHub from "./pages/NotificationsHub";
-import APIKeysManager from "./pages/APIKeysManager";
+import {
+  HFTDashboard,
+  Dashboard,
+  AdvancedOrders,
+  Monitoring,
+  PnLDashboard,
+  RiskHeatmap,
+  PredictiveAlerts,
+  SentimentAnalysis,
+  CrossChainBridge,
+  LiquidityPools,
+  JitoBundles,
+  Settings,
+  PortfolioDashboard,
+  PortfolioPage,
+  TradeHistory,
+  MarketScreener,
+  PerformanceAnalytics,
+  NotificationsHub,
+  APIKeysManager,
+  TradingPage,
+} from "./pages";
 
 const routes = [
   {
     path: "/",
-    label: "Trading",
+    label: "Dashboard",
     icon: Home,
-    component: HFTDashboard,
+    component: Dashboard,
     exact: true,
     needsDarkMode: true,
   },
@@ -52,10 +57,16 @@ const routes = [
     needsDarkMode: true,
   },
   {
+    path: "/trading",
+    label: "Trading",
+    icon: TrendingUp,
+    component: TradingPage,
+  },
+  {
     path: "/portfolio",
     label: "Portfolio",
     icon: Wallet,
-    component: PortfolioDashboard,
+    component: PortfolioPage,
   },
   {
     path: "/history",

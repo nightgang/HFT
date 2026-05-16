@@ -5,15 +5,16 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PageContainer, GridContainer, Card, MainLayout } from '../components/layouts';
 import {
+  PageContainer,
+  GridContainer,
+  Card,
   LoadingSpinner,
   ErrorState,
-  StatCard,
   DashboardOverview,
-} from '../components/dashboard';
-import { TradingPanel } from '../components/trading';
-import { PortfolioOverview } from '../components/portfolio';
+  TradingPanel,
+  PortfolioOverview,
+} from '../components';
 import {
   useGetPortfolioOverview,
   useGetActiveTrades,

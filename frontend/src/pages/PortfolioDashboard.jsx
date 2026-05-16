@@ -9,7 +9,7 @@ import {
   Download,
   PieChart,
 } from "lucide-react";
-import { usePortfolio } from "../hooks";
+import { useGetPortfolioOverview } from "../hooks";
 import { DataTable, LoadingSpinner, ErrorMessage, Button, Modal } from "../components/ui";
 import { createPortfolioColumns } from "../hooks/useTable";
 
@@ -17,7 +17,7 @@ const PortfolioDashboard = () => {
   const [showValues, setShowValues] = useState(true);
   const [selectedToken, setSelectedToken] = useState(null);
 
-  const { data: portfolio, isLoading, error, refetch } = usePortfolio();
+  const { data: portfolio, isLoading, error, refetch } = useGetPortfolioOverview();
 
   const handleRefresh = async () => {
     await refetch();

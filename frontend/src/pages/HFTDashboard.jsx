@@ -6,6 +6,10 @@ import HFTLiveFeed from "../components/HFTLiveFeed";
 import HFTWalletTracker from "../components/HFTWalletTracker";
 import HFTTradePanel from "../components/HFTTradePanel";
 import {
+  useGetActiveTrades,
+  useGetSystemStatus,
+} from "../hooks";
+import {
   LayoutDashboard,
   Terminal,
   Zap,
@@ -1131,9 +1135,8 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     showWalletTracker: true,
     showActiveTrades: true,
   });
-  const [activeTrades, setActiveTrades] = useState([]);
-  const [tradesLoading, setTradesLoading] = useState(true);
-  const [tradesError, setTradesError] = useState(null);
+  const { data: activeTrades = [], isLoading: tradesLoading, error: tradesError } = useGetActiveTrades();
+  const { data: systemStatus } = useGetSystemStatus();
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -1156,36 +1159,6 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
       setDashboardConfig((prev) => ({ ...prev, ...dashboardConfigProp }));
     }
   }, [dashboardConfigProp]);
-
-  useEffect(() => {
-    let mounted = true;
-    const fetchActiveTrades = async () => {
-      setTradesLoading(true);
-      try {
-        const response = await fetch("/api/trading/trades?limit=12");
-        const data = await response.json();
-        if (!mounted) return;
-        if (!response.ok) {
-          throw new Error(data.error || "Unable to load active trades");
-        }
-        setActiveTrades(data.trades || []);
-        setTradesError(null);
-      } catch (error) {
-        if (!mounted) return;
-        setTradesError(error.message || "Failed to load trades");
-        setActiveTrades([]);
-      } finally {
-        if (mounted) setTradesLoading(false);
-      }
-    };
-
-    fetchActiveTrades();
-    const intervalId = setInterval(fetchActiveTrades, 10000);
-    return () => {
-      mounted = false;
-      clearInterval(intervalId);
-    };
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -1262,12 +1235,14 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     { id: "plugins", label: "Plugins", icon: Puzzle },
   ];
 
+  const rpcHealthLabel = systemStatus?.rpcHealth ? systemStatus.rpcHealth.toUpperCase() : "HEALTHY";
+
   const statsCards = [
     { label: "Total PNL", value: "$18,742.60", change: "+7.8%", icon: TrendingUp, color: "text-emerald-400" },
     { label: "Win Rate", value: "86.3%", change: "+4.2%", icon: Activity, color: "text-emerald-400" },
     { label: "Total Volume", value: "$127.4K", change: "+12.5%", icon: DollarSign, color: "text-cyan-400" },
     { label: "Active Trades", value: tradesLoading ? "…" : `${activeTrades.length}`, change: "Realtime", icon: ZapIcon, color: "text-purple-400" },
-    { label: "Balance", value: "$45,230", change: "+2.1%", icon: Wallet, color: "text-emerald-400" },
+    { label: "RPC Health", value: rpcHealthLabel, change: systemStatus?.latency ? `${systemStatus.latency.toFixed(1)}ms` : "—", icon: Wifi, color: rpcHealthLabel === "HEALTHY" ? "text-green-400" : "text-amber-400" },
     { label: "Priority Fee", value: "0.000005", change: "Optimal", icon: Shield, color: "text-orange-400" },
   ];
 

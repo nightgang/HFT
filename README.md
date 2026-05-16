@@ -55,7 +55,7 @@ HFT/
 │   ├── models/            # ML models
 │   └── requirements.txt   # Python dependencies
 ├── cli/                    # Command-line trading interface
-│   └── katana-terminal.js  # Interactive trading terminal
+│   └── hft-terminal.js     # Interactive trading terminal
 ├── db/                     # Database initialization scripts
 │   ├── init.sql           # Initial schema
 │   ├── schema.sql         # Database schema
@@ -220,7 +220,7 @@ npm run pm2:stop       # Stop PM2 processes
 npm run backup         # Database backup
 
 # Trading CLI
-npm run katana         # Launch Katana trading terminal
+npm run hft            # Launch HFT trading terminal
 ```
 
 ### Backend Development

@@ -487,16 +487,16 @@ ws.send(JSON.stringify({
 
 ---
 
-## 🖥️ Katana Terminal
+## 🖥️ HFT Terminal
 
-The Katana Terminal is a professional command-line trading interface.
+The HFT Terminal is a professional command-line trading interface.
 
-### Launch Katana
+### Launch HFT Terminal
 
 ```bash
-npm run katana
+npm run hft
 # or
-node cli/katana-terminal.js
+node cli/hft-terminal.js
 ```
 
 ### Terminal Interface

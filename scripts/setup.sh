@@ -130,8 +130,8 @@ echo -e "${YELLOW}3. Start Both (Backend + Frontend):${NC}"
 echo "   npm run dev"
 echo ""
 
-echo -e "${YELLOW}4. Start Katana CLI:${NC}"
-echo "   npm run katana"
+echo -e "${YELLOW}4. Start HFT CLI:${NC}"
+echo "   npm run hft"
 echo ""
 
 echo -e "${YELLOW}5. Start AI Service:${NC}"

@@ -11,6 +11,7 @@ export { default as AdvancedOrders } from './AdvancedOrders';
 export { default as PortfolioDashboard } from './PortfolioDashboard';
 export { default as TradeHistory } from './TradeHistory';
 export { default as PnLDashboard } from './PnLDashboard';
+export { default as PerformanceAnalytics } from './PerformanceAnalytics';
 export { default as RiskHeatmap } from './RiskHeatmap';
 export { default as PredictiveAlerts } from './PredictiveAlerts';
 export { default as SentimentAnalysis } from './SentimentAnalysis';
