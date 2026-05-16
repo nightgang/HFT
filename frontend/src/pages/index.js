@@ -6,8 +6,8 @@
 export { default as Dashboard } from './Dashboard';
 export { default as PortfolioPage } from './PortfolioPage';
 export { default as TradingPage } from './TradingPage';
-export { default as HFTDashboard } from './Dashboard';
 export { default as AdvancedOrders } from './AdvancedOrders';
+
 export { default as PortfolioDashboard } from './PortfolioDashboard';
 export { default as TradeHistory } from './TradeHistory';
 export { default as PnLDashboard } from './PnLDashboard';
