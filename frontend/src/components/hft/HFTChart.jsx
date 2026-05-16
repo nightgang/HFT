@@ -3,7 +3,7 @@ import { createChart, ColorType } from "lightweight-charts";
 import { TrendingUp, Settings, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 
-function KatanaChart() {
+function HFTChart() {
   const [timeframe, setTimeframe] = useState("1H");
   const [chartType, setChartType] = useState("candle");
   const chartContainerRef = useRef(null);
@@ -179,4 +179,4 @@ function KatanaChart() {
   );
 }
 
-export default KatanaChart;
+export default HFTChart;

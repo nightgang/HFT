@@ -10,14 +10,14 @@ import {
   Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import KatanaHeader from "./KatanaHeader";
-import KatanaSidebar from "./KatanaSidebar";
-import KatanaChart from "./KatanaChart";
-import KatanaTradePanel from "./KatanaTradePanel";
-import KatanaLiveFeed from "./KatanaLiveFeed";
-import KatanaWalletTracker from "./KatanaWalletTracker";
-import KatanaTerminal from "./KatanaTerminal";
-import KatanaActiveTrades from "./KatanaActiveTrades";
+import HFTHeader from "./HFTHeader";
+import HFTSidebar from "./HFTSidebar";
+import HFTChart from "./HFTChart";
+import HFTTradePanel from "./HFTTradePanel";
+import HFTLiveFeed from "./HFTLiveFeed";
+              <HFTSidebar
+import HFTTerminal from "./HFTTerminal";
+import HFTActiveTrades from "./HFTActiveTrades";
 
 // EventEmitter polyfill for components that need it
 class EventEmitter {
@@ -32,10 +32,10 @@ class EventEmitter {
     if (this.events[event]) {
       this.events[event].forEach((callback) => callback(data));
     }
-  }
+            <HFTHeader
 }
 
-function KatanaLayout() {
+function HFTLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [terminalOpen, setTerminalOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -60,13 +60,13 @@ function KatanaLayout() {
         ),
       }));
     }, 2000);
-
+                    <HFTChart />
     return () => clearInterval(interval);
   }, []);
 
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: "📊" },
-    { id: "terminal", label: "Terminal", icon: "⌨️" },
+                    <HFTTradePanel />
+                    <HFTWalletTracker />
     { id: "trade", label: "Trade", icon: "💰" },
     { id: "wallets", label: "Wallets", icon: "🔑" },
     { id: "sniper", label: "Sniper", icon: "🎯" },
@@ -77,8 +77,8 @@ function KatanaLayout() {
     { id: "strategies", label: "Strategies", icon: "🧠" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ];
-
-  return (
+                  <HFTActiveTrades />
+                  <HFTLiveFeed />
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -95,9 +95,9 @@ function KatanaLayout() {
               "radial-gradient(ellipse_80%_80%_at_60%_-10%,rgba(120,40,200,0.4),rgba(10,10,40,0))",
               "radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,200,0.3),rgba(10,10,40,0))",
             ],
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
+                      <h3 className="text-sm font-bold text-purple-400">
+                        ⌨️ HFT-SYSTEM TERMINAL - ULTRA FAST EXECUTION
+                      </h3>
         <motion.div
           className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))]"
           animate={{
@@ -106,7 +106,7 @@ function KatanaLayout() {
               "radial-gradient(ellipse_80%_80%_at_70%_90%,rgba(0,200,150,0.3),rgba(10,10,40,0))",
               "radial-gradient(ellipse_80%_80%_at_80%_80%,rgba(0,200,150,0.2),rgba(10,10,40,0))",
             ],
-          }}
+                      <HFTTerminal />
           transition={{
             duration: 6,
             repeat: Infinity,
@@ -350,4 +350,4 @@ function StatCard({ label, value, change, icon, trending }) {
   );
 }
 
-export default KatanaLayout;
+export default HFTLayout;

@@ -17,23 +17,23 @@ import {
   Activity,
 } from "lucide-react";
 
-import HFTDashboard from "./pages/HFTDashboard";
-import AdvancedOrders from "./pages/AdvancedOrders";
-import Monitoring from "./pages/Monitoring";
-import PnLDashboard from "./pages/PnLDashboard";
-import RiskHeatmap from "./pages/RiskHeatmap";
-import PredictiveAlerts from "./pages/PredictiveAlerts";
-import SentimentAnalysis from "./pages/SentimentAnalysis";
-import CrossChainBridge from "./pages/CrossChainBridge";
-import LiquidityPools from "./pages/LiquidityPools";
-import JitoBundles from "./pages/JitoBundles";
-import Settings from "./pages/Settings";
-import PortfolioDashboard from "./pages/PortfolioDashboard";
-import TradeHistory from "./pages/TradeHistory";
-import MarketScreener from "./pages/MarketScreener";
-import PerformanceAnalytics from "./pages/PerformanceAnalytics";
-import NotificationsHub from "./pages/NotificationsHub";
-import APIKeysManager from "./pages/APIKeysManager";
+import HFTDashboard from "./pages/hft/HFTDashboard";
+import AdvancedOrders from "./pages/hft/AdvancedOrders";
+import Monitoring from "./pages/hft/Monitoring";
+import PnLDashboard from "./pages/hft/PnLDashboard";
+import RiskHeatmap from "./pages/hft/RiskHeatmap";
+import PredictiveAlerts from "./pages/hft/PredictiveAlerts";
+import SentimentAnalysis from "./pages/hft/SentimentAnalysis";
+import CrossChainBridge from "./pages/hft/CrossChainBridge";
+import LiquidityPools from "./pages/hft/LiquidityPools";
+import JitoBundles from "./pages/hft/JitoBundles";
+import Settings from "./pages/hft/Settings";
+import PortfolioDashboard from "./pages/hft/PortfolioDashboard";
+import TradeHistory from "./pages/hft/TradeHistory";
+import MarketScreener from "./pages/hft/MarketScreener";
+import PerformanceAnalytics from "./pages/hft/PerformanceAnalytics";
+import NotificationsHub from "./pages/hft/NotificationsHub";
+import APIKeysManager from "./pages/hft/APIKeysManager";
 
 const routes = [
   {

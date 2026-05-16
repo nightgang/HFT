@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Wallet } from "lucide-react";
 
-function KatanaWalletTracker() {
+function HFTWalletTracker() {
   const [wallets, setWallets] = useState([]);
 
   useEffect(() => {
@@ -125,4 +125,4 @@ function KatanaWalletTracker() {
   );
 }
 
-export default KatanaWalletTracker;
+export default HFTWalletTracker;

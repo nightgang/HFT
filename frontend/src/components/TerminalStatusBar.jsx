@@ -46,7 +46,7 @@ const TerminalStatusBar = ({ isCollapsed = false }) => {
           >
             <Activity className="w-3 h-3" />
           </motion.div>
-          <span>KATANA TERMINAL</span>
+            <span>HFT-SYSTEM TERMINAL</span>
           <span className="text-gray-500">●</span>
           <span>ACTIVE</span>
         </div>

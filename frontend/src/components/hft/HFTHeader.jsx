@@ -22,14 +22,14 @@ function KatanaHeader({ onMenuClick, sidebarOpen, stats }) {
             <Menu className="w-5 h-5" />
           </motion.button>
           <div>
-            <motion.h1
-              className="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-pulse"
+              <motion.h1
+              className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent animate-pulse"
               animate={{
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
               }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              HFT ⚔️ KATANA MODE
+              HFT-SYSTEM
             </motion.h1>
             <p className="text-xs text-gray-500">Ultra Fast Solana Trading</p>
           </div>
@@ -71,17 +71,17 @@ function KatanaHeader({ onMenuClick, sidebarOpen, stats }) {
             <div className="text-sm font-bold text-green-400">42ms</div>
           </div>
           <AutoTradeToggle ws={null} onStatusChange={(status) => {}} />
-          <motion.button
-            className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/40 border border-purple-400/50 rounded-lg text-purple-300 text-sm font-medium transition relative overflow-hidden"
+            <motion.button
+            className="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/30 rounded-lg text-cyan-300 text-sm font-medium transition relative overflow-hidden"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 hover:opacity-20"
+              className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-purple-600 opacity-0 hover:opacity-20"
               animate={{ x: ["-100%", "100%"] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
-            <span className="relative">Katana Mode: ON</span>
+            <span className="relative">HFT-SYSTEM: ON</span>
           </motion.button>
           <motion.button
             className="p-2 hover:bg-red-500/20 rounded-lg transition text-red-400"

@@ -39,11 +39,11 @@ const SystemLogsTerminal = () => {
         time: new Date().toLocaleTimeString(),
       };
 
-      setLogs(prev => [newLog, ...prev.slice(0, 49)]); // Keep last 50 logs
+      setLogs(prev => [newLog, ...(prev || []).slice(0, 49)]); // Keep last 50 logs
     }, 4000 + Math.random() * 6000); // Random interval between 4-10 seconds
 
     // Initial load
-    setLogs(mockSystemLogs);
+    setLogs((mockSystemLogs || []).slice(0));
 
     return () => clearInterval(interval);
   }, []);

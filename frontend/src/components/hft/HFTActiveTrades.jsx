@@ -1,6 +1,6 @@
 import { TrendingUp, X } from "lucide-react";
 
-function KatanaActiveTrades() {
+function HFTActiveTrades() {
   const trades = [
     {
       id: 1,
@@ -183,4 +183,4 @@ function KatanaActiveTrades() {
   );
 }
 
-export default KatanaActiveTrades;
+export default HFTActiveTrades;

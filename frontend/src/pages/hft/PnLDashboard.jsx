@@ -58,7 +58,7 @@ const PnLDashboard = () => {
                   : "bg-slate-800 text-gray-400 hover:bg-slate-700"
               }`}
             >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
+              {p.charAt(0).toUpperCase() + (p?.slice(1) || "")}
             </button>
           ))}
         </div>

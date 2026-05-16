@@ -3,7 +3,7 @@ import axios from "axios";
 import { ArrowDown, ArrowUp, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
-function KatanaTradePanel() {
+function HFTTradePanel() {
   const [activeTab, setActiveTab] = useState("buy");
   const [amount, setAmount] = useState("");
   const [strategy, setStrategy] = useState("market");
@@ -279,4 +279,4 @@ function KatanaTradePanel() {
   );
 }
 
-export default KatanaTradePanel;
+export default HFTTradePanel;

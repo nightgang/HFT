@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createChart } from "lightweight-charts";
 import TerminalConsole from "../components/TerminalConsole";
-import KatanaLiveFeed from "../components/KatanaLiveFeed";
-import KatanaWalletTracker from "../components/KatanaWalletTracker";
-import KatanaTradePanel from "../components/KatanaTradePanel";
+import HFTLiveFeed from "../components/hft/HFTLiveFeed";
+import HFTWalletTracker from "../components/hft/HFTWalletTracker";
+import HFTTradePanel from "../components/hft/HFTTradePanel";
 import {
   LayoutDashboard,
   Terminal,
@@ -79,7 +79,7 @@ const MempoolTransactionViewer = () => {
         status: ["pending", "confirmed"][Math.floor(Math.random() * 2)],
         timestamp: new Date().toLocaleTimeString(),
       };
-      setMempool((prev) => [newTx, ...prev.slice(0, 7)]);
+      setMempool((prev) => [newTx, ...(prev || []).slice(0, 7)]);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -161,7 +161,7 @@ const CopyTradingSignalFeed = () => {
         followers: Math.floor(Math.random() * 2000) + 500,
         timestamp: new Date().toLocaleTimeString(),
       };
-      setSignals((prev) => [newSignal, ...prev.slice(0, 5)]);
+      setSignals((prev) => [newSignal, ...(prev || []).slice(0, 5)]);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -784,7 +784,7 @@ const MainPanel = () => {
           close: newPrice,
         };
         chartRef.current.candlestickSeries.update(newCandle);
-        return [...prev.slice(1), newCandle];
+        return [...(prev || []).slice(1), newCandle];
       });
     }, 3000);
     return () => clearInterval(interval);
@@ -931,7 +931,7 @@ const LiveDataStream = () => {
         time: new Date().toLocaleTimeString(),
         color: ["purple", "amber", "cyan", "green"][Math.floor(Math.random() * 4)],
       };
-      setEvents((prev) => [newEvent, ...prev.slice(0, 14)]);
+      setEvents((prev) => [newEvent, ...(prev || []).slice(0, 14)]);
     }, 2000);
     return () => clearInterval(eventInterval);
   }, []);
@@ -1015,7 +1015,7 @@ const ExecutionTerminal = () => {
         pnl: Math.random() > 0.6 ? `+$${(Math.random() * 100).toFixed(2)}` : null,
         confidence: Math.floor(Math.random() * 25) + 70,
       };
-      setTrades((prev) => [newTrade, ...prev.slice(0, 11)]);
+      setTrades((prev) => [newTrade, ...(prev || []).slice(0, 11)]);
       setStats((prev) => ({
         ...prev,
         totalPnL: prev.totalPnL + (Math.random() - 0.4) * 50,
@@ -1290,7 +1290,6 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           >
             HFT-SYSTEM
           </motion.h1>
-          <div className="text-xs text-purple-400 mt-1 font-mono">KATANA MODE</div>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -1328,7 +1327,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           >
             <div className="flex items-center justify-center gap-2">
               <Zap className="w-4 h-4" />
-              <span className="text-sm font-mono">KATANA MODE</span>
+              <span className="text-sm font-mono">HFT-SYSTEM</span>
             </div>
           </motion.button>
         </div>
@@ -1348,15 +1347,15 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                HFT-SYSTEM – KATANA MODE
+                HFT-SYSTEM
               </h1>
               <p className="text-gray-400 text-sm mt-1">Ultra-fast Solana trading command center for Solana HFT.</p>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
                 <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/10 bg-white/5 px-3 py-1 text-cyan-200 tracking-[0.12em]">
                   <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                  KATANA AI ONLINE
+                  HFT-SYSTEM AI ONLINE
                 </span>
-                <span className="rounded-full border border-purple-500/10 bg-purple-500/10 px-3 py-1 text-purple-200">HFT Strategy Suite</span>
+                <span className="rounded-full border border-purple-500/10 bg-purple-500/10 px-3 py-1 text-purple-200">HFT-SYSTEM Strategy Suite</span>
               </div>
             </div>
 
@@ -1431,7 +1430,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           >
             <div className="p-4 border-b border-purple-500/20 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-white">$KAT – Katana Token</h2>
+                <h2 className="text-xl font-bold text-white">$HFT – HFT Token</h2>
                 <div className="text-sm text-gray-400">Current: $0.000956 <span className="text-green-400">+211%</span></div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1450,18 +1449,18 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
 
           {dashboardConfig.showTradePanel && (
             <motion.div className="col-span-12 lg:col-span-2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-              <KatanaTradePanel />
+                <HFTTradePanel />
             </motion.div>
           )}
 
           {(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) && (
             <motion.div className="col-span-12 lg:col-span-3 space-y-6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-              {dashboardConfig.showLiveFeed && <KatanaLiveFeed />}
-              {dashboardConfig.showWalletTracker && <KatanaWalletTracker />}
+              {dashboardConfig.showLiveFeed && <HFTLiveFeed />}
+              {dashboardConfig.showWalletTracker && <HFTWalletTracker />}
               <div className="rounded-3xl border border-white/10 bg-black/30 p-4 text-xs text-gray-300 shadow-[0_18px_60px_rgba(34,211,238,0.08)]">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div>
-                    <div className="text-xs uppercase tracking-[0.2em] text-gray-500">KATANA AI</div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-gray-500">HFT-SYSTEM AI</div>
                     <div className="text-sm font-bold text-white">Signal Feed</div>
                   </div>
                   <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-cyan-200 text-[10px]">93% Confidence</span>

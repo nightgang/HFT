@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, NavLink, Routes, Route } from "react-router-dom";
 import routes from "./routeConfig";
-import NotFound from "./pages/NotFound";
+import NotFound from "./pages/hft/NotFound";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -79,10 +79,10 @@ function App() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse">
-            ⚔️ KATANA MODE
-          </div>
+          <div className="text-center space-y-4">
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent animate-pulse">
+              HFT-SYSTEM
+            </div>
           <div className="text-gray-500 text-sm">Initializing trading engine...</div>
           <div className="w-48 h-1 bg-purple-500/20 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse" />
@@ -104,7 +104,7 @@ function App() {
           } bg-slate-900/90 border-r border-purple-500/20 transition-all duration-300 flex flex-col`}
         >
           <div className="p-6 flex items-center justify-between">
-            {sidebarOpen && <h1 className="text-xl font-bold text-purple-400">⚔️ KATANA</h1>}
+            {sidebarOpen && <h1 className="text-xl font-bold text-cyan-400">HFT-SYSTEM</h1>}
             <button
               onClick={() => setSidebarOpen((prev) => !prev)}
               className="p-2 rounded-lg bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 transition"
@@ -157,8 +157,8 @@ function App() {
           <div className="p-8">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-white">Katana Trading Suite</h2>
-                <p className="text-slate-400">Fast analytics and smart trading tools in one dashboard.</p>
+                <h2 className="text-3xl font-bold text-white">HFT-SYSTEM</h2>
+                <p className="text-slate-400">Professional Solana HFT Command Center.</p>
               </div>
               <button
                 type="button"

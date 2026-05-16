@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp } from "lucide-react";
 
-function KatanaLiveFeed() {
+function HFTLiveFeed() {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,7 +53,7 @@ function KatanaLiveFeed() {
       {/* Header */}
       <div className="px-4 py-3 border-b border-purple-500/20 flex items-center space-x-2">
         <TrendingUp className="w-4 h-4 text-purple-400" />
-        <h3 className="font-bold text-white text-sm">LIVE TOKEN FEED</h3>
+        <h3 className="font-bold text-white text-sm">LIVE TRADE FEED</h3>
         <div className="ml-auto text-xs text-gray-500">
           {feed.length} tokens
         </div>
@@ -91,7 +91,7 @@ function KatanaLiveFeed() {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <div className="font-mono font-bold text-white text-sm">
-                      {token.symbol || token.mint.slice(0, 8)}
+                        {token.symbol || token.mint?.slice(0, 8) || 'UNKNOWN'}
                     </div>
                     <div className="text-xs text-gray-500">{token.mint}</div>
                   </div>
@@ -135,4 +135,4 @@ function KatanaLiveFeed() {
   );
 }
 
-export default KatanaLiveFeed;
+export default HFTLiveFeed;

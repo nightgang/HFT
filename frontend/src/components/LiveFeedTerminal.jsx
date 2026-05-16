@@ -28,11 +28,11 @@ const LiveFeedTerminal = () => {
         time: new Date().toLocaleTimeString(),
       };
 
-      setFeedItems(prev => [newItem, ...prev.slice(0, 19)]); // Keep last 20 items
+      setFeedItems(prev => [newItem, ...(prev || []).slice(0, 19)]); // Keep last 20 items
     }, 2000 + Math.random() * 3000); // Random interval between 2-5 seconds
 
     // Initial load
-    setFeedItems(mockFeedData.slice(0, 10));
+    setFeedItems((mockFeedData || []).slice(0, 10));
 
     return () => clearInterval(interval);
   }, []);

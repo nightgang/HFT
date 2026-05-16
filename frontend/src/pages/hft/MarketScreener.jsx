@@ -168,7 +168,7 @@ const MarketScreener = () => {
             <p className="text-gray-400">No tokens found</p>
           </div>
         ) : (
-          filteredTokens.slice(0, 30).map((token, idx) => (
+          (filteredTokens || []).slice(0, 30).map((token, idx) => (
             <div
               key={idx}
               onClick={() => setSelectedToken(token)}
