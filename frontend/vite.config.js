@@ -39,12 +39,7 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: process.env.NODE_ENV === "development",
     minify: "esbuild",
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
         manualChunks(id) {

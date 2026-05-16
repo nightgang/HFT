@@ -107,6 +107,10 @@ async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIME
       headers: { 'Content-Type': 'application/json' }
     };
 
+    if (axios.defaults.headers && axios.defaults.headers.common && axios.defaults.headers.common.Authorization) {
+      config.headers.Authorization = axios.defaults.headers.common.Authorization;
+    }
+
     let response;
     if (method === 'GET') {
       response = await axios.get(`${API_BASE}${endpoint}`, config);

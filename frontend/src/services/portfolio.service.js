@@ -11,7 +11,15 @@ class PortfolioService {
    */
   async getPortfolioOverview() {
     try {
-      return await api.get('/portfolio');
+      const response = await api.get('/trading/wallets');
+      const wallets = response?.wallets || [];
+
+      return {
+        totalValue: 0,
+        change24h: 0,
+        pnlToday: 0,
+        holdings: wallets,
+      };
     } catch (error) {
       console.error('Failed to fetch portfolio overview:', error);
       throw error;

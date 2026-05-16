@@ -11,7 +11,7 @@ class MonitoringService {
    */
   async getSystemStatus() {
     try {
-      return await api.get('/monitoring/system-status');
+      return await api.get('/system/status');
     } catch (error) {
       console.error('Failed to fetch system status:', error);
       throw error;
@@ -23,7 +23,14 @@ class MonitoringService {
    */
   async getHealthCheck() {
     try {
-      return await api.get('/monitoring/health');
+      const response = await fetch('/healthz/ready', {
+        method: 'GET',
+        headers: api.getHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(`Health check failed: ${response.status}`);
+      }
+      return response.json();
     } catch (error) {
       console.error('Failed to fetch health check:', error);
       throw error;
@@ -35,7 +42,8 @@ class MonitoringService {
    */
   async getActiveTrades() {
     try {
-      return await api.get('/monitoring/active-trades');
+      const response = await api.get('/trading/trades?limit=50');
+      return response?.trades || [];
     } catch (error) {
       console.error('Failed to fetch active trades:', error);
       throw error;

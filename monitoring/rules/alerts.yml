@@ -33,6 +33,26 @@ groups:
           summary: "Redis cache is down"
           description: "Redis service is unavailable, trading performance may be affected"
 
+      # AI Service Health
+      - alert: AIServiceDown
+        expr: up{job="hft-ai-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AI service is down"
+          description: "HFT AI service has stopped responding or is unreachable"
+
+      # High backend error rate
+      - alert: BackendHighErrorRate
+        expr: rate(http_requests_total{job="hft-backend", status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High backend 5xx error rate"
+          description: "More than 5% of backend requests are failing with server errors"
+
       # High Memory Usage
       - alert: HighMemoryUsage
         expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85

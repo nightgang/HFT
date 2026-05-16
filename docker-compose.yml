@@ -73,6 +73,18 @@ services:
       - hft-network
     depends_on:
       - prometheus
+      - alertmanager
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: hft-alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    networks:
+      - hft-network
     restart: unless-stopped
 
   # PostgreSQL Exporter

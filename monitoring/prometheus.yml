@@ -11,7 +11,7 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []
+        - targets: ['alertmanager:9093']
 
 # Load rules once and periodically evaluate them
 rule_files:
@@ -30,6 +30,14 @@ scrape_configs:
       - targets: ['backend:3000']
     metrics_path: '/metrics'
     scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # AI Service Metrics
+  - job_name: 'hft-ai-service'
+    static_configs:
+      - targets: ['ai-service:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
     scrape_timeout: 5s
 
   # PostgreSQL Metrics (via postgres_exporter)

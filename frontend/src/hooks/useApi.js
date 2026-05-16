@@ -335,7 +335,7 @@ export const useCreateAPIKey = () => {
   });
 };
 
-export const useRegenerateApiKey = () => {
+export const useDeleteAPIKey = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (keyId) => systemService.deleteAPIKey(keyId),
@@ -348,6 +348,7 @@ export const useRegenerateApiKey = () => {
 export const useGetMarketData = useMarketData;
 export const useCreateApiKey = useCreateAPIKey;
 export const useDeleteApiKey = useDeleteAPIKey;
+export const useRegenerateApiKey = useRegenerateAPIKey;
 
 export const useGetWebhooks = (options = {}) => {
   return useQuery({

@@ -8,6 +8,7 @@ export * from './common';
 
 // Layout components
 export * from './layouts';
+export { PageContainer, GridContainer, Card } from './layouts';
 
 // Dashboard components
 export { DashboardOverview, StatCard } from './dashboard/StatsCard';
