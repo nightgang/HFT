@@ -46,6 +46,18 @@ class TradingEngine {
     return this.activeWallet;
   }
 
+  // Return recent trade history (safe fallback)
+  getTradeHistory(limit = 50) {
+    try {
+      const l = parseInt(limit, 10) || 50;
+      if (!Array.isArray(this.tradeHistory)) return [];
+      return this.tradeHistory.slice(-l).reverse();
+    } catch (error) {
+      logger.error('getTradeHistory error:', error);
+      return [];
+    }
+  }
+
   async getWallets() {
     try {
       return await solanaWalletService.listWallets();
