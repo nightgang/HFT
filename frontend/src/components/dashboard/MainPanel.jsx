@@ -20,32 +20,20 @@ export default function MainPanel() {
 
   useEffect(() => {
     if (chartContainerRef.current && !chartRef.current) {
+      const cw = chartContainerRef.current.clientWidth;
+      const ch = chartContainerRef.current.clientHeight;
+
       const chart = createChart(chartContainerRef.current, {
-        layout: {
-          background: { color: "#070a12" },
-          textColor: "#d1d5db",
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', monospace",
-        },
-        width: chartContainerRef.current.clientWidth,
-        height: 400,
-        timeScale: {
-          timeVisible: true,
-          secondsVisible: true,
-        },
-        grid: {
-          horzLines: { color: "#1a1a2e" },
-          vertLines: { color: "#1a1a2e" },
-        },
+        layout: { background: { color: "#070a12" }, textColor: "#d1d5db", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" },
+        width: cw, height: ch,
+        timeScale: { timeVisible: true, secondsVisible: true },
+        grid: { horzLines: { color: "#1a1a2e" }, vertLines: { color: "#1a1a2e" } },
       });
 
       const candlestickSeries = chart.addCandlestickSeries({
-        upColor: "#00FF9D",
-        downColor: "#FF3B3B",
-        borderUpColor: "#00FF9D",
-        borderDownColor: "#FF3B3B",
-        wickUpColor: "#00FF9D",
-        wickDownColor: "#FF3B3B",
+        upColor: "#00FF9D", downColor: "#FF3B3B",
+        borderUpColor: "#00FF9D", borderDownColor: "#FF3B3B",
+        wickUpColor: "#00FF9D", wickDownColor: "#FF3B3B",
       });
 
       const generateCandles = () => {
@@ -55,25 +43,20 @@ export default function MainPanel() {
         for (let i = 100; i >= 0; i--) {
           const change = (Math.random() - 0.5) * 2;
           price += change;
-          data.push({
-            time: now - i * 60,
-            open: price,
-            high: price + Math.random() * 1,
-            low: price - Math.random() * 1,
-            close: price + (Math.random() - 0.5) * 0.5,
-          });
+          data.push({ time: now - i * 60, open: price, high: price + Math.random() * 1, low: price - Math.random() * 1, close: price + (Math.random() - 0.5) * 0.5 });
         }
         return data;
       };
 
-      const initialData = generateCandles();
-      candlestickSeries.setData(initialData);
+      candlestickSeries.setData(generateCandles());
       chart.timeScale().fitContent();
-      chartRef.current = { chart, candlestickSeries };
-      setChartData(initialData);
+      chartRef.current = chart;
 
       const handleResize = () => {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        });
       };
       window.addEventListener("resize", handleResize);
       return () => {

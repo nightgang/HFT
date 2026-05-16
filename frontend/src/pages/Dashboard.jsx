@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { createChart } from "lightweight-charts";
 import {
-  LayoutDashboard,
-  Terminal,
-  Zap, Wallet, Target, Briefcase, FileText, History,
-  BarChart3, Brain, Settings, Puzzle, Activity,
+  LayoutDashboard, Terminal, Zap, Wallet, Target, Briefcase,
+  FileText, History, BarChart3, Brain, Settings, Puzzle, Activity,
   TrendingUp, TrendingDown, DollarSign, Shield,
   Play, Pause, Wifi, WifiOff, ChevronRight, ChevronLeft,
   ExternalLink, Square, RefreshCw, Lock, ChevronDown,
-  Radar, Flame, Crosshair,
+  Radar, Flame, Crosshair, Menu, X,
 } from "lucide-react";
 import {
   useGetActiveTrades,
@@ -29,27 +27,36 @@ import CopyTradingSignalFeed from "../components/dashboard/CopyTradingSignalFeed
 import NetworkCongestionVisualizer from "../components/dashboard/NetworkCongestionVisualizer";
 import ExecutionTerminal from "../components/dashboard/ExecutionTerminal";
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
+// ─── responsive column builder ───────────────────────────────────────────────
 
-function buildGridClass(showTrade, showLiveFeed, showWallet) {
-  if (!showTrade && !showLiveFeed && !showWallet) return "lg:col-span-12";
-  if (!showTrade && (showLiveFeed || showWallet)) return "lg:col-span-9";
-  if (showTrade && !(showLiveFeed || showWallet)) return "lg:col-span-10";
-  return "lg:col-span-7";
+function panelCol(mainWide, trade, feed, wallet) {
+  // total available slots = current breakpoint span for main
+  // mobile: main=12  tablet: main=8  xl: main=7/9/10/12
+  if (mainWide === 12) return trade ? 12 : 0;                                // mobile
+  if (mainWide === 8)  return trade ? 4 : (feed || wallet) ? 4 : 0;          // md
+  return trade ? 2 : (feed || wallet) ? 3 : 0;                               // lg/xl
 }
 
-const NEON = {
-  green: "#00FF9D", red: "#FF3B3B", purple: "#8B5CF6",
-  cyan: "#22D3EE", amber: "#FBBF24",
+// ─── breakpoint-aware style helpers ─────────────────────────────────────────
+
+// never-flicker animation for the stats-card row
+const FADE_UP = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.35 },
 };
 
-// ─── dashboard HFTDashboard ──────────────────────────────────────────────────
+// ─── HFTDashboard ────────────────────────────────────────────────────────────
 
 const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
+  // ── layout state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);      // mobile drawer
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isOnline, setIsOnline] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // ── configurable panels
   const [dashboardConfig, setDashboardConfig] = useState({
     showStatsCards: true,
     showTradePanel: true,
@@ -57,12 +64,16 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     showWalletTracker: true,
     showActiveTrades: true,
   });
+
+  // ── data
   const { data: activeTrades = [], isLoading: tradesLoading, error: tradesError } = useGetActiveTrades();
-  const { data: systemStatus } = useGetSystemStatus();
+  const { data: systemStatus } = useGetSystemSystemStatus();
+
+  // ── chart refs
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
 
-  // Load persisted UI config from localStorage
+  // ── localStorage persist
   useEffect(() => {
     const stored = window.localStorage.getItem("uiPreferences");
     if (stored) {
@@ -77,7 +88,6 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
     }
   }, []);
 
-  // Merge any externally-passed dashboard config
   useEffect(() => {
     if (dashboardConfigProp) {
       setDashboardConfig((prev) => ({ ...prev, ...dashboardConfigProp }));
@@ -86,99 +96,210 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Portfolio / HFT token mini chart
+  // Close mobile drawer on ESC / route change away from dashboard
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && setSidebarOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // ── HFT mini candlestick chart
   useEffect(() => {
     if (chartContainerRef.current && !chartRef.current) {
       const chart = createChart(chartContainerRef.current, {
-        layout: {
-          background: { color: "transparent" },
-          textColor: "#a855f7",
-        },
-        grid: {
-          vertLines: { color: "#1a1a2e" },
-          horzLines: { color: "#1a1a2e" },
-        },
+        layout: { background: { color: "transparent" }, textColor: "#a855f7" },
+        grid: { vertLines: { color: "#1a1a2e" }, horzLines: { color: "#1a1a2e" } },
         crosshair: { mode: 1 },
         rightPriceScale: { borderColor: "#a855f7" },
         timeScale: { borderColor: "#a855f7", timeVisible: true },
       });
-
       const series = chart.addCandlestickSeries({
         upColor: "#00ff88", downColor: "#a855f7",
         borderVisible: false, wickUpColor: "#00ff88", wickDownColor: "#a855f7",
       });
-
-      const data = [
+      const sample = [
         { time: "2024-01-01", open: 0.0008, high: 0.0009, low: 0.0007, close: 0.00085 },
         { time: "2024-01-02", open: 0.00085, high: 0.00095, low: 0.0008, close: 0.0009 },
         { time: "2024-01-03", open: 0.0009, high: 0.0010, low: 0.00085, close: 0.00095 },
         { time: "2024-01-04", open: 0.00095, high: 0.0011, low: 0.0009, close: 0.00098 },
         { time: "2024-01-05", open: 0.00098, high: 0.0012, low: 0.00095, close: 0.0011 },
       ];
-      series.setData(data);
+      series.setData(sample);
       chartRef.current = chart;
-
-      const handleResize = () => {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      };
-      window.addEventListener("resize", handleResize);
-      return () => {
-        window.removeEventListener("resize", handleResize);
-        chart.remove();
-      };
+      const onResize = () => chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      window.addEventListener("resize", onResize);
+      return () => { window.removeEventListener("resize", onResize); chart.remove(); };
     }
     return undefined;
   }, [sidebarCollapsed]);
 
+  // ── sidebar items
   const sidebarItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "terminal", label: "Terminal", icon: Terminal },
-    { id: "trade", label: "Trade", icon: Zap },
-    { id: "wallets", label: "Wallets", icon: Wallet },
-    { id: "sniper", label: "Sniper", icon: Target },
+    { id: "terminal",  label: "Terminal",  icon: Terminal },
+    { id: "trade",     label: "Trade",     icon: Zap },
+    { id: "wallets",   label: "Wallets",   icon: Wallet },
+    { id: "sniper",    label: "Sniper",    icon: Target },
     { id: "positions", label: "Positions", icon: Briefcase },
-    { id: "orders", label: "Orders", icon: FileText },
-    { id: "history", label: "History", icon: History },
+    { id: "orders",    label: "Orders",    icon: FileText },
+    { id: "history",   label: "History",   icon: History },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "monitoring", label: "Monitoring", icon: Activity },
-    { id: "strategies", label: "Strategies", icon: Brain },
-    { id: "settings", label: "Settings", icon: Settings },
-    { id: "plugins", label: "Plugins", icon: Puzzle },
+    { id: "monitoring",label: "Monitor",   icon: Activity },
+    { id: "strategies",label: "Strategies",icon: Brain },
+    { id: "settings",  label: "Settings",  icon: Settings },
+    { id: "plugins",   label: "Plugins",   icon: Puzzle },
   ];
 
+  // ── stats cards
   const rpcHealthLabel = systemStatus?.rpcHealth ? systemStatus.rpcHealth.toUpperCase() : "HEALTHY";
-
   const statsCards = [
-    { label: "Total PNL", value: "$18,742.60", change: "+7.8%", icon: TrendingUp, color: "text-emerald-400" },
-    { label: "Win Rate", value: "86.3%", change: "+4.2%", icon: Activity, color: "text-emerald-400" },
-    { label: "Total Volume", value: "$127.4K", change: "+12.5%", icon: DollarSign, color: "text-cyan-400" },
-    { label: "Active Trades", value: tradesLoading ? "…" : `${activeTrades.length}`, change: "Realtime", icon: Zap, color: "text-purple-400" },
-    { label: "RPC Health", value: rpcHealthLabel, change: systemStatus?.latency ? `${systemStatus.latency.toFixed(1)}ms` : "—", icon: Wifi, color: rpcHealthLabel === "HEALTHY" ? "text-green-400" : "text-amber-400" },
-    { label: "Priority Fee", value: "0.000005", change: "Optimal", icon: Shield, color: "text-orange-400" },
+    { label: "Total PNL",    value: "$18,742.60", change: "+7.8%",   icon: TrendingUp, color: "text-emerald-400" },
+    { label: "Win Rate",    value: "86.3%",       change: "+4.2%",   icon: Activity,   color: "text-emerald-400" },
+    { label: "Total Volume",value: "$127.4K",     change: "+12.5%",  icon: DollarSign, color: "text-cyan-400" },
+    { label: "Active Trades",value:tradesLoading?"…":`${activeTrades.length}`,change:"Realtime",icon:Zap,  color:"text-purple-400" },
+    { label: "RPC Health",  value: rpcHealthLabel,change:systemStatus?.latency?`${systemStatus.latency.toFixed(1)}ms`:"—",icon:Wifi,color:rpcHealthLabel==="HEALTHY"?"text-green-400":"text-amber-400" },
+    { label: "Priority Fee",value: "0.000005",   change: "Optimal", icon: Shield,    color: "text-orange-400" },
   ];
 
-  const mainPanelGridCol = buildGridClass(
+  // ── MainPanel grid helpers
+  const mainPanelCol = buildGridClass(
     dashboardConfig.showTradePanel,
     dashboardConfig.showLiveFeed,
     dashboardConfig.showWalletTracker,
   );
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050510] via-[#0a0a1a] to-[#050510] text-white overflow-hidden relative">
-      <CyberpunkGridBackground />
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.05),transparent_50%)] pointer-events-none" />
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(0,255,136,0.03),transparent_50%)] pointer-events-none" />
+  // ════════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ════════════════════════════════════════════════════════════════════════════
 
-      {/* ── sidebar ── */}
-      <motion.div
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#050510] via-[#0a0a1a] to-[#050510] text-white overflow-x-hidden relative">
+
+      {/* ── fixed background ── */}
+      <CyberpunkGridBackground />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.04),transparent_50%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(0,255,157,0.025),transparent_50%)] pointer-events-none" />
+
+      {/* ═══════════════════════════════════════
+          MOBILE TOP BAR  (< md = 768 px)
+      ═══════════════════════════════════════ */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-b border-cyan-500/20 px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300"
+          aria-label="Open menu"
+        >
+          <Menu size={18} />
+        </button>
+        <h1 className="text-sm font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+          HFT-SYSTEM
+        </h1>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1.5">
+          {isOnline
+            ? <Wifi className="w-4 h-4 text-green-400 animate-pulse" />
+            : <WifiOff className="w-4 h-4 text-red-400" />}
+          <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+          <span className="text-xs font-mono text-gray-400">{currentTime.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
+        </div>
+      </header>
+      {/* Spacer so content is not hidden behind the mobile top bar */}
+      <div className="md:hidden h-14" />
+
+      {/* ═══════════════════════════════════════
+          MOBILE DRAWER BACKDROP
+      ═══════════════════════════════════════ */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <>
+            {/* backdrop */}
+            <motion.div
+              key="drawer-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 z-[65] bg-black/60 backdrop-blur-sm"
+              onClick={() => setSidebarOpen(false)}
+            />
+            {/* drawer panel – same nav content as desktop sidebar but full height */}
+            <motion.aside
+              key="drawer-panel"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-black/90 backdrop-blur-xl border-r border-purple-500/20 z-[70] flex flex-col"
+            >
+              {/* drawer header */}
+              <div className="p-4 border-b border-purple-500/20 flex items-center justify-between">
+                <span className="text-base font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                  HFT-SYSTEM
+                </span>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"
+                  aria-label="Close menu"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* nav items */}
+              <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+                {sidebarItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setSidebarOpen(false);
+                      if (item.id === "monitoring") window.open("/monitoring", "_blank");
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      activeTab === item.id
+                        ? "bg-purple-500/20 border border-purple-500/40 text-purple-300"
+                        : "text-gray-300 hover:bg-white/5"
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    <span className="text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              {/* drawer footer panel controls */}
+              <div className="p-4 border-t border-purple-500/20 space-y-3">
+                <button
+                  onClick={() => setDashboardConfig((p) => ({ ...p, showStatsCards: !p.showStatsCards }))}
+                  className="w-full text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition"
+                >
+                  {dashboardConfig.showStatsCards ? "Hide" : "Show"} Stats Cards
+                </button>
+                <button
+                  onClick={() => setDashboardConfig((p) => ({ ...p, showActiveTrades: !p.showActiveTrades }))}
+                  className="w-full text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition"
+                >
+                  {dashboardConfig.showActiveTrades ? "Hide" : "Show"} Active Trades
+                </button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════════════════════════════
+          DESKTOP / TABLET SIDEBAR  (>= md)
+      ═══════════════════════════════════════ */}
+      <motion.aside
         initial={{ x: 0 }}
         animate={{ x: sidebarCollapsed ? -280 : 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="fixed left-0 top-0 h-full w-70 bg-black/80 backdrop-blur-xl border-r border-purple-500/20 z-50"
+        className="hidden md:flex fixed left-0 top-0 h-full w-70 bg-black/80 backdrop-blur-xl border-r border-purple-500/20 z-50 flex-col"
       >
+        {/* brand */}
         <div className="p-6 border-b border-purple-500/20">
           <motion.h1
             className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent"
@@ -188,35 +309,48 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           </motion.h1>
         </div>
 
-        <nav className="p-4 space-y-2">
+        {/* nav items */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           {sidebarItems.map((item) => (
-            <motion.button
+            <button
               key={item.id}
               onClick={() => {
-                if (item.id === "monitoring") {
-                  window.open("/monitoring", "_blank");
-                } else {
-                  setActiveTab(item.id);
-                }
+                if (item.id === "monitoring") { window.open("/monitoring", "_blank"); return; }
+                setActiveTab(item.id);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 activeTab === item.id
-                  ? "bg-purple-500/20 border border-purple-500/40 shadow-lg shadow-purple-500/20"
-                  : "hover:bg-purple-500/10 border border-transparent"
+                  ? "bg-purple-500/20 border border-purple-500/40 shadow-lg shadow-purple-500/20 text-purple-300"
+                  : "text-gray-400 hover:bg-purple-500/10 hover:text-gray-200"
               }`}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
             >
-              <item.icon className={`w-5 h-5 ${activeTab === item.id ? "text-purple-400" : "text-gray-400"}`} />
-              <span className={`text-sm ${activeTab === item.id ? "text-white" : "text-gray-300"}`}>{item.label}</span>
-            </motion.button>
+              <item.icon className="w-5 h-5 shrink-0" />
+              <span className="text-sm whitespace-nowrap">{item.label}</span>
+            </button>
           ))}
         </nav>
 
-        <div className="absolute bottom-6 left-4 right-4">
+        {/* panel controls */}
+        <div className="p-4 border-t border-purple-500/20 space-y-2">
+          <button
+            onClick={() => setDashboardConfig((p) => ({ ...p, showStatsCards: !p.showStatsCards }))}
+            className="w-full text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition"
+          >
+            {dashboardConfig.showStatsCards ? "Hide" : "Show"} Stats Cards
+          </button>
+          <button
+            onClick={() => setDashboardConfig((p) => ({ ...p, showActiveTrades: !p.showActiveTrades }))}
+            className="w-full text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition"
+          >
+            {dashboardConfig.showActiveTrades ? "Hide" : "Show"} Active Trades
+          </button>
+        </div>
+
+        {/* brand footer bar */}
+        <div className="p-4 border-t border-purple-500/20">
           <motion.button
-            className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-purple-500/30 border border-purple-400/30"
-            whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(168, 85, 247, 0.4)" }}
+            className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg shadow-purple-500/30 border border-purple-400/30"
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <div className="flex items-center justify-center gap-2">
@@ -226,81 +360,97 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           </motion.button>
         </div>
 
-        <motion.button
+        {/* collapse toggle — desktop only */}
+        <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-purple-500/20 backdrop-blur-xl border border-purple-500/30 rounded-full flex items-center justify-center hover:bg-purple-500/30 transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {sidebarCollapsed ? <ChevronRight className="w-4 h-4 text-purple-400" /> : <ChevronLeft className="w-4 h-4 text-purple-400" />}
-        </motion.button>
-      </motion.div>
+          {sidebarCollapsed
+            ? <ChevronRight className="w-4 h-4 text-purple-400" />
+            : <ChevronLeft className="w-4 h-4 text-purple-400" />}
+        </button>
+      </motion.aside>
 
-      {/* ── main content ── */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? "ml-0" : "ml-70"}`}>
-        <header className="bg-black/20 backdrop-blur-3xl border border-white/10 rounded-3xl p-6 shadow-[0_30px_90px_6px]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+      {/* ═══════════════════════════════════════
+          MAIN CONTENT WRAPPER
+          mobile: ml-0 | desktop: ml-70 when sidebar open, ml-0 when collapsed
+      ═══════════════════════════════════════ */}
+      <div className={`transition-[margin] duration-300 md:ml-0 ${!sidebarCollapsed ? "lg:ml-70" : ""}`}
+           style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+
+        {/* ── PAGE HEADER ── */}
+        <header className="bg-black/20 backdrop-blur-3xl border border-white/10 rounded-none md:rounded-3xl lg:rounded-3xl mx-0 p-4 md:p-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* title block */}
+            <div className="min-w-0">
+              {/* md+ desktop branding – hidden on mobile (mobile uses top bar) */}
+              <h1 className="hidden md:block text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
                 HFT-SYSTEM
               </h1>
-              <p className="text-gray-400 text-sm mt-1">Ultra-fast Solana trading command center for Solana HFT.</p>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/10 bg-white/5 px-3 py-1 text-cyan-200 tracking-[0.12em]">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" /> HFT-SYSTEM AI ONLINE
+              <p className="hidden md:block text-gray-400 text-sm mt-1">
+                Ultra-fast Solana trading command center.
+              </p>
+              {/* always visible status pills */}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] md:text-xs">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/10 bg-white/5 px-2.5 py-1 text-cyan-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  HFT-SYSTEM AI ONLINE
                 </span>
-                <span className="rounded-full border border-purple-500/10 bg-purple-500/10 px-3 py-1 text-purple-200">HFT-SYSTEM Strategy Suite</span>
+                <span className="rounded-full border border-purple-500/10 bg-purple-500/10 px-2.5 py-1 text-purple-200">
+                  Strategy Suite
+                </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
+            {/* right-side status / monitoring link (desktop only) */}
+            <div className="hidden lg:flex flex-wrap items-center gap-4 text-xs text-gray-300">
               <div className="flex items-center gap-2">
                 {isOnline ? <Wifi className="w-4 h-4 text-green-400 animate-pulse" /> : <WifiOff className="w-4 h-4 text-red-400" />}
-                <span className="text-sm text-gray-300">RPC</span>
+                <span>RPC</span>
               </div>
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
-                <span className="text-sm text-gray-300">WS</span>
+                <span>WS</span>
               </div>
-              <div className="text-sm text-gray-400 font-mono">{currentTime.toLocaleTimeString()}</div>
-              <div className="inline-flex items-center gap-2 rounded-3xl border border-cyan-500/10 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-200">
-                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" /> Congestion 32%
+              <span className="font-mono">{currentTime.toLocaleTimeString()}</span>
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-cyan-500/10 bg-cyan-500/5 px-3 py-1.5 text-cyan-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" /> Congestion 32%
               </div>
-              <motion.a
+              <a
                 href="/monitoring"
-                className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-300 hover:text-purple-200 transition-all duration-200"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-300 transition"
               >
-                <Activity className="w-4 h-4" />
-                <span className="text-sm font-medium">Monitoring</span>
+                <Activity className="w-3.5 h-3.5" />
+                <span>Monitoring</span>
                 <ExternalLink className="w-3 h-3" />
-              </motion.a>
+              </a>
             </div>
           </div>
 
+          {/* ── stats cards card grid ── */}
           {dashboardConfig.showStatsCards && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-6">
-              {statsCards.map((card, index) => (
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
+              {statsCards.map((card, i) => (
                 <motion.div
                   key={card.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.08, duration: 0.4 }}
-                  className="group relative bg-gradient-to-br from-black/50 via-black/30 to-black/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 transition-all duration-300 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(34,211,238,0.15)]"
-                  whileHover={{ scale: 1.03, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
+                  {...FADE_UP}
+                  transition={{ delay: i * 0.06 }}
+                  className="group relative bg-gradient-to-br from-black/50 via-black/30 to-black/50 backdrop-blur-xl border border-white/10 rounded-2xl p-3 md:p-4 transition-colors hover:border-cyan-400/30"
+                  style={{ boxShadow: "0 12px 40px rgba(34,211,238,0.08)" }}
                 >
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-3">
-                      <card.icon className={`w-5 h-5 ${card.color} transition-transform group-hover:scale-110`} />
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${card.change.startsWith("+") ? "bg-green-500/20 text-green-300" : card.change.startsWith("-") ? "bg-red-500/20 text-red-300" : "bg-cyan-500/20 text-cyan-300"}`}>
-                        {card.change}
-                      </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <card.icon className={`w-4 h-4 md:w-5 md:h-5 ${card.color} group-hover:scale-110 transition-transform`} />
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                        card.change.startsWith("+") ? "bg-green-500/20 text-green-300"
+                        : card.change.startsWith("-") ? "bg-red-500/20 text-red-300"
+                        : "bg-cyan-500/20 text-cyan-300"
+                      }`}>{card.change}</span>
                     </div>
-                    <div className="text-xl font-bold text-white mb-1 transition-colors group-hover:text-cyan-300">{card.value}</div>
-                    <div className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">{card.label}</div>
+                    {/* truncate values on the smallest screens to avoid overflow */}
+                    <div className="text-base md:text-xl font-bold text-white truncate">{card.value}</div>
+                    <div className="text-[10px] md:text-xs text-gray-400 truncate">{card.label}</div>
                   </div>
                 </motion.div>
               ))}
@@ -308,64 +458,108 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           )}
         </header>
 
+        {/* ── STATUS BAR ── */}
         <StatusBar />
 
-        <div className="p-6 grid grid-cols-12 gap-6 min-h-[calc(100vh-340px)]">
-          {/* Portfolio / HFT mini-chart panel */}
-          <motion.div
-            className={`col-span-12 ${mainPanelGridCol} bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden`}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="p-4 border-b border-purple-500/20 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white">$HFT – HFT Token</h2>
-                <div className="text-sm text-gray-400">Current: $0.000956 <span className="text-green-400">+211%</span></div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {["1s", "5s", "15s", "1m", "5m", "15s", "1h", "4h"].map((tf) => (
-                  <button key={tf} className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded transition-colors">{tf}</button>
-                ))}
-              </div>
-            </div>
-            <div ref={chartContainerRef} className="h-96 w-full" />
-          </motion.div>
+        {/* ═══════════════════════════════════════
+            PRIMARY GRID
+            mobile: 1-col | md(≥768px):2-col | xl(≥1280px):12-col dynamic:
+                main = 12(mobile) | 8(md) | 7/9/10/12(xl)  → via buildGridClass
+            RHS column: trade panel (md+), feed+wallet (md+)
+        ═══════════════════════════════════════ */}
+        <div className="p-3 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-6 min-h-0">
 
-          {dashboardConfig.showTradePanel && (
-            <motion.div className="col-span-12 lg:col-span-2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-              <HFTTradePanel />
+            {/* main chart panel */}
+            <motion.div
+              className={`col-span-1
+                ${mainPanelCol === 12 ? "" : "md:col-span-8"}
+                ${mainPanelCol === 7  ? "lg:col-span-7"
+                :  mainPanelCol === 9  ? "lg:col-span-9"
+                :  mainPanelCol === 10 ? "lg:col-span-10"
+                :  mainPanelCol === 12 ? "lg:col-span-12"
+                :                          "lg:col-span-8"}
+                bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl overflow-hidden`}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15, duration: 0.3 }}
+            >
+              <div className="p-3 md:p-4 border-b border-purple-500/20 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-lg md:text-xl font-bold text-white">$HFT – HFT Token</h2>
+                  <p className="text-xs md:text-sm text-gray-400 mt-0.5">Current: $0.000956 <span className="text-green-400">+211%</span></p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {["1s","5s","15s","1m","5m","15s","1h","4h"].map((tf) => (
+                    <button key={tf} className="px-2 py-0.5 text-[10px] md:text-xs bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded transition-colors">{tf}</button>
+                  ))}
+                </div>
+              </div>
+              {/* aspect-video equals 16:9; on xs the chart bar collapses gracefully */}
+              <div className="aspect-[16/9] md:aspect-[3/1] w-full">
+                <div ref={chartContainerRef} className="h-full w-full" />
+              </div>
             </motion.div>
-          )}
 
-          {(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) && (
-            <motion.div className="col-span-12 lg:col-span-3 space-y-6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-              {dashboardConfig.showLiveFeed && <HFTLiveFeed />}
-              {dashboardConfig.showWalletTracker && <HFTWalletTracker />}
-              <div className="rounded-3xl border border-white/10 bg-black/30 p-4 text-xs text-gray-300 shadow-[0_18px_60px_8px]">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.2em] text-gray-500">HFT-SYSTEM AI</div>
-                    <div className="text-sm font-bold text-white">Signal Feed</div>
+            {/* RHS stack – trade panel + feed / wallet card */}
+            <div className="col-span-1 md:col-span-4 flex flex-col gap-3 md:gap-6">
+
+              {dashboardConfig.showTradePanel && (
+                <motion.div
+                  className="col-span-1 lg:col-span-2"
+                  initial={{ opacity: 0, x: 15 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <HFTTradePanel />
+                </motion.div>
+              )}
+
+              {(dashboardConfig.showLiveFeed || dashboardConfig.showWalletTracker) && (
+                <motion.div
+                  className="col-span-1 space-y-3 md:space-y-6"
+                  initial={{ opacity: 0, x: 15 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  {dashboardConfig.showLiveFeed && <HFTLiveFeed />}
+                  {dashboardConfig.showWalletTracker && <HFTWalletTracker />}
+                  {/* AI Signal card */}
+                  <div className="rounded-3xl border border-white/10 bg-black/30 p-4 text-xs text-gray-300">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500">HFT-SYSTEM AI</div>
+                        <div className="text-sm font-bold text-white">Signal Feed</div>
+                      </div>
+                      <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-cyan-200 text-[10px]">93% Conf</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 leading-5">
+                      High-conviction MEV signal detected. Monitor mempool latency.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] text-gray-400">
+                      <span className="rounded-full bg-white/5 px-2 py-0.5">AI +3.2</span>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5">Mempool</span>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5">Signal Live</span>
+                    </div>
                   </div>
-                  <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-cyan-200 text-[10px]">93% Confidence</span>
-                </div>
-                <p className="text-[11px] text-gray-400 leading-5">High-conviction MEV signal detected. Monitor mempool latency and prepare execution lane.</p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] text-gray-400">
-                  <span className="rounded-full bg-white/5 px-2 py-1">AI +3.2</span>
-                  <span className="rounded-full bg-white/5 px-2 py-1">Mempool</span>
-                  <span className="rounded-full bg-white/5 px-2 py-1">Signal Live</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
+                </motion.div>
+              )}
+            </div>
+          </div>
 
+          {/* ── ACTIVE TRADES ── */}
           {dashboardConfig.showActiveTrades && (
-            <motion.div className="col-span-12 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-lg overflow-hidden" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-              <div className="p-4 border-b border-purple-500/20">
-                <h3 className="text-lg font-bold text-white">ACTIVE TRADES</h3>
+            <motion.div
+              className="mt-4 md:mt-6 bg-black/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl overflow-hidden"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <div className="p-3 md:p-4 border-b border-purple-500/20">
+                <h3 className="text-base md:text-lg font-bold text-white">ACTIVE TRADES</h3>
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile: horizontal scroll card; md+: full table */}
+              <div className="md:hidden overflow-x-auto">
                 {tradesLoading ? (
                   <div className="p-6 text-center text-sm text-gray-400">Loading active trades...</div>
                 ) : tradesError ? (
@@ -373,7 +567,52 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                 ) : activeTrades.length === 0 ? (
                   <div className="p-6 text-center text-sm text-gray-400">No active trades available right now.</div>
                 ) : (
-                  <table className="w-full">
+                  <div className="flex gap-3 p-3 overflow-x-auto snap-x snap-mandatory">
+                    {activeTrades.map((trade, i) => {
+                      const type = trade.side?.toUpperCase?.() || trade.type || "BUY";
+                      const token = trade.token || trade.market || trade.symbol || "UNKNOWN";
+                      return (
+                        <div
+                          key={trade.id || `${token}-${i}`}
+                          className="snap-center shrink-0 w-64 bg-black/50 border border-purple-500/10 rounded-xl p-3.5 space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-white">{token}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                              type === "BUY" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                            }`}>{type}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                            <span className="text-gray-500">Amount</span>
+                            <span className="text-right text-gray-300">{trade.amount || trade.quantity || "—"}</span>
+                            <span className="text-gray-500">Entry</span>
+                            <span className="text-right text-gray-300">${trade.entryPrice || trade.price || trade.entry || "—"}</span>
+                            <span className="text-gray-500">Current</span>
+                            <span className="text-right text-white">${trade.currentPrice || trade.current || "—"}</span>
+                            <span className="text-gray-500">P&L</span>
+                            <span className="text-right text-green-400 font-semibold">{trade.pnl || trade.profit || "—"}</span>
+                            <span className="text-gray-500">P&L %</span>
+                            <span className="text-right text-green-400 font-semibold">{trade.pnlPercent || trade.returnPercent || "—"}</span>
+                          </div>
+                          <button className="w-full py-1.5 text-[11px] bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors">
+                            Close
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* md+ full-width scrollable table */}
+              <div className="hidden md:block overflow-x-auto">
+                {tradesLoading ? (
+                  <div className="p-6 text-center text-sm text-gray-400">Loading active trades...</div>
+                ) : tradesError ? (
+                  <div className="p-6 text-center text-sm text-red-400">{tradesError}</div>
+                ) : activeTrades.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-gray-400">No active trades available right now.</div>
+                ) : (
+                  <table className="w-full min-w-[700px]">
                     <thead>
                       <tr className="border-b border-purple-500/10">
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Token</th>
@@ -381,41 +620,40 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Amount</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Entry</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Current</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">PNL %</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">P&L</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">P&L %</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {activeTrades.map((trade, index) => {
-                        const type = trade.side?.toUpperCase?.() || trade.type || "BUY";
-                        const token = trade.token || trade.market || trade.symbol || "UNKNOWN";
-                        const amount = trade.amount || trade.quantity || "-";
-                        const entry = trade.entryPrice || trade.price || trade.entry || "-";
-                        const current = trade.currentPrice || trade.current || "-";
-                        const pnl = trade.pnl || trade.profit || "-";
-                        const pnlPercent = trade.pnlPercent || trade.returnPercent || "-";
+                        const type     = trade.side?.toUpperCase?.() || trade.type || "BUY";
+                        const token    = trade.token || trade.market || trade.symbol || "UNKNOWN";
+                        const amount   = trade.amount || trade.quantity || "-";
+                        const entry    = trade.entryPrice || trade.price || trade.entry || "-";
+                        const current  = trade.currentPrice || trade.current || "-";
+                        const pnl      = trade.pnl || trade.profit || "-";
+                        const pnlPct   = trade.pnlPercent || trade.returnPercent || "-";
                         return (
                           <motion.tr
                             key={trade.id || `${token}-${index}`}
                             className="border-b border-purple-500/5 hover:bg-purple-500/5 transition-colors"
-                            whileHover={{ backgroundColor: "rgba(168, 85, 247, 0.05)" }}
                           >
                             <td className="px-4 py-3 text-sm text-white font-medium">{token}</td>
                             <td className="px-4 py-3">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
                                 type === "BUY" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
-                              }`}>
-                                {type}
-                              </span>
+                              }`}>{type}</span>
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-300">{amount}</td>
                             <td className="px-4 py-3 text-sm text-gray-300">${entry}</td>
                             <td className="px-4 py-3 text-sm text-white">${current}</td>
                             <td className="px-4 py-3 text-sm text-green-400 font-medium">{pnl}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 font-medium">{pnlPercent}</td>
+                            <td className="px-4 py-3 text-sm text-green-400 font-medium">{pnlPct}</td>
                             <td className="px-4 py-3">
-                              <button className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs transition-colors">Close</button>
+                              <button className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs transition-colors">
+                                Close
+                              </button>
                             </td>
                           </motion.tr>
                         );
@@ -428,42 +666,69 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
           )}
         </div>
 
-        <div className="px-6">
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 xl:col-span-3">
+        {/* ── MIDDLE ROW: Control / MainPanel / LiveFeed ── */}
+        <div className="p-3 md:px-6 md:pb-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-6">
+            <div className="col-span-1 md:col-span-4">
               <ControlPanel />
             </div>
-            <div className="col-span-12 xl:col-span-6">
+            <div className="col-span-1 md:col-span-8">
               <MainPanel />
             </div>
-            <div className="col-span-12 xl:col-span-3">
-              <LiveDataStream />
-            </div>
           </div>
         </div>
 
-        <div className="px-6 py-6">
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 lg:col-span-4">
-              <MempoolTransactionViewer />
-            </div>
-            <div className="col-span-12 lg:col-span-4">
-              <CopyTradingSignalFeed />
-            </div>
-            <div className="col-span-12 lg:col-span-4">
-              <NetworkCongestionVisualizer />
-            </div>
+        {/* ── BOTTOM WIDGETS: 1-col → lg:3-col ── */}
+        <div className="px-3 md:px-6 py-3 md:py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
+            <MempoolTransactionViewer />
+            <CopyTradingSignalFeed />
+            <NetworkCongestionVisualizer />
           </div>
         </div>
 
-        <div className="px-6 pb-6">
+        {/* ── EXECUTION TERMINAL ── */}
+        <div className="px-3 md:px-6 pb-6">
           <ExecutionTerminal />
         </div>
 
-        <div className="px-6 pb-10">
+        {/* ── TERMINAL CONSOLE ── */}
+        <div className="px-3 md:px-6 pb-10">
           <TerminalConsole />
         </div>
       </div>
+
+      {/* ═══════════════════════════════════════
+          MOBILE BOTTOM NAV  (< md, fixed bottom)
+      ═══════════════════════════════════════ */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-black/85 backdrop-blur-xl border-t border-cyan-500/20 px-2 py-1 pb-[env(safe-area-inset-bottom,8px)]">
+        <div className="grid grid-cols-4 items-center">
+          {[
+            { id: "dashboard",  icon: LayoutDashboard },
+            { id: "trading",   icon: Zap },
+            { id: "wallets",   icon: Wallet },
+            { id: "terminal",  icon: Terminal },
+          ].map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center gap-0.5 py-2 rounded-lg transition-colors ${
+                  isActive ? "text-cyan-300" : "text-gray-500"
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                {/* truncated label on very small screens */}
+                <span className="text-[9px] tracking-tight leading-none">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
     </div>
   );
 };
