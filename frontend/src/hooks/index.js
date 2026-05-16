@@ -1,6 +1,9 @@
 // API hooks
 export * from "./useApi";
 
+// Custom utility hooks
+export * from "./useCustom";
+
 // WebSocket hooks
 export * from "./useWebSocket";
 

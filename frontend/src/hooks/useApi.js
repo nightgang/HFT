@@ -1,446 +1,365 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+/**
+ * Enhanced useApi hook
+ * Wrapper around service layer for React Query integration
+ */
 
-// API Base URL
-const API_BASE = "/api";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  tradingService,
+  walletService,
+  ordersService,
+  portfolioService,
+  analyticsService,
+  alertsService,
+  notificationsService,
+  monitoringService,
+  systemService,
+} from '../services';
 
-// System endpoints
-export const useSystemStatus = () => {
+// Trading Hooks
+export const useGetTrades = (filters = {}, options = {}) => {
   return useQuery({
-    queryKey: ["system", "status"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/system/status`);
-      return response.data;
-    },
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
-};
-
-export const useDetections = () => {
-  return useQuery({
-    queryKey: ["system", "detections"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/system/detections`);
-      return response.data;
-    },
-    refetchInterval: 10000, // Refetch every 10 seconds
-  });
-};
-
-// Trading endpoints
-export const useWallets = () => {
-  return useQuery({
-    queryKey: ["trading", "wallets"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/trading/wallets`);
-      return response.data;
-    },
-  });
-};
-
-export const useConnectWallet = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (walletData) => {
-      const response = await axios.post(`${API_BASE}/trading/wallet/connect`, walletData);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["trading", "wallets"] });
-    },
-  });
-};
-
-// Trade History
-export const useTradeHistory = (params = {}) => {
-  return useQuery({
-    queryKey: ["trade-history", params],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/trade-history`, { params });
-      return response.data;
-    },
-  });
-};
-
-// Portfolio
-export const usePortfolio = () => {
-  return useQuery({
-    queryKey: ["portfolio"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/portfolio`);
-      return response.data;
-    },
-    refetchInterval: 15000, // Refetch every 15 seconds
-  });
-};
-
-// API Keys
-export const useApiKeys = () => {
-  return useQuery({
-    queryKey: ["api-keys"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/api-keys`);
-      return response.data;
-    },
-  });
-};
-
-export const useCreateApiKey = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (keyData) => {
-      const response = await axios.post(`${API_BASE}/api-keys`, keyData);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-    },
-  });
-};
-
-export const useDeleteApiKey = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (keyId) => {
-      await axios.delete(`${API_BASE}/api-keys/${keyId}`);
-      return keyId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-    },
-  });
-};
-
-export const useRegenerateApiKey = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (keyId) => {
-      const response = await axios.put(`${API_BASE}/api-keys/${keyId}/regenerate`);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-    },
-  });
-};
-
-// Notifications
-export const useNotifications = () => {
-  return useQuery({
-    queryKey: ["notifications"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/notifications`);
-      return response.data;
-    },
+    queryKey: ['trades', filters],
+    queryFn: () => tradingService.getAllTrades(filters),
     refetchInterval: 30000,
+    ...options,
   });
 };
 
-export const useMarkNotificationRead = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (notificationId) => {
-      await axios.put(`${API_BASE}/notifications/${notificationId}/read`);
-      return notificationId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-  });
-};
-
-export const useDeleteNotification = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (notificationId) => {
-      await axios.delete(`${API_BASE}/notifications/${notificationId}`);
-      return notificationId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-  });
-};
-
-export const useMarkAllNotificationsRead = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      await axios.put(`${API_BASE}/notifications/read-all`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-  });
-};
-
-// Performance Analytics
-export const usePerformanceAnalytics = (params = {}) => {
+export const useGetTradeById = (tradeId, options = {}) => {
   return useQuery({
-    queryKey: ["performance-analytics", params],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/performance-analytics`, { params });
-      return response.data;
+    queryKey: ['trade', tradeId],
+    queryFn: () => tradingService.getTradeById(tradeId),
+    enabled: !!tradeId,
+    ...options,
+  });
+};
+
+export const useCreateTrade = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tradeData) => tradingService.createTrade(tradeData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trades'] });
     },
   });
 };
 
-// Market Screener
-export const useMarketScreener = (params = {}) => {
-  return useQuery({
-    queryKey: ["market-screener", params],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/market-screener`, { params });
-      return response.data;
+export const useCancelTrade = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tradeId) => tradingService.cancelTrade(tradeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trades'] });
     },
+  });
+};
+
+export const useExecuteTrade = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tradeId) => tradingService.executeTrade(tradeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trades'] });
+    },
+  });
+};
+
+// Market Data Hooks
+export const useMarketData = (tokenMint, options = {}) => {
+  return useQuery({
+    queryKey: ['marketData', tokenMint],
+    queryFn: () => tradingService.getMarketData(tokenMint),
+    enabled: !!tokenMint,
+    refetchInterval: 5000,
+    ...options,
+  });
+};
+
+export const useGetTWAP = (tokenMint, timewindow = 300, options = {}) => {
+  return useQuery({
+    queryKey: ['twap', tokenMint, timewindow],
+    queryFn: () => tradingService.getTWAP(tokenMint, timewindow),
+    enabled: !!tokenMint,
     refetchInterval: 10000,
+    ...options,
   });
 };
 
-// Predictive Alerts
-export const usePredictiveAlerts = () => {
+// Wallet Hooks
+export const useGetWallets = (filters = {}, options = {}) => {
   return useQuery({
-    queryKey: ["predictive-alerts"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/predictive-alerts`);
-      return response.data;
+    queryKey: ['wallets', filters],
+    queryFn: () => walletService.getAllWallets(filters),
+    ...options,
+  });
+};
+
+export const useGetWalletById = (walletId, options = {}) => {
+  return useQuery({
+    queryKey: ['wallet', walletId],
+    queryFn: () => walletService.getWalletById(walletId),
+    enabled: !!walletId,
+    refetchInterval: 15000,
+    ...options,
+  });
+};
+
+export const useCreateWallet = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (walletData) => walletService.createWallet(walletData.name, walletData.description, walletData.type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
     },
+  });
+};
+
+export const useGetWalletBalance = (walletId, options = {}) => {
+  return useQuery({
+    queryKey: ['walletBalance', walletId],
+    queryFn: () => walletService.getWalletBalance(walletId),
+    enabled: !!walletId,
+    refetchInterval: 10000,
+    ...options,
+  });
+};
+
+// Orders Hooks
+export const useGetOrders = (filters = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['orders', filters],
+    queryFn: () => ordersService.getAllOrders(filters),
     refetchInterval: 20000,
+    ...options,
   });
 };
 
-export const useAcknowledgeAlert = () => {
+export const useCreateOrder = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (alertId) => {
-      await axios.put(`${API_BASE}/predictive-alerts/${alertId}/acknowledge`);
-      return alertId;
-    },
+    mutationFn: (orderData) => ordersService.createOrder(orderData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["predictive-alerts"] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 };
 
-// P&L Dashboard
-export const usePnLDashboard = (period = "1d") => {
-  return useQuery({
-    queryKey: ["pnl-dashboard", period],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/pnl-dashboard?period=${period}`);
-      return response.data;
+export const useCancelOrder = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId) => ordersService.cancelOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
+  });
+};
+
+// Portfolio Hooks
+export const useGetPortfolioOverview = (options = {}) => {
+  return useQuery({
+    queryKey: ['portfolioOverview'],
+    queryFn: () => portfolioService.getPortfolioOverview(),
     refetchInterval: 30000,
+    ...options,
   });
 };
 
-// Risk Heatmap
-export const useRiskHeatmap = () => {
+export const useGetHoldings = (filters = {}, options = {}) => {
   return useQuery({
-    queryKey: ["risk-heatmap"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/risk-heatmap`);
-      return response.data;
-    },
+    queryKey: ['holdings', filters],
+    queryFn: () => portfolioService.getHoldings(filters),
+    refetchInterval: 25000,
+    ...options,
+  });
+};
+
+export const useGetAllocation = (options = {}) => {
+  return useQuery({
+    queryKey: ['allocation'],
+    queryFn: () => portfolioService.getAllocation(),
     refetchInterval: 30000,
+    ...options,
   });
 };
 
-export const useCorrelationMatrix = () => {
+export const useGetPortfolioPerformance = (timeframe = '1d', options = {}) => {
   return useQuery({
-    queryKey: ["correlation-matrix"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/correlation-matrix`);
-      return response.data;
-    },
-    refetchInterval: 60000, // Refetch every minute
-  });
-};
-
-// Sentiment Analysis
-export const useSentimentAnalysis = (filter = "all") => {
-  return useQuery({
-    queryKey: ["sentiment-analysis", filter],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/sentiment-analysis?source=${filter}`);
-      return response.data;
-    },
+    queryKey: ['performance', timeframe],
+    queryFn: () => portfolioService.getPerformance(timeframe),
     refetchInterval: 30000,
+    ...options,
   });
 };
 
-// Advanced Orders
-export const useAdvancedOrders = () => {
+// Analytics Hooks
+export const useGetPerformanceAnalytics = (timeframe = '1d', options = {}) => {
   return useQuery({
-    queryKey: ["advanced-orders"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/advanced-orders`);
-      return response.data;
-    },
+    queryKey: ['analytics', timeframe],
+    queryFn: () => analyticsService.getPerformanceAnalytics(timeframe),
+    refetchInterval: 60000,
+    ...options,
   });
 };
 
-export const useCreateAdvancedOrder = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (orderData) => {
-      const response = await axios.post(`${API_BASE}/advanced-orders`, orderData);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["advanced-orders"] });
-    },
-  });
-};
-
-export const useDeleteAdvancedOrder = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (orderId) => {
-      await axios.delete(`${API_BASE}/advanced-orders/${orderId}`);
-      return orderId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["advanced-orders"] });
-    },
-  });
-};
-
-// Liquidity Pools
-export const useLiquidityPools = () => {
+export const useGetTradeAnalytics = (filters = {}, options = {}) => {
   return useQuery({
-    queryKey: ["liquidity-pools"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/liquidity-pools`);
-      return response.data;
-    },
+    queryKey: ['tradeAnalytics', filters],
+    queryFn: () => analyticsService.getTradeAnalytics(filters),
+    refetchInterval: 60000,
+    ...options,
   });
 };
 
-export const useCreateLiquidityPool = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (poolData) => {
-      const response = await axios.post(`${API_BASE}/liquidity-pools`, poolData);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["liquidity-pools"] });
-    },
-  });
-};
-
-export const useDeleteLiquidityPool = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (poolId) => {
-      await axios.delete(`${API_BASE}/liquidity-pools/${poolId}`);
-      return poolId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["liquidity-pools"] });
-    },
-  });
-};
-
-// Cross-Chain Bridge
-export const useCrossChainBridge = () => {
+// Alerts Hooks
+export const useGetAlerts = (filters = {}, options = {}) => {
   return useQuery({
-    queryKey: ["cross-chain-bridge"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/cross-chain-bridge`);
-      return response.data;
-    },
+    queryKey: ['alerts', filters],
+    queryFn: () => alertsService.getAllAlerts(filters),
+    ...options,
   });
 };
 
-export const useBridgeTokens = () => {
+export const useCreateAlert = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (bridgeData) => {
-      const response = await axios.post(`${API_BASE}/cross-chain-bridge`, bridgeData);
-      return response.data;
-    },
+    mutationFn: (alertData) => alertsService.createAlert(alertData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cross-chain-bridge"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
   });
 };
 
-// Jito Bundles
-export const useJitoBundles = () => {
+export const useDeleteAlert = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (alertId) => alertsService.deleteAlert(alertId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    },
+  });
+};
+
+// Notifications Hooks
+export const useGetNotifications = (limit = 50, offset = 0, options = {}) => {
   return useQuery({
-    queryKey: ["jito-bundles"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/jito-bundles`);
-      return response.data;
-    },
+    queryKey: ['notifications', limit, offset],
+    queryFn: () => notificationsService.getAllNotifications(limit, offset),
+    refetchInterval: 15000,
+    ...options,
   });
 };
 
-export const useCreateJitoBundle = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (bundleData) => {
-      const response = await axios.post(`${API_BASE}/jito-bundles`, bundleData);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jito-bundles"] });
-    },
-  });
-};
-
-export const useDeleteJitoBundle = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (bundleId) => {
-      await axios.delete(`${API_BASE}/jito-bundles/${bundleId}`);
-      return bundleId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jito-bundles"] });
-    },
-  });
-};
-
-// Settings
-export const useSettings = () => {
+export const useGetUnreadCount = (options = {}) => {
   return useQuery({
-    queryKey: ["settings"],
-    queryFn: async () => {
-      const response = await axios.get(`${API_BASE}/settings`);
-      return response.data;
+    queryKey: ['unreadCount'],
+    queryFn: () => notificationsService.getUnreadCount(),
+    refetchInterval: 30000,
+    ...options,
+  });
+};
+
+export const useMarkNotificationAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId) => notificationsService.markAsRead(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 };
 
-export const useUpdateSettings = () => {
-  const queryClient = useQueryClient();
+// Monitoring Hooks
+export const useGetSystemStatus = (options = {}) => {
+  return useQuery({
+    queryKey: ['systemStatus'],
+    queryFn: () => monitoringService.getSystemStatus(),
+    refetchInterval: 30000,
+    ...options,
+  });
+};
 
+export const useGetHealthCheck = (options = {}) => {
+  return useQuery({
+    queryKey: ['health'],
+    queryFn: () => monitoringService.getHealthCheck(),
+    refetchInterval: 30000,
+    ...options,
+  });
+};
+
+export const useGetActiveTrades = (options = {}) => {
+  return useQuery({
+    queryKey: ['activeTrades'],
+    queryFn: () => monitoringService.getActiveTrades(),
+    refetchInterval: 10000,
+    ...options,
+  });
+};
+
+export const useGetSystemLogs = (limit = 100, offset = 0, options = {}) => {
+  return useQuery({
+    queryKey: ['systemLogs', limit, offset],
+    queryFn: () => monitoringService.getSystemLogs(limit, offset),
+    ...options,
+  });
+};
+
+// System Hooks
+export const useGetAPIKeys = (options = {}) => {
+  return useQuery({
+    queryKey: ['apiKeys'],
+    queryFn: () => systemService.getAPIKeys(),
+    ...options,
+  });
+};
+
+export const useCreateAPIKey = () => {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (settings) => {
-      await axios.put(`${API_BASE}/settings`, settings);
-      return settings;
-    },
+    mutationFn: (data) => systemService.createAPIKey(data.name, data.permissions),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
     },
   });
+};
+
+export const useDeleteAPIKey = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (keyId) => systemService.deleteAPIKey(keyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+    },
+  });
+};
+
+export const useGetWebhooks = (options = {}) => {
+  return useQuery({
+    queryKey: ['webhooks'],
+    queryFn: () => systemService.getWebhooks(),
+    ...options,
+  });
+};
+
+export const useCreateWebhook = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (webhookData) => systemService.createWebhook(webhookData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+    },
+  });
+};
+
+export const useDeleteWebhook = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (webhookId) => systemService.deleteWebhook(webhookId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+    },
+  });
+};
 };
