@@ -59,7 +59,9 @@ export const StatusBadge = ({ status, label = '', size = 'md' }) => {
  * Price Change Badge
  */
 export const PriceChangeBadge = ({ change, size = 'md' }) => {
-  const isPositive = change >= 0;
+  const numericChange = typeof change === 'number' ? change : parseFloat(change);
+  const isNumber = !Number.isNaN(numericChange);
+  const isPositive = isNumber && numericChange >= 0;
   const sizeClasses = {
     xs: 'text-xs',
     sm: 'text-sm',
@@ -67,14 +69,20 @@ export const PriceChangeBadge = ({ change, size = 'md' }) => {
     lg: 'text-lg',
   };
 
+  const content = isNumber
+    ? `${isPositive ? '+' : ''}${numericChange.toFixed(2)}%`
+    : change != null
+    ? String(change)
+    : '-';
+
   return (
     <motion.span
-      className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'} ${
+      className={`font-semibold ${isNumber ? (isPositive ? 'text-green-400' : 'text-red-400') : 'text-gray-400'} ${
         sizeClasses[size]
       }`}
       whileHover={{ scale: 1.1 }}
     >
-      {isPositive ? '+' : ''}{change.toFixed(2)}%
+      {content}
     </motion.span>
   );
 };
