@@ -102,7 +102,7 @@ export const Input = ({
       {...props}
     />
     {error && (
-      <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      <p className="text-sm text-red-600 dark:text-red-400">{error?.message || error}</p>
     )}
   </div>
 );
@@ -145,7 +145,7 @@ export const Select = ({
       ))}
     </select>
     {error && (
-      <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      <p className="text-sm text-red-600 dark:text-red-400">{error?.message || error}</p>
     )}
   </div>
 );
@@ -183,7 +183,7 @@ export const Textarea = ({
       {...props}
     />
     {error && (
-      <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      <p className="text-sm text-red-600 dark:text-red-400">{error?.message || error}</p>
     )}
   </div>
 );

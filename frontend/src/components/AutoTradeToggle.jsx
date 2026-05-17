@@ -196,7 +196,7 @@ export default function AutoTradeToggle({ ws, onStatusChange }) {
             exit={{ opacity: 0, y: -10 }}
             className="absolute top-full mt-2 text-xs text-red-400 px-2 py-1 bg-red-500/10 border border-red-400/50 rounded whitespace-nowrap"
           >
-            {error}
+            {error?.message || String(error)}
           </motion.div>
         )}
       </AnimatePresence>

@@ -58,7 +58,7 @@ class AuditLogger {
 
   async logTradeExecution(wallet, tokenMint, amount, type, success, ip, userAgent) {
     await this.log('TRADE_EXECUTION', {
-      wallet: wallet.toString(),
+      wallet: typeof wallet === 'string' ? wallet : (wallet?.toString?.() || 'unknown'),
       tokenMint,
       amount,
       type,

@@ -37,6 +37,19 @@ function panelCol(mainWide, trade, feed, wallet) {
   return trade ? 2 : (feed || wallet) ? 3 : 0;                               // lg/xl
 }
 
+// Resolve the main panel's grid column span (12 / 8 / 7 / 9 / 10) based on
+// which optional panels are visible.  lc = "left-col" = mainPanelCol so that
+// the lg:col-span-X conditional block below has a deterministic value.
+function buildGridClass(showTradePanel, showLiveFeed, showWalletTracker) {
+  if (!showTradePanel && !showLiveFeed && !showWalletTracker) return 12;  // bare
+  if (!showTradePanel && (showLiveFeed || showWalletTracker))           return 9;  // feed+wallet only
+  if (showTradePanel && !showLiveFeed && !showWalletTracker)             return 7;  // trade only
+  if (showTradePanel && !showLiveFeed && showWalletTracker)              return 9;  // trade+wallet
+  if (showTradePanel && showLiveFeed && !showWalletTracker)              return 8;  // trade+feed
+  if (showTradePanel && showLiveFeed && showWalletTracker)               return 10; // all three
+  return 8;
+}
+
 // ─── breakpoint-aware style helpers ─────────────────────────────────────────
 
 // never-flicker animation for the stats-card row
@@ -67,7 +80,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
 
   // ── data
   const { data: activeTrades = [], isLoading: tradesLoading, error: tradesError } = useGetActiveTrades();
-  const { data: systemStatus } = useGetSystemSystemStatus();
+  const { data: systemStatus } = useGetSystemStatus();
 
   // ── chart refs
   const chartContainerRef = useRef(null);
@@ -563,7 +576,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                 {tradesLoading ? (
                   <div className="p-6 text-center text-sm text-gray-400">Loading active trades...</div>
                 ) : tradesError ? (
-                  <div className="p-6 text-center text-sm text-red-400">{tradesError}</div>
+                  <div className="p-6 text-center text-sm text-red-400">{tradesError?.message || String(tradesError)}</div>
                 ) : activeTrades.length === 0 ? (
                   <div className="p-6 text-center text-sm text-gray-400">No active trades available right now.</div>
                 ) : (
@@ -608,7 +621,7 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
                 {tradesLoading ? (
                   <div className="p-6 text-center text-sm text-gray-400">Loading active trades...</div>
                 ) : tradesError ? (
-                  <div className="p-6 text-center text-sm text-red-400">{tradesError}</div>
+                  <div className="p-6 text-center text-sm text-red-400">{tradesError?.message || String(tradesError)}</div>
                 ) : activeTrades.length === 0 ? (
                   <div className="p-6 text-center text-sm text-gray-400">No active trades available right now.</div>
                 ) : (

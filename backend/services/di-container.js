@@ -32,6 +32,9 @@ const tradeHistoryAggregationService = require('./trade-history-aggregation.serv
 const { GridTradingService, DCAService, ScalpingBotService} = require('./trading-strategies.service');
 const { ArbitrageService, RebalancingService, SLTPService } = require('./advanced-trading.service');
 const { PositionCloningService, OptionsFuturesService } = require('./cloning-derivatives.service');
+const KatanaEngine = require('./engines/katana.engine');
+
+const katanaEngine = new KatanaEngine();
 
 // Register all services
 const container = new DIContainer();
@@ -61,5 +64,7 @@ container.register('rebalancingService', new RebalancingService());
 container.register('slTPService', new SLTPService());
 container.register('positionCloningService', new PositionCloningService());
 container.register('optionsFuturesService', new OptionsFuturesService());
+// Katana Engine — registered here and used by both server and katanaRoutes
+container.register('katanaEngine', katanaEngine);
 
 module.exports = container;

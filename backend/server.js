@@ -11,12 +11,7 @@ const failedTradeRecoveryService = require('./services/resilience/failed-trade-r
 const circuitBreakerService = require('./services/resilience/circuit-breaker.service');
 const gracefulShutdownManager = require('./services/resilience/graceful-shutdown.service');
 const backupService = require('./services/backup.service');
-const KatanaEngine = require('./services/engines/katana.engine');
-const katanaEngine = new KatanaEngine();
-const websocketServer = require('./ws/websocket.server');
-const eventPoller = require('./services/eventPoller');
-const emailService = require('./services/email.service');
-const emailScheduler = require('./services/email-scheduler.service');
+const diContainer = require('./services/di-container');
 
 const PORT = parseInt(process.env.PORT, 10) || 3001;
 const websocketPort = parseInt(process.env.WS_PORT, 10) || 3002;
@@ -27,6 +22,12 @@ if (missingEnv.length > 0) {
   logger.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
   process.exit(1);
 }
+
+const katanaEngine = diContainer.get('katanaEngine');
+const websocketServer = require('./ws/websocket.server');
+const eventPoller = require('./services/eventPoller');
+const emailService = require('./services/email.service');
+const emailScheduler = require('./services/email-scheduler.service');
 
 async function initializeServices() {
   await monitoringService.initialize();

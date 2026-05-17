@@ -132,7 +132,7 @@ export const useMount = (callback) => {
  * useUnmount - Run effect only on unmount
  */
 export const useUnmount = (callback) => {
-  useEffect(() => callback, []);
+  useEffect(() => callback(), []);
 };
 
 /**
