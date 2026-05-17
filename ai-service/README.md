@@ -149,6 +149,15 @@ Environment variables:
 - `AI_SERVICE_API_KEY`: API key for secure backend access
 - Service automatically loads models on startup
 
+## Event Bus Integration
+
+The AI service is built to participate in the shared realtime EventBus:
+
+- subscribes to `token.detected` events from the backend engine
+- processes token detection payloads and generates AI trading signals
+- publishes predictions to `ai.prediction` on Redis Pub/Sub
+- uses the same Redis configuration as the backend and frontend
+
 ## Dependencies
 
 - **fastapi**: Web framework

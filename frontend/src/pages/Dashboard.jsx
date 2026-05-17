@@ -7,6 +7,7 @@ import {
   Server, Globe, LineChart, Play, Pause, Flame, Lock, Square, Crosshair,
   Copy, Gauge, Layers, Eye, EyeOff, CheckCircle, Radar, DollarSign,
 } from "lucide-react";
+import { useRealtimeDashboardData } from "../hooks/useRealtimeDashboardData";
 
 const NEON = {
   purple: "#8B5CF6",
@@ -104,7 +105,7 @@ const buildVolume = (candles) => {
   }));
 };
 
-const Dashboard = () => {
+const Dashboard = ({ dashboardConfig = {} }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -112,6 +113,110 @@ const Dashboard = () => {
   const [isMobile, setIsMobile] = useState(false);
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
+
+  const {
+    isConnected,
+    lastMessageType,
+    lastMessageAt,
+    wsError,
+    autoTradeStatus,
+    aiPredictions,
+    arbitrageSignals,
+    smartMoneySignals,
+    priceUpdates,
+    tradeRetries,
+    wallets: liveWallets,
+    activeTrades,
+    systemStatus,
+  } = useRealtimeDashboardData();
+
+  const statsData = [
+    {
+      label: "Total PnL",
+      value: systemStatus?.totalPnl ?? "$18,742.60",
+      change: systemStatus?.pnlChange ?? "+7.8%",
+      up: systemStatus?.pnlChange?.startsWith("+") ?? true,
+      icon: TrendingUp,
+    },
+    {
+      label: "Win Rate",
+      value: systemStatus?.winRate ?? "86.3%",
+      change: systemStatus?.winRateChange ?? "+4.2%",
+      up: true,
+      icon: TrendingUp,
+    },
+    {
+      label: "Total Volume",
+      value: systemStatus?.totalVolume ?? "$127.4K",
+      change: systemStatus?.volumeChange ?? "+12.5%",
+      up: true,
+      icon: TrendingUp,
+    },
+    {
+      label: "Network Latency",
+      value: systemStatus?.rpcLatency ? `${systemStatus.rpcLatency} ms` : "12 ms",
+      change: systemStatus?.rpcStatus ?? "Optimal",
+      up: systemStatus?.rpcStatus === "Optimal" ? null : false,
+      icon: Globe,
+    },
+    {
+      label: "RPC Health",
+      value: systemStatus?.rpcHealth ?? "99.2%",
+      change: systemStatus?.rpcStatus ?? "All green",
+      up: true,
+      icon: CheckCircle,
+    },
+    {
+      label: "Active Signals",
+      value: `${aiPredictions.length + arbitrageSignals.length + smartMoneySignals.length}`,
+      change: "Live",
+      up: null,
+      icon: Radar,
+    },
+  ];
+
+  const walletItems = liveWallets?.length
+    ? liveWallets.map((w) => ({
+        asset: w.asset || w.symbol || "UNKNOWN",
+        bal: w.balance || w.amount || "0",
+        chg: w.change || "—",
+        color: w.color || "#06B6D4",
+      }))
+    : WALLET_DATA;
+
+  const signalFeed = [
+    ...aiPredictions.map((prediction) => ({
+      label: "AI Prediction",
+      detail: prediction.recommendation || prediction.score || "Signal generated",
+      color: "#22c55e",
+      time: prediction.timestamp,
+    })),
+    ...arbitrageSignals.map((signal) => ({
+      label: "Arbitrage Signal",
+      detail: signal.summary || signal.price || "Arbitrage opportunity",
+      color: "#facc15",
+      time: signal.timestamp,
+    })),
+    ...smartMoneySignals.map((signal) => ({
+      label: "Smart Money",
+      detail: signal.summary || signal.price || "Smart money flow detected",
+      color: "#8b5cf6",
+      time: signal.timestamp,
+    })),
+  ].slice(0, 6);
+
+  const currentPrice = priceUpdates?.[0]?.price ?? "0.0009112";
+  const currentChange = priceUpdates?.[0]?.change ?? "+2.45%";
+  const currentMarket = priceUpdates?.[0]?.market ?? {
+    high: "0.00115",
+    low: "0.00042",
+    volume: "12.8M",
+  };
+
+  const formatTime = (value) => {
+    if (!value) return "--";
+    return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
 
   // ── Viewport detection
   useEffect(() => {
@@ -242,9 +347,12 @@ const Dashboard = () => {
                   placeholder="Search pairs, wallets, signals..."
                   className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-gray-300 placeholder-gray-600 w-64"
                 />
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 text-sm text-gray-300">
                   <Bell size={20} className="text-gray-400 cursor-pointer" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"}`} />
+                    <span>{isConnected ? "Realtime connected" : "Realtime disconnected"}</span>
+                  </div>
                 </div>
               </div>
             </header>
@@ -252,49 +360,52 @@ const Dashboard = () => {
             {/* Dashboard content */}
             <div className="p-6 space-y-6">
               {/* Stats row */}
-              <div className="grid grid-cols-6 gap-4">
-                {STATS.map((stat) => {
-                  const Icon = stat.icon;
-                  return (
-                    <div
-                      key={stat.label}
-                      className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-4 backdrop-blur-xl hover:border-white/20 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs text-gray-500 font-mono uppercase tracking-wider">{stat.label}</span>
-                        <Icon size={16} className="text-cyan-400" />
+              {dashboardConfig.showStatsCards !== false && (
+                <div className="grid grid-cols-6 gap-4">
+                  {statsData.map((stat) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div
+                        key={stat.label}
+                        className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-4 backdrop-blur-xl hover:border-white/20 transition-all"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs text-gray-500 font-mono uppercase tracking-wider">{stat.label}</span>
+                          <Icon size={16} className="text-cyan-400" />
+                        </div>
+                        <div className="text-lg font-bold text-white mb-2">{stat.value}</div>
+                        <div className={`text-xs font-semibold ${
+                          stat.up === true
+                            ? "text-green-400"
+                            : stat.up === false
+                            ? "text-red-400"
+                            : "text-cyan-400"
+                        }`}>
+                          {stat.change}
+                        </div>
+                        {/* Mini sparkline chart */}
+                        <div className="mt-2 h-8 flex items-end gap-1">
+                          {[...Array(20)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="flex-1 bg-gradient-to-t from-green-500/20 to-green-500/50 rounded-t"
+                              style={{
+                                height: `${Math.sin(i / 5) * 30 + 50}%`,
+                              }}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-lg font-bold text-white mb-2">{stat.value}</div>
-                      <div className={`text-xs font-semibold ${
-                        stat.up === true
-                          ? "text-green-400"
-                          : stat.up === false
-                          ? "text-red-400"
-                          : "text-cyan-400"
-                      }`}>
-                        {stat.change}
-                      </div>
-                      {/* Mini sparkline chart */}
-                      <div className="mt-2 h-8 flex items-end gap-1">
-                        {[...Array(20)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="flex-1 bg-gradient-to-t from-green-500/20 to-green-500/50 rounded-t"
-                            style={{
-                              height: `${Math.sin(i / 5) * 30 + 50}%`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Main panel with chart */}
-              <div className="grid grid-cols-3 gap-6">
-                {/* Chart and trading section */}
-                <div className="col-span-2 space-y-4">
+              {dashboardConfig.showTradePanel !== false && (
+                <div className="grid grid-cols-3 gap-6">
+                  {/* Chart and trading section */}
+                  <div className="col-span-2 space-y-4">
                   {/* Trading pair header */}
                   <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
                     <div className="flex items-start justify-between mb-4">
@@ -303,15 +414,17 @@ const Dashboard = () => {
                           BONK/USDC <span className="text-lg text-gray-500">☆</span>
                         </h3>
                         <div className="flex items-baseline gap-4 mt-2">
-                          <span className="text-2xl font-bold text-cyan-400">0.0009112</span>
-                          <span className="text-sm text-green-400 font-semibold">+2.45%</span>
+                          <span className="text-2xl font-bold text-cyan-400">{currentPrice}</span>
+                          <span className={`text-sm font-semibold ${currentChange.startsWith("+") ? "text-green-400" : "text-red-400"}`}>
+                            {currentChange}
+                          </span>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><span className="text-gray-500">24h Change</span><div className="text-white font-bold">+211%</div></div>
-                        <div><span className="text-gray-500">24h High</span><div className="text-cyan-400 font-bold">0.00115</div></div>
-                        <div><span className="text-gray-500">24h Low</span><div className="text-amber-400 font-bold">0.00042</div></div>
-                        <div><span className="text-gray-500">Volume</span><div className="text-purple-400 font-bold">12.8M</div></div>
+                        <div><span className="text-gray-500">24h Change</span><div className="text-white font-bold">{currentMarket.change ?? "+211%"}</div></div>
+                        <div><span className="text-gray-500">24h High</span><div className="text-cyan-400 font-bold">{currentMarket.high}</div></div>
+                        <div><span className="text-gray-500">24h Low</span><div className="text-amber-400 font-bold">{currentMarket.low}</div></div>
+                        <div><span className="text-gray-500">Volume</span><div className="text-purple-400 font-bold">{currentMarket.volume}</div></div>
                       </div>
                     </div>
 
@@ -414,125 +527,139 @@ const Dashboard = () => {
                   </div>
 
                   {/* Wallet overview */}
-                  <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
-                    <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Wallet Overview</h4>
-                    <div className="text-center mb-4">
-                      <div className="text-xs text-gray-500">Total Value</div>
-                      <div className="text-3xl font-bold text-white">$124,582.40</div>
-                      <div className="text-sm text-green-400 font-semibold">+$3,241.20 (+2.67%)</div>
-                    </div>
+                  {dashboardConfig.showWalletTracker !== false && (
+                    <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
+                      <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Wallet Overview</h4>
+                      <div className="text-center mb-4">
+                        <div className="text-xs text-gray-500">Total Value</div>
+                        <div className="text-3xl font-bold text-white">{systemStatus?.walletTotalValue ?? "$124,582.40"}</div>
+                        <div className="text-sm text-green-400 font-semibold">{systemStatus?.walletChange ?? "+$3,241.20 (+2.67%)"}</div>
+                      </div>
 
-                    {/* Pie chart placeholder */}
-                    <div className="flex items-center justify-center mb-4">
-                      <div
-                        className="w-24 h-24 rounded-full relative"
-                        style={{
-                          background:
-                            "conic-gradient(from 0deg, #22c55e 0deg 90deg, #06B6D4 90deg 180deg, #8B5CF6 180deg 270deg, #F59E0B 270deg)",
-                        }}
-                      />
-                    </div>
+                      {/* Pie chart placeholder */}
+                      <div className="flex items-center justify-center mb-4">
+                        <div
+                          className="w-24 h-24 rounded-full relative"
+                          style={{
+                            background:
+                              "conic-gradient(from 0deg, #22c55e 0deg 90deg, #06B6D4 90deg 180deg, #8B5CF6 180deg 270deg, #F59E0B 270deg)",
+                          }}
+                        />
+                      </div>
 
-                    <div className="space-y-2 text-xs">
-                      {WALLET_DATA.map((w) => (
-                        <div key={w.asset} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className="text-cyan-400 font-semibold">{w.asset}</span>
-                            <span className="text-gray-500">{w.bal}</span>
+                      <div className="space-y-2 text-xs">
+                        {walletItems.map((w) => (
+                          <div key={w.asset} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <span className="text-cyan-400 font-semibold">{w.asset}</span>
+                              <span className="text-gray-500">{w.bal}</span>
+                            </div>
+                            <span className={w.chg === "—" ? "text-gray-500" : w.chg.startsWith("+") ? "text-green-400" : "text-red-400"}>
+                              {w.chg}
+                            </span>
                           </div>
-                          <span className={w.chg === "—" ? "text-gray-500" : w.chg.startsWith("+") ? "text-green-400" : "text-red-400"}>
-                            {w.chg}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Monitoring + Signals + Market Overview */}
-              <div className="grid grid-cols-3 gap-4">
-                {/* Monitoring */}
-                <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
-                  <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Monitoring</h4>
-                  <div className="space-y-3">
-                    {MONITORING_DATA.map((m) => (
-                      <div key={m.label} className="border-b border-white/5 pb-3 last:border-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-400">{m.label}</span>
-                          <span className="text-xs px-2 py-1 bg-white/5 rounded text-gray-300">{m.status}</span>
-                        </div>
-                        <div className="text-lg font-bold" style={{ color: m.color }}>
-                          {m.value} {m.unit}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Signals feed */}
-                <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
-                  <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Signals Feed</h4>
-                  <div className="space-y-3">
-                    {SIGNALS.map((s) => (
-                      <div key={s.label} className="border-b border-white/5 pb-3 last:border-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-400">{s.label}</span>
-                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: s.color }} />
-                        </div>
-                        <div className="text-sm" style={{ color: s.color }}>
-                          {s.detail}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* PnL Analytics + CC Market */}
-                <div className="space-y-4">
-                  {/* PnL */}
-                  <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">PnL Analytics</h4>
-                      <div className="flex gap-1">
-                        {["Day", "Week", "Month", "Year"].map((p) => (
-                          <button
-                            key={p}
-                            className="px-2 py-1 text-xs rounded bg-white/5 hover:bg-white/10 border border-white/10"
-                          >
-                            {p}
-                          </button>
                         ))}
                       </div>
                     </div>
-                    <div className="text-2xl font-bold text-green-400">$18,742.60</div>
-                    <div className="text-xs text-gray-500 mt-1">+7.8%</div>
+                  )}
+                </div>
+              </div>              )}
+              {/* Monitoring + Signals + Market Overview */}
+              {dashboardConfig.showLiveFeed !== false && (
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Monitoring */}
+                  <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
+                    <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Monitoring</h4>
+                    <div className="space-y-3">
+                      {MONITORING_DATA.map((m) => (
+                        <div key={m.label} className="border-b border-white/5 pb-3 last:border-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-400">{m.label}</span>
+                            <span className="text-xs px-2 py-1 bg-white/5 rounded text-gray-300">{m.status}</span>
+                          </div>
+                          <div className="text-lg font-bold" style={{ color: m.color }}>
+                            {m.value} {m.unit}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="border-t border-white/10 pt-4 mt-4 text-xs text-gray-400">
+                        <div className="flex items-center justify-between">
+                          <span>WS state</span>
+                          <span>{isConnected ? "Connected" : "Disconnected"}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span>Last event</span>
+                          <span>{lastMessageType || "none"}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* CC Market */}
-                  <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
-                    <h4 className="text-xs font-bold text-white mb-3 uppercase tracking-wider">CC Market Overview</h4>
-                    <div className="space-y-2">
-                      {CC_MARKET.map((m) => (
-                        <div key={m.label} className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400">{m.label}</span>
-                          <span className="font-semibold" style={{ color: m.color }}>
-                            {m.value}
-                          </span>
+                  {/* Signals feed */}
+                  <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
+                    <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Signals Feed</h4>
+                    <div className="space-y-3">
+                      {(signalFeed.length ? signalFeed : SIGNALS).map((s, index) => (
+                        <div key={`${s.label}-${index}`} className="border-b border-white/5 pb-3 last:border-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-400">{s.label}</span>
+                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: s.color }} />
+                          </div>
+                          <div className="text-sm" style={{ color: s.color }}>
+                            {s.detail}
+                          </div>
+                          <div className="text-[11px] text-gray-500 mt-1">{formatTime(s.time)}</div>
                         </div>
                       ))}
                     </div>
                   </div>
+
+                  {/* PnL Analytics + CC Market */}
+                  <div className="space-y-4">
+                    {/* PnL */}
+                    <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">PnL Analytics</h4>
+                        <div className="flex gap-1">
+                          {["Day", "Week", "Month", "Year"].map((p) => (
+                            <button
+                              key={p}
+                              className="px-2 py-1 text-xs rounded bg-white/5 hover:bg-white/10 border border-white/10"
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-green-400">{systemStatus?.pnlValue ?? "$18,742.60"}</div>
+                      <div className="text-xs text-gray-500 mt-1">{systemStatus?.pnlChange ?? "+7.8%"}</div>
+                    </div>
+
+                    {/* CC Market */}
+                    <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
+                      <h4 className="text-xs font-bold text-white mb-3 uppercase tracking-wider">CC Market Overview</h4>
+                      <div className="space-y-2">
+                        {CC_MARKET.map((m) => (
+                          <div key={m.label} className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">{m.label}</span>
+                            <span className="font-semibold" style={{ color: m.color }}>
+                              {m.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Portfolio summary */}
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: "Total Value", value: "$124,582.40", icon: "💼", border: "#06B6D4" },
-                  { label: "24h Change", value: "+$3,241.20", icon: "📈", border: "#22C55E" },
-                  { label: "Win Rate", value: "86.3%", icon: "📊", border: "#8B5CF6" },
-                  { label: "Open Positions", value: "7", icon: "🎯", border: "#F59E0B" },
+                  { label: "Total Value", value: systemStatus?.portfolioValue ?? "$124,582.40", icon: "💼", border: "#06B6D4" },
+                  { label: "24h Change", value: systemStatus?.portfolioChange ?? "+$3,241.20", icon: "📈", border: "#22C55E" },
+                  { label: "Win Rate", value: systemStatus?.winRate ?? "86.3%", icon: "📊", border: "#8B5CF6" },
+                  { label: "Open Positions", value: activeTrades?.length ?? 7, icon: "🎯", border: "#F59E0B" },
                 ].map((item) => (
                   <div
                     key={item.label}
@@ -547,6 +674,51 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
+
+              {dashboardConfig.showActiveTrades !== false && (
+                <div className="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-xl p-6 backdrop-blur-xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Active Trades</h4>
+                    <span className="text-xs text-gray-400">{activeTrades?.length ?? 0} open</span>
+                  </div>
+                  {activeTrades?.length ? (
+                    <div className="grid grid-cols-1 gap-3">
+                      {activeTrades.map((trade, index) => (
+                        <div key={trade.id ?? index} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="text-sm text-gray-400">{trade.market || trade.pair || "UNKNOWN"}</div>
+                              <div className="text-base font-bold text-white">{trade.side || trade.status || "Pending"}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-400">Size</div>
+                              <div className="text-base text-white">{trade.size || trade.amount || "—"}</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-gray-400">
+                            <div>
+                              <div>Status</div>
+                              <div className="text-white">{trade.status || "ACTIVE"}</div>
+                            </div>
+                            <div>
+                              <div>Entry</div>
+                              <div className="text-white">{trade.entryPrice || trade.price || "—"}</div>
+                            </div>
+                            <div>
+                              <div>PL</div>
+                              <div className={`font-semibold ${trade.pnl?.startsWith("+") ? "text-green-400" : "text-red-400"}`}>
+                                {trade.pnl ?? "—"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400">No active trades streaming yet. Live updates appear here once the engine begins publishing.</div>
+                  )}
+                </div>
+              )}
 
               {/* Footer */}
               <div className="text-center text-xs text-gray-600 py-4 border-t border-white/5">
