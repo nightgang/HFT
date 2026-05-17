@@ -1,5 +1,6 @@
 const logger = require('../../utils/logger');
 const jupiterService = require('../../integrations/jupiter.service');
+const eventBus = require('../../services/event-bus.service');
 
 class ArbitrageEngine {
   constructor() {
@@ -59,12 +60,11 @@ class ArbitrageEngine {
         };
         opportunities.push(signalData);
 
-        // Emit WebSocket signal
-        const websocketServer = require('../../ws/websocket.server');
-        websocketServer.broadcast({
+        const payload = {
           type: 'ARBITRAGE_SIGNAL',
           data: signalData
-        });
+        };
+        await eventBus.publishEvent('arbitrage.signal', payload, payload);
 
         logger.info(`📊 Arbitrage signal: ${tokenMint} spread ${(spread * 100).toFixed(2)}%`);
       }

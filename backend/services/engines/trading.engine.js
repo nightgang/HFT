@@ -7,7 +7,7 @@ const multiExchangeService = require('../multi-exchange.service');
 const heliusService = require('../../integrations/helius.service');
 const jupiterService = require('../../integrations/jupiter.service');
 const smartMoneyEngine = require('./smartmoney.engine');
-const websocketServer = require('../../ws/websocket.server');
+const eventBus = require('../../services/event-bus.service');
 const { encrypt, decrypt } = require('../../middleware/auth');
 const mevService = require('../mev/mev.service');
 const riskService = require('../risk/risk.service');
@@ -272,26 +272,29 @@ class TradingEngine {
         last_trade_at: new Date()
       });
 
-      // Broadcast trade update
-      websocketServer.broadcast({
-        type: 'TRADE_EXECUTED',
-        data: {
-          trade: {
-            id: tradeRecord.trade_id,
-            type: 'buy',
-            tokenMint: validated.tokenMint,
-            amount: buyAmount,
-            signature: result.signature,
-            status: 'success',
-            slippage: slippageSim,
-            sandwich: sandwichCheck
+      // Publish trade execution event using the shared EventBus
+      {
+        const payload = {
+          type: 'TRADE_EXECUTED',
+          data: {
+            trade: {
+              id: tradeRecord.trade_id,
+              type: 'buy',
+              tokenMint: validated.tokenMint,
+              amount: buyAmount,
+              signature: result.signature,
+              status: 'success',
+              slippage: slippageSim,
+              sandwich: sandwichCheck
+            },
+            wallet: {
+              name: this.activeWallet.name,
+              address: this.activeWallet.address,
+            },
           },
-          wallet: {
-            name: this.activeWallet.name,
-            address: this.activeWallet.address,
-          },
-        },
-      });
+        };
+        await eventBus.publishEvent('trade.executed', payload, payload);
+      }
 
       return {
         success: true,
@@ -495,26 +498,29 @@ class TradingEngine {
         last_trade_at: new Date()
       });
 
-      // Broadcast trade update
-      websocketServer.broadcast({
-        type: 'TRADE_EXECUTED',
-        data: {
-          trade: {
-            id: tradeRecord.trade_id,
-            type: 'sell',
-            tokenMint: validated.tokenMint,
-            amount: validated.amount,
-            signature: result.signature,
-            status: 'success',
-            slippage: slippageSim,
-            sandwich: sandwichCheck
+      // Publish trade execution event using the shared EventBus
+      {
+        const payload = {
+          type: 'TRADE_EXECUTED',
+          data: {
+            trade: {
+              id: tradeRecord.trade_id,
+              type: 'sell',
+              tokenMint: validated.tokenMint,
+              amount: validated.amount,
+              signature: result.signature,
+              status: 'success',
+              slippage: slippageSim,
+              sandwich: sandwichCheck
+            },
+            wallet: {
+              name: this.activeWallet.name,
+              address: this.activeWallet.address,
+            },
           },
-          wallet: {
-            name: this.activeWallet.name,
-            address: this.activeWallet.address,
-          },
-        },
-      });
+        };
+        await eventBus.publishEvent('trade.executed', payload, payload);
+      }
 
       return {
         success: true,

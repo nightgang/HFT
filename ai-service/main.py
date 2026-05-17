@@ -89,8 +89,18 @@ async def lifespan(app: FastAPI):
     # Initialize Redis subscriber for EventBus integration
     global redis_client, redis_listener_task
     try:
-        redis_url = os.getenv('REDIS_URL') or f"redis://{os.getenv('REDIS_HOST','localhost')}:{os.getenv('REDIS_PORT','6379')}"
-        redis_client = aioredis.from_url(redis_url)
+        redis_url = os.getenv('REDIS_URL')
+        if not redis_url:
+            redis_host = os.getenv('REDIS_HOST', 'localhost')
+            redis_port = os.getenv('REDIS_PORT', '6379')
+            redis_db = os.getenv('REDIS_DB', '0')
+            redis_password = os.getenv('REDIS_PASSWORD')
+            if redis_password:
+                redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
+            else:
+                redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
+
+        redis_client = aioredis.from_url(redis_url, encoding='utf-8', decode_responses=True)
         redis_listener_task = asyncio.create_task(event_bus_listener())
         logger.info('AI service connected to EventBus')
     except Exception as e:

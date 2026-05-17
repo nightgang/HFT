@@ -3,7 +3,7 @@ const { tokenDetectionSchema } = require('../../utils/validator');
 const riskEngine = require('./risk.engine');
 const tradingEngine = require('./trading.engine');
 const predictionEngine = require('./prediction.engine');
-const websocketServer = require('../../ws/websocket.server');
+const eventBus = require('../../services/event-bus.service');
 
 class SniperEngine {
   constructor() {
@@ -40,12 +40,15 @@ class SniperEngine {
       const validatedData = tokenDetectionSchema.parse(normalizedData);
       logger.info(`Processing token detection: ${validatedData.mint}`);
 
-      // Broadcast token detected event
-      websocketServer.broadcast({
-        type: 'TOKEN_DETECTED',
-        data: validatedData,
-        timestamp: Date.now(),
-      });
+      // Publish token detected event to the shared realtime EventBus
+      {
+        const payload = {
+          type: 'TOKEN_DETECTED',
+          data: validatedData,
+          timestamp: Date.now(),
+        };
+        await eventBus.publishEvent('token.detected', payload, payload);
+      }
 
       // Step 3: Pass through Risk Engine
       const riskResult = await riskEngine.evaluateTokenRisk(validatedData.mint);
@@ -71,56 +74,69 @@ class SniperEngine {
               status: 'success',
             });
 
-            // Broadcast event via WebSocket
-            websocketServer.broadcast({
-              type: 'TRADE_EXECUTED',
-              data: {
-                mint: validatedData.mint,
-                signature: tradeResult.signature,
-                amount: tradeResult.amount,
-                tradeId: tradeRecord.id,
-              },
-              timestamp: Date.now(),
-            });
+            // Publish trade execution event to shared realtime EventBus
+            {
+              const payload = {
+                type: 'TRADE_EXECUTED',
+                data: {
+                  mint: validatedData.mint,
+                  signature: tradeResult.signature,
+                  amount: tradeResult.amount,
+                  tradeId: tradeRecord.id,
+                },
+                timestamp: Date.now(),
+              };
+              await eventBus.publishEvent('trade.executed', payload, payload);
+            }
 
             logger.info(`Sniper trade executed successfully: ${tradeResult.signature}`);
           } else {
-            // Log failed trade
-            websocketServer.broadcast({
-              type: 'TRADE_FAILED',
-              data: {
-                mint: validatedData.mint,
-                reason: tradeResult.error,
-              },
-              timestamp: Date.now(),
-            });
+            // Publish trade failure event
+            {
+              const payload = {
+                type: 'TRADE_FAILED',
+                data: {
+                  mint: validatedData.mint,
+                  reason: tradeResult.error,
+                },
+                timestamp: Date.now(),
+              };
+              await eventBus.publishEvent('trade.failed', payload, payload);
+            }
             logger.error(`Sniper trade failed for ${validatedData.mint}: ${tradeResult.error}`);
           }
         } else {
           // Auto trade disabled - just log approval
-          websocketServer.broadcast({
-            type: 'RISK_APPROVED',
-            data: { mint: validatedData.mint },
-            timestamp: Date.now(),
-          });
+          {
+            const payload = {
+              type: 'RISK_APPROVED',
+              data: { mint: validatedData.mint },
+              timestamp: Date.now(),
+            };
+            await eventBus.publishEvent('risk.alert', payload, payload);
+          }
           logger.info(`Token ${validatedData.mint} approved but auto-trade disabled`);
         }
       } else {
         // Step 5: If UNSAFE - Reject + log reason
-        websocketServer.broadcast({
-          type: 'RISK_REJECTED',
-          data: { mint: validatedData.mint, reason: 'Risk evaluation failed' },
-          timestamp: Date.now(),
-        });
+        {
+          const payload = {
+            type: 'RISK_REJECTED',
+            data: { mint: validatedData.mint, reason: 'Risk evaluation failed' },
+            timestamp: Date.now(),
+          };
+          await eventBus.publishEvent('risk.alert', payload, payload);
+        }
         logger.warn(`Token ${validatedData.mint} rejected by risk engine`);
       }
     } catch (error) {
       logger.error('Token detection processing error:', error);
-      websocketServer.broadcast({
+      const payload = {
         type: 'PROCESSING_ERROR',
         data: { error: error.message },
         timestamp: Date.now(),
-      });
+      };
+      await eventBus.publishEvent('risk.alert', payload, payload);
     }
   }
 

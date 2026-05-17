@@ -141,6 +141,12 @@ Models are saved to the `models/` directory and loaded on startup.
 Environment variables:
 
 - `MODEL_DIR`: Directory for model files (default: "models")
+- `REDIS_HOST`: Redis host for the shared EventBus (default: `localhost`)
+- `REDIS_PORT`: Redis port for the shared EventBus (default: `6379`)
+- `REDIS_DB`: Redis database index for the shared EventBus (default: `0`)
+- `REDIS_PASSWORD`: Optional Redis password for EventBus authentication
+- `REDIS_URL`: Optional Redis connection URL (overrides `REDIS_HOST`/`REDIS_PORT`)
+- `AI_SERVICE_API_KEY`: API key for secure backend access
 - Service automatically loads models on startup
 
 ## Dependencies

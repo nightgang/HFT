@@ -200,7 +200,7 @@ const Dashboard = ({ dashboardConfig = {} }) => {
   /* ══════════════════════════════════════════════════════════════════════
      2 · STATUS BAR  (Cyberpunk / StatusBar component features)
      ══════════════════════════════════════════════════════════════════════ */
-  const StatusBar = () => {
+  const StatusBar = ({ realtime }) => {
     const [metrics, setMetrics] = useState({
       botStatus: "SCANNING",
       latency: 2.3,
@@ -285,6 +285,13 @@ const Dashboard = ({ dashboardConfig = {} }) => {
             <div className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">TIME</div>
             <div className="text-[#22D3EE] text-sm font-bold">{metrics.timestamp.toLocaleTimeString()}</div>
           </div>
+        </div>
+        <div className="mt-3 px-4 py-3 bg-black/10 border-t border-white/10 rounded-b-3xl flex flex-wrap gap-2 text-[10px] text-gray-400">
+          <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">AI {realtime.aiPredictions?.length ?? 0}</span>
+          <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">Arb {realtime.arbitrageSignals?.length ?? 0}</span>
+          <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">Smart {realtime.smartMoneySignals?.length ?? 0}</span>
+          <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">Price {realtime.priceUpdates?.length ?? 0}</span>
+          <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">Retry {realtime.tradeRetries?.length ?? 0}</span>
         </div>
         <div className="h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent animate-pulse" />
       </div>
@@ -481,31 +488,152 @@ const Dashboard = ({ dashboardConfig = {} }) => {
     );
   };
 
-  const AiPredictionsPanel = () => {
-    const aiPredictions = realtime.aiPredictions || [];
+  const formatRealtimeTimestamp = (value) => {
+    const timestamp = value || value === 0 ? new Date(value) : null;
+    const date = timestamp instanceof Date && !isNaN(timestamp) ? timestamp : new Date(value);
+    return date instanceof Date && !isNaN(date) ? date.toLocaleTimeString() : new Date().toLocaleTimeString();
+  };
 
-    if (aiPredictions.length === 0) return null;
+  const RealtimePanel = ({ title, count, children }) => (
+    <div className="w-80 max-w-full">
+      <div className="bg-gradient-to-br from-black/60 to-black/40 border border-white/10 rounded-xl p-3 backdrop-blur-md shadow-lg">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs text-gray-400 font-mono">{title}</div>
+          <div className="text-[10px] text-gray-500">{count}</div>
+        </div>
+        <div className="space-y-2 max-h-64 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+
+  const RealtimeSummaryPanel = () => {
+    const aiCount = realtime.aiPredictions?.length || 0;
+    const arbCount = realtime.arbitrageSignals?.length || 0;
+    const smartCount = realtime.smartMoneySignals?.length || 0;
+    const priceCount = realtime.priceUpdates?.length || 0;
+    const retryCount = realtime.tradeRetries?.length || 0;
+    const totalCount = aiCount + arbCount + smartCount + priceCount + retryCount;
+
+    if (totalCount === 0) return null;
 
     return (
-      <div className="fixed right-6 bottom-6 w-80 max-w-full z-50">
-        <div className="bg-gradient-to-br from-black/60 to-black/40 border border-white/10 rounded-xl p-3 backdrop-blur-md shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-gray-400 font-mono">AI Predictions</div>
-            <div className="text-[10px] text-gray-500">{aiPredictions.length}</div>
+      <div className="feed-card">
+        <SectionLabel label="Realtime Summary" right={<span className="pill">Live</span>} />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">AI Signals</div>
+            <div className="text-lg font-bold text-white">{aiCount}</div>
           </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {aiPredictions.map((p, idx) => (
-              <div key={p.tokenMint || idx} className="p-2 bg-black/30 rounded-md flex items-start gap-2">
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-white">{p.tokenMint || p.token || 'UNKNOWN'}</div>
-                  <div className="text-xs text-gray-300">{p.recommendation || p.model || ''} — score {p.score ?? p.score}</div>
-                </div>
-                <div className="text-right text-xs text-gray-400">{new Date(p.timestamp || p.receivedAt || Date.now()).toLocaleTimeString()}</div>
-              </div>
-            ))}
+          <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Arbitrage</div>
+            <div className="text-lg font-bold text-white">{arbCount}</div>
+          </div>
+          <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Smart Money</div>
+            <div className="text-lg font-bold text-white">{smartCount}</div>
+          </div>
+          <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Price Updates</div>
+            <div className="text-lg font-bold text-white">{priceCount}</div>
+          </div>
+          <div className="col-span-2 bg-black/30 rounded-xl p-3 border border-white/10">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Retry Events</div>
+            <div className="text-lg font-bold text-white">{retryCount}</div>
           </div>
         </div>
       </div>
+    );
+  };
+
+  const AiPredictionsPanel = () => {
+    const aiPredictions = realtime.aiPredictions || [];
+    if (aiPredictions.length === 0) return null;
+
+    return (
+      <RealtimePanel title="AI Predictions" count={aiPredictions.length}>
+        {aiPredictions.map((p, idx) => (
+          <div key={p.tokenMint || idx} className="p-2 bg-black/30 rounded-md flex items-start gap-2">
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-white">{p.tokenMint || p.token || 'UNKNOWN'}</div>
+              <div className="text-xs text-gray-300">{p.recommendation || p.model || ''} — score {p.score ?? p.data?.score ?? 'N/A'}</div>
+            </div>
+            <div className="text-right text-xs text-gray-400">{formatRealtimeTimestamp(p.timestamp || p.receivedAt)}</div>
+          </div>
+        ))}
+      </RealtimePanel>
+    );
+  };
+
+  const ArbitrageSignalsPanel = () => {
+    const arbitrageSignals = realtime.arbitrageSignals || [];
+    if (arbitrageSignals.length === 0) return null;
+
+    return (
+      <RealtimePanel title="Arbitrage Signals" count={arbitrageSignals.length}>
+        {arbitrageSignals.map((signal, idx) => (
+          <div key={signal.id || signal.tokenMint || idx} className="p-2 bg-black/30 rounded-md">
+            <div className="text-sm font-semibold text-white">{signal.tokenMint || signal.mint || signal.token || 'UNKNOWN'}</div>
+            <div className="text-xs text-gray-300">Route: {signal.route || 'unknown'}</div>
+            <div className="text-xs text-gray-300">Spread: {signal.spread != null ? `${(signal.spread * 100).toFixed(2)}%` : 'N/A'}</div>
+            <div className="text-right text-[10px] text-gray-500">{formatRealtimeTimestamp(signal.timestamp || signal.receivedAt || signal.createdAt)}</div>
+          </div>
+        ))}
+      </RealtimePanel>
+    );
+  };
+
+  const SmartMoneySignalsPanel = () => {
+    const smartMoneySignals = realtime.smartMoneySignals || [];
+    if (smartMoneySignals.length === 0) return null;
+
+    return (
+      <RealtimePanel title="Smart Money" count={smartMoneySignals.length}>
+        {smartMoneySignals.map((signal, idx) => (
+          <div key={signal.id || signal.walletAddress || signal.tokenMint || idx} className="p-2 bg-black/30 rounded-md">
+            <div className="text-sm font-semibold text-white">{signal.walletAddress || signal.tokenMint || signal.token || 'UNKNOWN'}</div>
+            <div className="text-xs text-gray-300">Score: {signal.smartSignalScore || signal.score || 'N/A'}</div>
+            <div className="text-xs text-gray-300">{signal.recommendation || 'No recommendation'}</div>
+            <div className="text-right text-[10px] text-gray-500">{formatRealtimeTimestamp(signal.timestamp || signal.receivedAt || signal.createdAt)}</div>
+          </div>
+        ))}
+      </RealtimePanel>
+    );
+  };
+
+  const PriceUpdatesPanel = () => {
+    const priceUpdates = realtime.priceUpdates || [];
+    if (priceUpdates.length === 0) return null;
+
+    return (
+      <RealtimePanel title="Price Updates" count={priceUpdates.length}>
+        {priceUpdates.map((update, idx) => (
+          <div key={update.id || update.tokenMint || update.mint || update.token || idx} className="p-2 bg-black/30 rounded-md">
+            <div className="text-sm font-semibold text-white">{update.tokenMint || update.mint || update.token || 'UNKNOWN'}</div>
+            <div className="text-xs text-gray-300">Price: {update.price != null ? `$${update.price}` : 'N/A'}</div>
+            <div className="text-right text-[10px] text-gray-500">{formatRealtimeTimestamp(update.timestamp || update.receivedAt || update.createdAt)}</div>
+          </div>
+        ))}
+      </RealtimePanel>
+    );
+  };
+
+  const TradeRetriesPanel = () => {
+    const tradeRetries = realtime.tradeRetries || [];
+    if (tradeRetries.length === 0) return null;
+
+    return (
+      <RealtimePanel title="Trade Retries" count={tradeRetries.length}>
+        {tradeRetries.map((retry, idx) => {
+          const trade = retry.trade || retry.data?.trade || retry.data || retry;
+          return (
+            <div key={retry.id || trade.id || idx} className="p-2 bg-black/30 rounded-md">
+              <div className="text-sm font-semibold text-white">{trade.tokenMint || trade.mint || trade.token || 'UNKNOWN'}</div>
+              <div className="text-xs text-gray-300">Reason: {retry.reason || trade.reason || 'Retry triggered'}</div>
+              <div className="text-right text-[10px] text-gray-500">{formatRealtimeTimestamp(retry.timestamp || retry.receivedAt || retry.createdAt)}</div>
+            </div>
+          );
+        })}
+      </RealtimePanel>
     );
   };
 
@@ -1425,6 +1553,8 @@ const Dashboard = ({ dashboardConfig = {} }) => {
           </div>
         </div>
 
+        <RealtimeSummaryPanel />
+
         {/* ── Lower grid: TradeTabs / Trades / Right col ── */}
         <div className="dsk-low-grid">
 
@@ -1510,6 +1640,7 @@ const Dashboard = ({ dashboardConfig = {} }) => {
           <div style={{ padding: 0, minHeight: 260 }}>
             <MainPanel />
           </div>
+          <RealtimeSummaryPanel />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             {CC_MARKET.map((m) => (
               <div key={m.label} style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)", borderLeft: "1px solid rgba(255,255,255,0.04)" }}>
@@ -1605,7 +1736,10 @@ const Dashboard = ({ dashboardConfig = {} }) => {
           </nav>
         </aside>
       )}
-      <main className="mob-content" role="main">{children}</main>
+      <main className="mob-content" role="main">
+        {children}
+        <RealtimeOverlay />
+      </main>
       <nav className="mob-bottomnav" role="navigation" aria-label="Main navigation">
         {[
           { id: "dashboard", icon: LayoutDashboard, label: "Home" },
@@ -1709,14 +1843,36 @@ const Dashboard = ({ dashboardConfig = {} }) => {
     );
   }
 
+  const RealtimeOverlay = () => {
+    const hasPanels = [
+      realtime.aiPredictions?.length,
+      realtime.arbitrageSignals?.length,
+      realtime.smartMoneySignals?.length,
+      realtime.priceUpdates?.length,
+      realtime.tradeRetries?.length,
+    ].some((count) => count > 0);
+
+    if (!hasPanels) return null;
+
+    return (
+      <div className="fixed right-6 bottom-6 z-50 flex flex-col gap-3 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2">
+        <AiPredictionsPanel />
+        <ArbitrageSignalsPanel />
+        <SmartMoneySignalsPanel />
+        <PriceUpdatesPanel />
+        <TradeRetriesPanel />
+      </div>
+    );
+  };
+
   return (
     <DesktopLayout>
       {/* System status bar (feature from StatusBar component) */}
-      <StatusBar />
+      <StatusBar realtime={realtime} />
 
       {/* Main Dashboard view (features from DesktopView + all sub-panels) */}
       <DesktopView />
-      <AiPredictionsPanel />
+      <RealtimeOverlay />
     </DesktopLayout>
   );
 };

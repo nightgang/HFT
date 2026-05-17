@@ -98,6 +98,110 @@ class WebSocketServer {
     }));
   }
 
+  normalizeMessage(payload) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return payload;
+    }
+
+    const normalized = { ...payload };
+    const originalType = normalized.type;
+
+    switch (originalType) {
+      case 'TRADE_EXECUTED':
+      case 'TRADE_FAILED': {
+        normalized.type = 'trade-update';
+        const trade = normalized.data?.trade || normalized.data || {};
+        normalized.trades = [trade];
+        normalized.status = trade.status || (originalType === 'TRADE_FAILED' ? 'failed' : 'success');
+        delete normalized.data;
+        break;
+      }
+      case 'TRADE_RETRY': {
+        normalized.type = 'trade-retry';
+        normalized.trades = [normalized.data?.trade || normalized.data || {}];
+        normalized.reason = normalized.data?.reason || null;
+        delete normalized.data;
+        break;
+      }
+      case 'RISK_APPROVED':
+      case 'RISK_REJECTED': {
+        normalized.type = 'risk-alert';
+        normalized.alert = {
+          alertType: originalType,
+          severity: originalType === 'RISK_REJECTED' ? 'high' : 'info',
+          tokenMint: normalized.data?.mint || normalized.data?.tokenMint,
+          message: normalized.data?.reason || normalized.data?.error || originalType,
+          details: normalized.data,
+        };
+        delete normalized.data;
+        break;
+      }
+      case 'PROCESSING_ERROR': {
+        normalized.type = 'alert';
+        normalized.alert = {
+          alertType: originalType,
+          severity: 'error',
+          message: normalized.data?.error || normalized.data?.message || 'Processing error',
+          details: normalized.data,
+        };
+        delete normalized.data;
+        break;
+      }
+      case 'TOKEN_DETECTED': {
+        normalized.type = 'token-detected';
+        normalized.token = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'PRICE_UPDATE': {
+        normalized.type = 'price-update';
+        normalized.price = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'PNL_UPDATE': {
+        normalized.type = 'pnl-update';
+        normalized.pnl = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'RISK_ALERT': {
+        normalized.type = 'risk-alert';
+        normalized.alert = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'ARBITRAGE_SIGNAL': {
+        normalized.type = 'arbitrage-signal';
+        normalized.signal = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'SMART_MONEY_SIGNAL': {
+        normalized.type = 'smartmoney-signal';
+        normalized.signal = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'STATUS': {
+        normalized.type = 'status';
+        normalized.status = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      case 'AI_PREDICTION': {
+        normalized.type = 'ai-prediction';
+        normalized.prediction = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
+      default:
+        break;
+    }
+
+    return normalized;
+  }
+
   /**
    * Initialize auto-trade status broadcast
    * Subscribe to auto-trade service changes and broadcast to all clients
@@ -121,8 +225,9 @@ class WebSocketServer {
   }
 
   broadcast(data) {
+    const normalized = this.normalizeMessage(data);
     const message = JSON.stringify({
-      ...data,
+      ...normalized,
       serverTimestamp: Date.now(),
     });
 
@@ -140,7 +245,7 @@ class WebSocketServer {
       }
     }
 
-    logger.debug(`Broadcasted message to ${sentCount} authenticated clients: ${data.type}`);
+    logger.debug(`Broadcasted message to ${sentCount} authenticated clients: ${normalized.type}`);
   }
 
   getClientCount() {

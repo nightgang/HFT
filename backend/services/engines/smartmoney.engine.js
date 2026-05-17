@@ -1,5 +1,6 @@
 const logger = require('../../utils/logger');
 const heliusService = require('../../integrations/helius.service');
+const eventBus = require('../../services/event-bus.service');
 
 class SmartMoneyEngine {
   constructor() {
@@ -141,11 +142,10 @@ class SmartMoneyEngine {
     return 'SELL';
   }
 
-  emitSmartMoneySignal(walletAddress, score) {
+  async emitSmartMoneySignal(walletAddress, score) {
     const recommendation = this.getRecommendation(score);
     if (score >= 70) {
-      const websocketServer = require('../../ws/websocket.server');
-      websocketServer.broadcast({
+      const payload = {
         type: 'SMART_MONEY_SIGNAL',
         data: {
           walletAddress,
@@ -153,8 +153,9 @@ class SmartMoneyEngine {
           recommendation,
           timestamp: Date.now(),
         },
-      });
-      logger.info(`📡 Broadcasted SMART_MONEY_SIGNAL for ${walletAddress}: ${score}`);
+      };
+      await eventBus.publishEvent('smartmoney.signal', payload, payload);
+      logger.info(`📡 Published SMART_MONEY_SIGNAL for ${walletAddress}: ${score}`);
     }
   }
 
@@ -173,7 +174,7 @@ class SmartMoneyEngine {
       score += copyTradeScore;
       const finalScore = Math.max(0, Math.min(100, score));
 
-      this.emitSmartMoneySignal(walletAddress, finalScore);
+      await this.emitSmartMoneySignal(walletAddress, finalScore);
 
       return {
         walletAddress,

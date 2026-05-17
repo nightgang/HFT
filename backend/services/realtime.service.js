@@ -10,29 +10,62 @@ class RealtimeService {
       const eventBus = require('./event-bus.service');
       await eventBus.initialize();
 
-      // Subscribe to token detected events and forward to websocket clients
-      const unsub = await eventBus.subscribe('token.detected', async (payload) => {
-        try {
-          this.broadcast(payload);
-        } catch (e) {
-          console.error('Failed to forward token.detected to websocket:', e);
-        }
+      const subscribeChannel = async (channel, handler) => {
+        const unsub = await eventBus.subscribe(channel, async (payload) => {
+          try {
+            await handler(payload);
+          } catch (internalError) {
+            console.error(`Failed to forward ${channel} to websocket:`, internalError);
+          }
+        });
+        this.eventUnsubscribers.push(unsub);
+      };
+
+      await subscribeChannel('token.detected', async (payload) => {
+        this.broadcast(payload);
       });
 
-      // Subscribe to AI prediction events and forward to websocket clients
-      const unsubAi = await eventBus.subscribe('ai.prediction', async (payload) => {
-        try {
-          // normalize payload to include a type for frontend handlers
-          const message = typeof payload === 'object' ? { type: 'ai-prediction', ...payload } : { type: 'ai-prediction', data: payload };
-          this.broadcast(message);
-        } catch (e) {
-          console.error('Failed to forward ai.prediction to websocket:', e);
-        }
+      await subscribeChannel('ai.prediction', async (payload) => {
+        const message = typeof payload === 'object' ? { type: 'ai-prediction', ...payload } : { type: 'ai-prediction', data: payload };
+        this.broadcast(message);
       });
 
-      this.eventUnsubscribers.push(unsubAi);
+      await subscribeChannel('trade.executed', async (payload) => {
+        this.broadcast(payload);
+      });
 
-      this.eventUnsubscribers.push(unsub);
+      await subscribeChannel('trade.failed', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('trade.retry', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('risk.alert', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('katana.status', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('price.update', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('pnl.update', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('arbitrage.signal', async (payload) => {
+        this.broadcast(payload);
+      });
+
+      await subscribeChannel('smartmoney.signal', async (payload) => {
+        this.broadcast(payload);
+      });
+
       console.info('RealtimeService subscribed to event-bus channels');
     } catch (error) {
       console.error('RealtimeService initialization failed:', error);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useWebSocket } from "./useWebSocket";
+import { getRealtimePayload } from "./realtimeMessageParser";
 
 const buildDashboardWebSocketUrl = () => {
   if (typeof window === "undefined") return null;
@@ -30,6 +31,10 @@ export const useRealtimeDashboardData = () => {
     wallets: null,
     systemStatus: null,
     aiPredictions: [],
+    arbitrageSignals: [],
+    smartMoneySignals: [],
+    priceUpdates: [],
+    tradeRetries: [],
     lastMessageType: null,
     lastMessageAt: null,
   });
@@ -80,15 +85,34 @@ export const useRealtimeDashboardData = () => {
             : current.alerts;
           break;
         }
-        default:
-          break;
         case "ai-prediction": {
-          const incoming = lastMessage || {};
+          const incoming = getRealtimePayload(lastMessage) || {};
           const existing = current.aiPredictions || [];
           const nextPred = { ...incoming, receivedAt: Date.now() };
           next.aiPredictions = [nextPred, ...existing].slice(0, 20);
           break;
         }
+        case "arbitrage-signal": {
+          const incoming = getRealtimePayload(lastMessage);
+          next.arbitrageSignals = [incoming, ...(current.arbitrageSignals || [])].slice(0, 20);
+          break;
+        }
+        case "smartmoney-signal": {
+          const incoming = getRealtimePayload(lastMessage);
+          next.smartMoneySignals = [incoming, ...(current.smartMoneySignals || [])].slice(0, 20);
+          break;
+        }
+        case "price-update": {
+          const incoming = getRealtimePayload(lastMessage);
+          next.priceUpdates = [incoming, ...(current.priceUpdates || [])].slice(0, 20);
+          break;
+        }
+        case "trade-retry": {
+          next.tradeRetries = [getRealtimePayload(lastMessage) || lastMessage, ...(current.tradeRetries || [])].slice(0, 20);
+          break;
+        }
+        default:
+          break;
       }
 
       return next;

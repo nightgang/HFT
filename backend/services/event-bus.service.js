@@ -13,13 +13,18 @@ class EventBusService {
     if (this.isInitialized) return;
 
     try {
-      this.pub = redis.createClient({
-        url: process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
-      });
+      const redisUrl = process.env.REDIS_URL || (() => {
+        const host = process.env.REDIS_HOST || 'localhost';
+        const port = process.env.REDIS_PORT || 6379;
+        const db = process.env.REDIS_DB || 0;
+        const password = process.env.REDIS_PASSWORD;
+        return password
+          ? `redis://:${password}@${host}:${port}/${db}`
+          : `redis://${host}:${port}/${db}`;
+      })();
 
-      this.sub = redis.createClient({
-        url: process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
-      });
+      this.pub = redis.createClient({ url: redisUrl });
+      this.sub = redis.createClient({ url: redisUrl });
 
       this.pub.on('error', (err) => logger.error('EventBus pub error:', err));
       this.sub.on('error', (err) => logger.error('EventBus sub error:', err));
@@ -43,6 +48,23 @@ class EventBusService {
       logger.debug(`EventBus published to ${channel}`);
     } catch (error) {
       logger.error('EventBus publish error:', error);
+      throw error;
+    }
+  }
+
+  async publishEvent(channel, message, fallbackData = null) {
+    try {
+      await this.publish(channel, message);
+    } catch (error) {
+      logger.warn(`EventBus publishEvent failed for ${channel}: ${error.message}`);
+      if (fallbackData) {
+        try {
+          const websocketServer = require('../ws/websocket.server');
+          websocketServer.broadcast(fallbackData);
+        } catch (fallbackError) {
+          logger.error('Fallback WebSocket broadcast failed:', fallbackError);
+        }
+      }
     }
   }
 

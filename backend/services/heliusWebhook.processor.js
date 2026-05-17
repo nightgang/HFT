@@ -32,13 +32,7 @@ class HeliusWebhookProcessor {
         tokenDetectionSchema.parse(tokenData);
         await sniperEngine.processTokenDetection(tokenData);
 
-        // Publish token detection event to the EventBus (shared realtime layer)
-        const eventBus = require('./event-bus.service');
-        await eventBus.publish('token.detected', {
-          type: 'TOKEN_DETECTED',
-          data: tokenData,
-        });
-
+        // token detection is published by the sniper engine to the shared EventBus
         processed++;
       } catch (error) {
         logger.error('Helius webhook processing error:', error.message);

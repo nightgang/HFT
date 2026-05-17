@@ -19,7 +19,7 @@ const KatanaExecutor = require('./katana.executor');
 const KatanaWebSocket = require('./katana.websocket');
 const jupiterService = require('../../integrations/jupiter.service');
 const heliusService = require('../../integrations/helius.service');
-const websocketServer = require('../../ws/websocket.server');
+const eventBus = require('../../services/event-bus.service');
 const TradeModel = require('../../models/trade.model');
 const WalletModel = require('../../models/wallet.model');
 
@@ -97,11 +97,14 @@ class KatanaEngine extends EventEmitter {
       this.isActive = true;
 
       // Broadcast status
-      websocketServer.broadcast({
-        type: 'KATANA_STATUS',
-        data: { status: 'active', config: this.config },
-        timestamp: Date.now()
-      });
+      {
+        const payload = {
+          type: 'KATANA_STATUS',
+          data: { status: 'active', config: this.config },
+          timestamp: Date.now()
+        };
+        await eventBus.publishEvent('katana.status', payload, payload);
+      }
 
       logger.info('✅ Katana Mode Engine started successfully');
 
@@ -135,11 +138,14 @@ class KatanaEngine extends EventEmitter {
       await this.executor.shutdown();
       await this.ws.shutdown();
 
-      websocketServer.broadcast({
-        type: 'KATANA_STATUS',
-        data: { status: 'stopped' },
-        timestamp: Date.now()
-      });
+      {
+        const payload = {
+          type: 'KATANA_STATUS',
+          data: { status: 'stopped' },
+          timestamp: Date.now()
+        };
+        await eventBus.publishEvent('katana.status', payload, payload);
+      }
 
       logger.info('✅ Katana Mode Engine stopped');
 
@@ -166,8 +172,21 @@ class KatanaEngine extends EventEmitter {
       this.addRecentDetection(tokenData, riskLevel);
 
       // Auto-buy if enabled
-      if (this.config.autoBuyEnabled && this.shouldAutoBuy(tokenData)) {
+      if (this.config.autoBuyEnabled && await this.shouldAutoBuy(tokenData)) {
         await this.executeAutoBuy(tokenData);
+      }
+
+      // Publish token detection event to shared realtime EventBus
+      {
+        const payload = {
+          type: 'TOKEN_DETECTED',
+          data: {
+            ...tokenData,
+            riskLevel,
+          },
+          timestamp: Date.now()
+        };
+        await eventBus.publishEvent('token.detected', payload, payload);
       }
 
       // Broadcast to clients
@@ -299,6 +318,13 @@ class KatanaEngine extends EventEmitter {
 
     // Broadcast alert
     this.ws.broadcastRiskAlert(data);
+
+    const payload = {
+      type: 'RISK_REJECTED',
+      data,
+      timestamp: Date.now(),
+    };
+    await eventBus.publishEvent('risk.alert', payload, payload);
   }
 
   async handleTradeExecuted(data) {
@@ -309,6 +335,13 @@ class KatanaEngine extends EventEmitter {
 
     // Broadcast update
     this.ws.broadcastTradeUpdate(data);
+
+    const payload = {
+      type: 'TRADE_EXECUTED',
+      data,
+      timestamp: Date.now(),
+    };
+    await eventBus.publishEvent('trade.executed', payload, payload);
   }
 
   async handleTradeFailed(data) {
@@ -321,11 +354,25 @@ class KatanaEngine extends EventEmitter {
 
     // Broadcast failure
     this.ws.broadcastTradeFailure(data);
+
+    const payload = {
+      type: 'TRADE_FAILED',
+      data,
+      timestamp: Date.now(),
+    };
+    await eventBus.publishEvent('trade.failed', payload, payload);
   }
 
   async handleRetryScheduled(data) {
     logger.info(`🔁 Retry scheduled for trade: ${JSON.stringify(data)}`);
     this.ws.broadcastRetryScheduled(data);
+
+    const payload = {
+      type: 'RETRY_SCHEDULED',
+      data,
+      timestamp: Date.now(),
+    };
+    await eventBus.publishEvent('trade.retry', payload, payload);
   }
 
   // Monitoring methods
@@ -337,6 +384,11 @@ class KatanaEngine extends EventEmitter {
           const liquidity = await this.checkLiquidity(tokenMint);
 
           this.ws.broadcastPriceUpdate(tokenMint, price, liquidity);
+          await eventBus.publishEvent('price.update', {
+            type: 'PRICE_UPDATE',
+            data: { tokenMint, price, liquidity },
+            timestamp: Date.now()
+          });
         } catch (error) {
           logger.debug(`Price check failed for ${tokenMint}:`, error.message);
         }
@@ -353,9 +405,14 @@ class KatanaEngine extends EventEmitter {
   }
 
   startPnLMonitoring() {
-    this.pnlMonitorInterval = setInterval(() => {
+    this.pnlMonitorInterval = setInterval(async () => {
       const pnlData = this.calculatePnL();
       this.ws.broadcastPnLUpdate(pnlData);
+      await eventBus.publishEvent('pnl.update', {
+        type: 'PNL_UPDATE',
+        data: pnlData,
+        timestamp: Date.now()
+      });
     }, 2000); // Every 2 seconds
   }
 

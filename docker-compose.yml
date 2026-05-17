@@ -202,6 +202,11 @@ services:
     environment:
       PYTHONPATH: /app
       AI_SERVICE_API_KEY: ${AI_SERVICE_API_KEY:-}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_URL: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "8000:8000"
     networks:

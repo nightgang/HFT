@@ -26,7 +26,8 @@ HFT is an institutional-grade, high-frequency trading system designed for the So
 - **🔐 Enterprise Security**: JWT authentication, encryption, rate limiting, and audit logs
 - **📈 Risk Management**: Position limits, correlation analysis, and predictive alerts
 - **⚙️ AI Integration**: Machine learning-based market analysis and signal generation (optional)
-- **📊 Observability**: Prometheus metrics, Grafana dashboards, structured logging
+- **� Shared Realtime Event Bus**: Redis Pub/Sub powers a shared realtime data layer for AI, CLI, frontend, and backend
+- **�📊 Observability**: Prometheus metrics, Grafana dashboards, structured logging
 - **🐳 Production Ready**: Docker, Kubernetes, and PM2 deployment options
 - **🔗 Multi-Chain**: Cross-chain trading and arbitrage capabilities
 
@@ -183,6 +184,8 @@ The system uses a **modular, microservices-ready architecture**:
 │   Optional AI Service (Python)      │
 │  (Market Analysis & Signal Gen)     │
 └─────────────────────────────────────┘
+
+Shared realtime data is delivered via a Redis-backed EventBus, giving the frontend, CLI, and AI service a single source of truth for token detection, trade events, AI predictions, and system status.
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design.

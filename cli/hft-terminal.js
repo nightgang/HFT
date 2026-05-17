@@ -168,6 +168,10 @@ class HFTSystemTerminal {
     this.autoTradeEnabled = true;
     this.selectedToken = null;
     this.selectedWallet = null;
+    this.latestArbitrageSignal = null;
+    this.latestSmartMoneySignal = null;
+    this.latestPriceUpdate = null;
+    this.tradeRetryCount = 0;
     this.commandHistory = [];
     this.availableCommands = AVAILABLE_COMMANDS;
   }
@@ -297,7 +301,18 @@ class HFTSystemTerminal {
         // Subscribe to channels
         this.ws.send(JSON.stringify({
           type: 'SUBSCRIBE',
-          channels: ['tokens', 'trades', 'pnl', 'risk', 'autotrade-status']
+          channels: [
+            'tokens',
+            'trades',
+            'pnl',
+            'risk',
+            'autotrade-status',
+            'price-update',
+            'trade-retry',
+            'arbitrage-signal',
+            'smartmoney-signal',
+            'ai-prediction'
+          ]
         }));
       });
 
@@ -352,23 +367,47 @@ class HFTSystemTerminal {
   handleWebSocketMessage(message) {
     switch (message.type) {
       case 'TOKEN_DETECTED':
-        this.displayTokenDetection(message.data);
+      case 'token-detected':
+        this.displayTokenDetection(message.data || message.token);
         break;
-      case 'TRADE_UPDATE':
-        this.displayTradeUpdate(message.data);
+      case 'TRADE_EXECUTED':
+      case 'trade-update':
+        this.displayTradeUpdate(message.trades?.[0] || message.data?.trade || message.data);
+        break;
+      case 'TRADE_FAILED':
+        this.displayTradeUpdate(message.trade || message.data?.trade || message.data);
+        break;
+      case 'TRADE_RETRY':
+      case 'trade-retry':
+        this.displayTradeRetry(message);
+        break;
+      case 'ARBITRAGE_SIGNAL':
+      case 'arbitrage-signal':
+        this.displayArbitrageSignal(message.signal || message.data || message);
+        break;
+      case 'SMART_MONEY_SIGNAL':
+      case 'smartmoney-signal':
+        this.displaySmartMoneySignal(message.signal || message.data || message);
         break;
       case 'PNL_UPDATE':
         this.pnlData = message.data;
         this.updateStatusBar();
         break;
       case 'RISK_ALERT':
-        this.displayRiskAlert(message.data);
+      case 'risk-alert':
+      case 'RISK_REJECTED':
+      case 'RISK_APPROVED':
+        this.displayRiskAlert(message.alert || message.data || message);
+        break;
+      case 'ai-prediction':
+        this.displayAiPrediction(message);
+        break;
+      case 'PRICE_UPDATE':
+      case 'price-update':
+        this.displayPriceUpdate(message.price || message.data || message);
         break;
       case 'autotrade-status':
         this.handleAutoTradeStatusUpdate(message);
-        break;
-      case 'PRICE_UPDATE':
-        // Update displayed prices if needed
         break;
       default:
         break;
@@ -376,17 +415,29 @@ class HFTSystemTerminal {
   }
 
   displayTokenDetection(token) {
-    console.log(`\n🎯 NEW TOKEN: ${token.symbol || 'UNKNOWN'} (${token.mint.slice(0, 8)}...)`);
-    console.log(`   Liquidity: ${token.liquidity?.toFixed(1) || 'N/A'} SOL`);
+    if (!token) return;
+    console.log(`\n🎯 NEW TOKEN: ${token.symbol || 'UNKNOWN'} (${(token.mint || token.tokenMint || '').slice(0, 8)}...)`);
+    console.log(`   Liquidity: ${token.liquidity?.toFixed?.(1) || 'N/A'} SOL`);
     console.log(`   Risk Level: ${token.riskLevel || 'UNKNOWN'}`);
     this.rl.prompt();
   }
 
   displayTradeUpdate(trade) {
+    if (!trade) return;
     const emoji = trade.side === 'buy' ? '🟢' : '🔴';
-    console.log(`\n${emoji} TRADE: ${trade.side.toUpperCase()} ${trade.amount} ${trade.tokenMint.slice(0, 8)}...`);
-    console.log(`   Price: $${trade.price?.toFixed(6) || 'N/A'}`);
+    console.log(`\n${emoji} TRADE: ${String(trade.side || trade.type || 'trade').toUpperCase()} ${trade.amount || trade.input_amount || 'N/A'} ${String(trade.tokenMint || trade.output_token_mint || '').slice(0, 8)}...`);
+    console.log(`   Price: $${trade.price?.toFixed?.(6) || 'N/A'}`);
     console.log(`   Status: ${trade.status || 'EXECUTED'}`);
+    this.rl.prompt();
+  }
+
+  displayAiPrediction(prediction) {
+    if (!prediction) return;
+    const tokenMint = prediction.tokenMint || prediction.data?.tokenMint || prediction.data?.token;
+    console.log(`\n🤖 AI PREDICTION: ${tokenMint ? tokenMint.slice(0, 8) + '...' : 'UNKNOWN'}`);
+    console.log(`   Score: ${prediction.score ?? prediction.data?.score ?? 'N/A'}`);
+    console.log(`   Recommendation: ${prediction.recommendation || prediction.data?.recommendation || 'N/A'}`);
+    console.log(`   Confidence: ${prediction.confidence != null ? (prediction.confidence * 100).toFixed(1) + '%' : 'N/A'}`);
     this.rl.prompt();
   }
 
@@ -396,11 +447,51 @@ class HFTSystemTerminal {
     this.rl.prompt();
   }
 
+  displayTradeRetry(payload) {
+    const trade = payload.trade || payload.data?.trade || payload.data || payload;
+    this.tradeRetryCount += 1;
+    console.log(`\n⏳ TRADE RETRY: ${trade.tokenMint?.slice(0, 8) || (trade.mint || 'UNKNOWN')}...`);
+    console.log(`   Reason: ${payload.reason || trade.reason || 'Retry triggered'}`);
+    this.updateStatusBar();
+    this.rl.prompt();
+  }
+
+  displayArbitrageSignal(signal) {
+    if (!signal) return;
+    this.latestArbitrageSignal = signal;
+    console.log(`\n📊 ARBITRAGE SIGNAL: ${signal.tokenMint?.slice(0, 8) || signal.mint || signal.token || 'UNKNOWN'}...`);
+    console.log(`   Spread: ${signal.spread != null ? `${(signal.spread * 100).toFixed(2)}%` : 'N/A'}`);
+    console.log(`   Route: ${signal.route || 'unknown'}`);
+    this.updateStatusBar();
+    this.rl.prompt();
+  }
+
+  displaySmartMoneySignal(signal) {
+    if (!signal) return;
+    this.latestSmartMoneySignal = signal;
+    console.log(`\n📡 SMART MONEY SIGNAL: ${signal.walletAddress || signal.tokenMint || signal.token || 'UNKNOWN'}`);
+    console.log(`   Score: ${signal.smartSignalScore || signal.score || 'N/A'}`);
+    console.log(`   Recommendation: ${signal.recommendation || 'N/A'}`);
+    this.updateStatusBar();
+    this.rl.prompt();
+  }
+
+  displayPriceUpdate(price) {
+    if (!price) return;
+    this.latestPriceUpdate = price;
+    console.log(`\n💹 PRICE UPDATE: ${price.tokenMint || price.mint || price.token || 'UNKNOWN'} - ${price.price != null ? `$${price.price}` : 'N/A'}`);
+    this.updateStatusBar();
+    this.rl.prompt();
+  }
+
   updateStatusBar() {
     // Update terminal title/status if possible
     const pnl = this.formatPnL(this.pnlData.totalPnL);
     const percent = this.formatPercentage(this.pnlData.pnlPercentage);
-    process.title = `HFT-SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades}`;
+    const arb = this.latestArbitrageSignal ? 'A' : '-';
+    const smart = this.latestSmartMoneySignal ? 'S' : '-';
+    const price = this.latestPriceUpdate ? 'P' : '-';
+    process.title = `HFT-SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades} | Arb:${arb} Smart:${smart} Price:${price} Retries:${this.tradeRetryCount}`;
   }
 
   /**
@@ -411,6 +502,10 @@ class HFTSystemTerminal {
     const tokenDisplay = this.selectedToken || 'None';
     const demoDisplay = this.demoMode ? ` ${styleText('(DEMO MODE)', STYLES.cyan)}` : '';
 
+    const latestArb = this.latestArbitrageSignal ? `${(this.latestArbitrageSignal.tokenMint || this.latestArbitrageSignal.mint || this.latestArbitrageSignal.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
+    const latestSmartMoney = this.latestSmartMoneySignal ? `${(this.latestSmartMoneySignal.walletAddress || this.latestSmartMoneySignal.tokenMint || this.latestSmartMoneySignal.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
+    const latestPrice = this.latestPriceUpdate ? `${(this.latestPriceUpdate.tokenMint || this.latestPriceUpdate.mint || this.latestPriceUpdate.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
+
     console.log('\n' + renderPanel('HFT-SYSTEM', [
       styleText('Unified CLI dashboard matching frontend HFT-SYSTEM experience.', STYLES.gray),
       '',
@@ -418,7 +513,11 @@ class HFTSystemTerminal {
       panelLine('Status', this.systemActive ? styleText('RUNNING', STYLES.green) : styleText('STOPPED', STYLES.red)),
       panelLine('Token', tokenDisplay),
       panelLine('Wallet', walletDisplay),
-      panelLine('Auto Trade', this.autoTradeEnabled ? styleText('ENABLED', STYLES.green) : styleText('DISABLED', STYLES.red))
+      panelLine('Auto Trade', this.autoTradeEnabled ? styleText('ENABLED', STYLES.green) : styleText('DISABLED', STYLES.red)),
+      panelLine('Last Arb', latestArb),
+      panelLine('Last SmartMoney', latestSmartMoney),
+      panelLine('Last Price', latestPrice),
+      panelLine('Retry Count', String(this.tradeRetryCount))
     ]) + demoDisplay);
 
     console.log('\n' + renderPanel('COMMAND CENTER', [
