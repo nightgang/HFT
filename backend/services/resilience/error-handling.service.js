@@ -1,4 +1,5 @@
 // Comprehensive Error Handling Service
+const alertingService = require('../alerting/alerting.service');
 const logger = require('../../utils/logger');
 const { query } = require('../../db/connection');
 
@@ -72,7 +73,33 @@ class ErrorHandlingService {
     // Check if threshold exceeded
     if (this.errorCounts[key] > this.errorThresholds[severity]) {
       logger.warn(`ERROR THRESHOLD EXCEEDED: ${errorType} (${severity}) - Count: ${this.errorCounts[key]}`);
-      // TODO: Send alert to monitoring system (Slack, PagerDuty, etc.)
+      Promise.resolve(
+        alertingService.sendAlert(
+          this.mapSeverityToAlertSeverity(severity),
+          `Error threshold exceeded: ${errorType}`,
+          `The ${severity} error \"${errorType}\" has occurred ${this.errorCounts[key]} times.`,
+          {
+            errorType,
+            severity,
+            count: this.errorCounts[key]
+          }
+        )
+      ).catch((err) => {
+        logger.error('Failed to send threshold alert:', err);
+      });
+    }
+  }
+
+  mapSeverityToAlertSeverity(severity) {
+    switch (severity) {
+      case 'critical':
+        return 'critical';
+      case 'error':
+        return 'high';
+      case 'warning':
+        return 'medium';
+      default:
+        return 'low';
     }
   }
 

@@ -46,6 +46,14 @@ REQUEST_COUNT = Counter(
     'Total number of AI service requests',
     ['method', 'endpoint', 'status']
 )
+PREDICT_REQUEST_COUNT = Counter(
+    'ai_service_prediction_requests_total',
+    'Total number of AI prediction requests'
+)
+RISK_REQUEST_COUNT = Counter(
+    'ai_service_risk_assessment_requests_total',
+    'Total number of AI risk assessment requests'
+)
 REQUEST_LATENCY = Histogram(
     'ai_service_request_duration_seconds',
     'Request latency of AI service HTTP endpoints',
@@ -349,6 +357,7 @@ async def predict_token_score(
         "price_volatility": metadata.get("price_volatility", 0.5),
     }
     prediction = ensemble_predict(features)
+    PREDICT_REQUEST_COUNT.inc()
     risk_assessment = assess_risk(features)
     score = prediction["score"]
     risk_level = risk_assessment["risk_level"]
@@ -396,6 +405,7 @@ async def assess_token_risk(
         "price_change_24h": market_data.get("price_change_24h", 0),
     }
     risk_assessment = assess_risk(features)
+    RISK_REQUEST_COUNT.inc()
     recommendation = "AVOID" if risk_assessment["risk_level"] == "High" else "CONSIDER" if risk_assessment["risk_level"] == "Medium" else "SAFE"
     return RiskAssessment(
         tokenMint=token_mint,

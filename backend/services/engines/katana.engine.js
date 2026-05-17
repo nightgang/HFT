@@ -41,7 +41,7 @@ class KatanaEngine extends EventEmitter {
       jitoEnabled: process.env.KATANA_JITO_ENABLED === 'true',
       autoBuyEnabled: process.env.KATANA_AUTO_BUY_ENABLED === 'true',
       riskProtectionEnabled: process.env.KATANA_RISK_PROTECTION_ENABLED !== 'false',
-      terminalMode: process.env.KATANA_TERMINAL_MODE === 'true'
+      terminalMode: process.env.HFT_TERMINAL_MODE === 'true' || process.env.KATANA_TERMINAL_MODE === 'true'
     };
 
     // State
@@ -75,6 +75,10 @@ class KatanaEngine extends EventEmitter {
   async start() {
     try {
       logger.info('🚀 Starting Katana Mode Engine...');
+
+      if (this.config.terminalMode) {
+        logger.info('⌨️ Starting HFT Terminal Mode...');
+      }
 
       // Initialize components
       await this.strategy.initialize();

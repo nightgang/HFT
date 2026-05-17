@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const AlertModel = require('../models/alert.model');
 const logger = require('../utils/logger');
+const realtimeService = require('../services/realtime.service');
 
 const router = express.Router();
 
@@ -32,6 +33,8 @@ router.post('/', authenticate, async (req, res) => {
       tokenMint,
       expiresAt
     });
+
+    realtimeService.publishAlert(alert);
 
     res.status(201).json({
       success: true,
@@ -118,6 +121,8 @@ router.put('/:alertId', authenticate, async (req, res) => {
       tokenMint,
       status
     });
+
+    realtimeService.publishAlert(updated);
 
     res.json({
       success: true,

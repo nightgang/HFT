@@ -107,6 +107,18 @@ class PredictiveAlertsService {
   }
 
   /**
+   * Acknowledge alert
+   */
+  async acknowledgeAlert(alertId) {
+    try {
+      return await api.put(`/predictive-alerts/${alertId}/acknowledge`);
+    } catch (error) {
+      console.error('Failed to acknowledge alert:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get prediction accuracy
    */
   async getPredictionAccuracy() {

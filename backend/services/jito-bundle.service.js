@@ -53,7 +53,7 @@ class JitoBundleService {
   // Get bundles for wallet
   async getBundlesByWallet(walletId) {
     try {
-      const bundles = await JitoBundleModel.getBundlesByWallet(walletId);
+      const bundles = await JitoBundleModel.getByWallet(walletId);
       return bundles;
     } catch (error) {
       logger.error('Error fetching bundles:', error);

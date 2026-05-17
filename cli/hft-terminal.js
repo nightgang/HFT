@@ -22,7 +22,7 @@ if (!API_BASE || !HFT_WS_URL) {
 }
 
 const AVAILABLE_COMMANDS = [
-  'start', 'stop', 'status', 'buy', 'sell', 'select', 'wallets', 'usewallet',
+  'start', 'stop', 'status', 'health', 'buy', 'sell', 'select', 'wallets', 'usewallet',
   'predict', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
   'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
   'portfolio', 'settings', 'help', 'exit', 'toggle', 'autotrade'
@@ -87,13 +87,13 @@ const MESSAGES = {
   AUTH_FAILED: '❌ Authentication failed',
   CONNECTION_FAILED: '❌ Cannot connect to backend server. Is it running?',
   DEMO_MODE: '🎭 DEMO MODE - No backend required',
-  SYSTEM_STARTED: '✅ HFT System Mode started',
-  SYSTEM_STOPPED: '🛑 HFT System Mode stopped',
+  SYSTEM_STARTED: '✅ HFT-SYSTEM mode started',
+  SYSTEM_STOPPED: '🛑 HFT-SYSTEM mode stopped',
   TRADE_SUBMITTED: '✅ Trade order submitted',
   NO_TOKEN_SELECTED: '❌ No token selected. Use "select <mint>" first.',
   INVALID_AMOUNT: '❌ Invalid amount. Usage: buy/sell <amount>',
   UNKNOWN_COMMAND: '❌ Unknown command. Type "help" for available commands.',
-  EXITING: '⚔️ Exiting HFT SYSTEM TERMINAL...'
+  EXITING: '⚔️ Exiting HFT-SYSTEM TERMINAL...'
 };
 
 // ============ API HELPER FUNCTIONS ============
@@ -144,7 +144,7 @@ async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIME
 }
 
 /**
- * HFT System Terminal CLI for HFT Solana Trading System
+ * HFT-SYSTEM Terminal CLI for HFT Solana Trading System
  */
 class HFTSystemTerminal {
   constructor(options = {}) {
@@ -175,7 +175,7 @@ class HFTSystemTerminal {
   }
 
   makePrompt() {
-    return `${styleText(`${EMOJIS.SWORD} HFT`, STYLES.purple, STYLES.bold)} ${styleText('>', STYLES.cyan)} `;
+    return `${styleText(`${EMOJIS.SWORD} HFT-SYSTEM`, STYLES.purple, STYLES.bold)} ${styleText('>', STYLES.cyan)} `;
   }
 
   question(promptText) {
@@ -187,12 +187,12 @@ class HFTSystemTerminal {
   }
 
   /**
-   * Start the HFT SYSTEM TERMINAL
+   * Start the HFT-SYSTEM TERMINAL
    */
   async start() {
     console.clear();
-    console.log(renderPanel('HFT SYSTEM TERMINAL', [
-      styleText('Dark terminal UI aligned to frontend trading dashboard', STYLES.gray),
+    console.log(renderPanel('HFT-SYSTEM TERMINAL', [
+      styleText('Unified CLI dashboard matching frontend HFT-SYSTEM design', STYLES.gray),
       '',
       panelLine('Environment', this.demoMode ? 'DEMO MODE' : 'CLI'),
       panelLine('Backend', API_BASE),
@@ -278,17 +278,17 @@ class HFTSystemTerminal {
   }
 
   /**
-   * Establish WebSocket connection to HFT system engine
+   * Establish WebSocket connection to HFT-SYSTEM engine
    */
   async connectWebSocket() {
     if (this.demoMode) return;
 
     try {
-      console.log('🔌 Connecting to HFT system engine...');
+      console.log('🔌 Connecting to HFT-SYSTEM engine...');
       this.ws = new WebSocket(`${HFT_WS_URL}?token=${this.authToken}`);
 
       this.ws.on('open', () => {
-        console.log('🔌 Connected to HFT system engine');
+        console.log('🔌 Connected to HFT-SYSTEM engine');
         this.isConnected = true;
 
         // Subscribe to channels
@@ -308,7 +308,7 @@ class HFTSystemTerminal {
       });
 
       this.ws.on('close', () => {
-        console.log('🔌 Disconnected from HFT system engine');
+        console.log('🔌 Disconnected from HFT-SYSTEM engine');
         this.isConnected = false;
       });
 
@@ -397,7 +397,7 @@ class HFTSystemTerminal {
     // Update terminal title/status if possible
     const pnl = this.formatPnL(this.pnlData.totalPnL);
     const percent = this.formatPercentage(this.pnlData.pnlPercentage);
-    process.title = `HFT SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades}`;
+    process.title = `HFT-SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades}`;
   }
 
   /**
@@ -408,19 +408,19 @@ class HFTSystemTerminal {
     const tokenDisplay = this.selectedToken || 'None';
     const demoDisplay = this.demoMode ? ` ${styleText('(DEMO MODE)', STYLES.cyan)}` : '';
 
-    console.log('\n' + renderPanel('HFT SYSTEM SUITE', [
-      styleText('Fast analytics and smart trading tools in one dashboard.', STYLES.gray),
+    console.log('\n' + renderPanel('HFT-SYSTEM', [
+      styleText('Unified CLI dashboard matching frontend HFT-SYSTEM experience.', STYLES.gray),
       '',
-      panelLine('Mode', 'HFT SYSTEM'),
-      panelLine('Status', this.systemActive ? styleText('RUNNING', STYLES.cyan) : styleText('STOPPED', STYLES.red)),
+      panelLine('Mode', 'HFT-SYSTEM'),
+      panelLine('Status', this.systemActive ? styleText('RUNNING', STYLES.green) : styleText('STOPPED', STYLES.red)),
       panelLine('Token', tokenDisplay),
       panelLine('Wallet', walletDisplay),
       panelLine('Auto Trade', this.autoTradeEnabled ? styleText('ENABLED', STYLES.green) : styleText('DISABLED', STYLES.red))
     ]) + demoDisplay);
 
     console.log('\n' + renderPanel('COMMAND CENTER', [
-      `${styleText('start', STYLES.cyan)} ${styleText('- Start HFT System Mode', STYLES.gray)}`,
-      `${styleText('stop', STYLES.cyan)}  ${styleText('- Stop HFT System Mode', STYLES.gray)}`,
+      `${styleText('start', STYLES.cyan)} ${styleText('- Start HFT-SYSTEM mode', STYLES.gray)}`,
+      `${styleText('stop', STYLES.cyan)}  ${styleText('- Stop HFT-SYSTEM mode', STYLES.gray)}`,
       `${styleText('status', STYLES.cyan)} ${styleText('- Show current status', STYLES.gray)}`,
       `${styleText('buy <amount>', STYLES.cyan)} ${styleText('- Buy selected token', STYLES.gray)}`,
       `${styleText('sell <amount>', STYLES.cyan)} ${styleText('- Sell selected token', STYLES.gray)}`,
@@ -428,6 +428,7 @@ class HFTSystemTerminal {
       `${styleText('wallets', STYLES.cyan)} ${styleText('- List configured wallets', STYLES.gray)}`,
       `${styleText('usewallet <pk>', STYLES.cyan)} ${styleText('- Select wallet for trades', STYLES.gray)}`,
       `${styleText('predict <mint>', STYLES.cyan)} ${styleText('- Request AI signal for token', STYLES.gray)}`,
+      `${styleText('risk <mint>', STYLES.cyan)} ${styleText('- Request token risk assessment', STYLES.gray)}`,
       `${styleText('positions', STYLES.cyan)} ${styleText('- Show active positions', STYLES.gray)}`,
       `${styleText('tokens', STYLES.cyan)} ${styleText('- Show recent token detections', STYLES.gray)}`,
       `${styleText('history / trades', STYLES.cyan)} ${styleText('- Show trade history', STYLES.gray)}`,
@@ -436,7 +437,7 @@ class HFTSystemTerminal {
       `${styleText('risk-heatmap', STYLES.cyan)} ${styleText('- Show portfolio risk heatmap', STYLES.gray)}`,
       `${styleText('alerts', STYLES.cyan)} ${styleText('- Show active predictive alerts', STYLES.gray)}`,
       `${styleText('pnl', STYLES.cyan)} ${styleText('- Show P&L dashboard summary', STYLES.gray)}`,
-      `${styleText('portfolio', STYLES.cyan)} ${styleText('- Show portfolio summary', STYLES.gray)}`,
+      `${styleText('portfolio', STYLES.cyan)} ${styleText('- Show portfolio dashboard summary', STYLES.gray)}`,
       `${styleText('settings', STYLES.cyan)} ${styleText('- Show or update wallet limits', STYLES.gray)}`,
       `${styleText('help', STYLES.cyan)} ${styleText('- Show this help', STYLES.gray)}`
     ]));
@@ -474,6 +475,9 @@ class HFTSystemTerminal {
         case 'status':
           await this.showStatus();
           break;
+        case 'health':
+          await this.showHealth();
+          break;
         case 'buy':
           await this.executeTrade('buy', args[0]);
           break;
@@ -491,6 +495,9 @@ class HFTSystemTerminal {
           break;
         case 'predict':
           await this.requestPrediction(args[0]);
+          break;
+        case 'risk':
+          await this.requestRiskAssessment(args[0]);
           break;
         case 'positions':
           await this.showPositions();
@@ -564,7 +571,7 @@ class HFTSystemTerminal {
         this.systemActive = true;
       }
     } catch (error) {
-      console.log('❌ Failed to start HFT System Mode:', error.response?.data?.error || error.message);
+      console.log('❌ Failed to start HFT-SYSTEM mode:', error.response?.data?.error || error.message);
     }
   }
 
@@ -582,7 +589,7 @@ class HFTSystemTerminal {
         this.systemActive = false;
       }
     } catch (error) {
-      console.log('❌ Failed to stop HFT System Mode:', error.response?.data?.error || error.message);
+      console.log('❌ Failed to stop HFT-SYSTEM mode:', error.response?.data?.error || error.message);
     }
   }
 
@@ -595,7 +602,7 @@ class HFTSystemTerminal {
       statusLines.push(panelLine('Watched Tokens', String(Math.floor(Math.random() * 20))));
       statusLines.push(panelLine('Total PnL', this.formatPnL(this.pnlData.totalPnL)));
       statusLines.push(panelLine('P&L %', `${this.formatPercentage(this.pnlData.pnlPercentage)}%`));
-      console.log('\n' + renderPanel('HFT SYSTEM STATUS (DEMO)', statusLines));
+      console.log('\n' + renderPanel('HFT-SYSTEM STATUS (DEMO)', statusLines));
       return;
     }
 
@@ -609,9 +616,46 @@ class HFTSystemTerminal {
       statusLines.push(panelLine('Total PnL', this.formatPnL(this.pnlData.totalPnL)));
       statusLines.push(panelLine('P&L %', `${this.formatPercentage(this.pnlData.pnlPercentage)}%`));
 
-      console.log('\n' + renderPanel('HFT SYSTEM STATUS', statusLines));
+      console.log('\n' + renderPanel('HFT-SYSTEM STATUS', statusLines));
     } catch (error) {
       console.log(styleText('❌ Failed to get status:', STYLES.red), error.response?.data?.error || error.message);
+    }
+  }
+
+  async showHealth() {
+    if (this.demoMode) {
+      console.log(renderPanel('HFT BACKEND HEALTH (DEMO)', [
+        panelLine('Status', styleText('healthy', STYLES.green)),
+        panelLine('Uptime', 'N/A'),
+        panelLine('Database', 'N/A'),
+        panelLine('API', 'N/A')
+      ]));
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API_BASE}/health`, { validateStatus: () => true });
+      const health = response.data || {};
+      const dbStatus = health.checks?.database?.status || 'unknown';
+      const apiStatus = health.checks?.api?.status || 'unknown';
+      const memoryStatus = health.checks?.memory?.status || 'unknown';
+      const statusLine = health.status || (response.status === 200 ? 'healthy' : 'unhealthy');
+      const statusStyle = statusLine === 'healthy' ? STYLES.green : statusLine === 'degraded' ? STYLES.yellow : STYLES.red;
+
+      console.log(renderPanel('HFT BACKEND HEALTH', [
+        panelLine('HTTP Status', String(response.status)),
+        panelLine('Health Status', styleText(statusLine, statusStyle)),
+        panelLine('Database', dbStatus),
+        panelLine('API', apiStatus),
+        panelLine('Memory', memoryStatus),
+        panelLine('Timestamp', health.timestamp || 'unknown')
+      ]));
+
+      if (response.status >= 400) {
+        console.log(styleText('⚠️ Backend returned an unhealthy response', STYLES.yellow));
+      }
+    } catch (error) {
+      console.log(styleText('❌ Failed to get health:', STYLES.red), error.response?.data?.error || error.message);
     }
   }
 
@@ -732,6 +776,46 @@ class HFTSystemTerminal {
       if (payload.model) console.log(`   Model        : ${payload.model}`);
     } catch (error) {
       console.log('❌ Prediction failed:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async requestRiskAssessment(tokenMint) {
+    if (this.demoMode) {
+      if (!tokenMint) {
+        console.log('❌ Usage: risk <tokenMint>');
+        return;
+      }
+
+      const riskLevels = ['Low', 'Medium', 'High'];
+      const score = Math.floor(Math.random() * 50) + 25;
+      const level = riskLevels[Math.min(Math.floor(score / 33), riskLevels.length - 1)];
+      const recommendation = level === 'High' ? 'Avoid trading this token' : level === 'Medium' ? 'Trade with caution' : 'Suitable for monitoring';
+
+      console.log(`\n⚠️ Risk assessment for ${tokenMint} (DEMO):`);
+      console.log(`   Risk Score   : ${score}`);
+      console.log(`   Risk Level   : ${level}`);
+      console.log(`   Recommendation: ${recommendation}`);
+      return;
+    }
+
+    if (!tokenMint) {
+      console.log('❌ Usage: risk <tokenMint>');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE}/api/ai/risk-assessment`, { tokenMint });
+      const payload = response.data.data || response.data;
+
+      console.log(`\n⚠️ Risk assessment for ${tokenMint}:`);
+      console.log(`   Risk Score   : ${payload.riskScore}`);
+      console.log(`   Risk Level   : ${payload.riskLevel}`);
+      console.log(`   Recommendation: ${payload.recommendation}`);
+      if (payload.riskFactors && payload.riskFactors.length) {
+        console.log(`   Risk Factors : ${payload.riskFactors.join(', ')}`);
+      }
+    } catch (error) {
+      console.log('❌ Risk assessment failed:', error.response?.data?.error || error.message);
     }
   }
 

@@ -12,14 +12,37 @@ import {
   ErrorState,
 } from '../components';
 import { useGetHoldings, useGetAllocation, useGetPortfolioPerformance } from '../hooks';
-import { Wallet, TrendingUp, BarChart3 } from 'lucide-react';
+import { Button } from '../components/ui';
+import { Wallet, TrendingUp, BarChart3, RefreshCw, Download, Eye, EyeOff } from 'lucide-react';
 
 export default function Portfolio() {
   const [timeframe, setTimeframe] = useState('1d');
 
+  const [showValues, setShowValues] = useState(true);
   const { data: holdings, isLoading: holdingsLoading } = useGetHoldings();
   const { data: allocation } = useGetAllocation();
   const { data: performance } = useGetPortfolioPerformance(timeframe);
+
+  const totalValue = holdings?.reduce((sum, item) => sum + (item?.value || 0), 0) || 0;
+
+  const handleExport = () => {
+    if (!holdings?.length) return;
+    const headers = ['Token', 'Amount', 'Price', 'Value', 'Change'];
+    const rows = holdings.map((holding) => [
+      holding.symbol,
+      holding.amount,
+      holding.price,
+      holding.value,
+      holding.change,
+    ]);
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `holdings-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   if (holdingsLoading) {
     return (
@@ -34,24 +57,79 @@ export default function Portfolio() {
       title="Portfolio Management"
       description="Track your holdings and asset allocation"
     >
-      {/* Performance Overview */}
-      <div className="flex items-center gap-4 mb-6">
-        {['1d', '7d', '1m', '3m', '1y'].map((tf) => (
-          <button
-            key={tf}
-            onClick={() => setTimeframe(tf)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              timeframe === tf
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+        <div>
+          <p className="text-gray-400">Performance snapshot and portfolio management tools</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowValues((current) => !current)}
           >
-            {tf.toUpperCase()}
-          </button>
-        ))}
+            {showValues ? (
+              <EyeOff className="w-4 h-4 mr-2" />
+            ) : (
+              <Eye className="w-4 h-4 mr-2" />
+            )}
+            {showValues ? 'Hide Values' : 'Show Values'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExport}
+            disabled={!holdings?.length}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export Holdings
+          </Button>
+        </div>
       </div>
 
-      {/* Allocation Chart & Holdings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-gray-400 text-sm">Total Value</p>
+              <p className="text-2xl font-bold text-white">{showValues ? `$${totalValue.toFixed(2)}` : '••••••'}</p>
+            </div>
+            <Wallet className="w-10 h-10 text-blue-400 opacity-80" />
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-gray-400 text-sm">Holdings</p>
+              <p className="text-2xl font-bold text-white">{holdings?.length || 0}</p>
+            </div>
+            <BarChart3 className="w-10 h-10 text-violet-400 opacity-80" />
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-gray-400 text-sm">Return</p>
+              <p className={`text-2xl font-bold ${performance?.return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {performance?.return != null ? `${performance.return >= 0 ? '+' : ''}${performance.return.toFixed(2)}%` : 'N/A'}
+              </p>
+            </div>
+            <TrendingUp className="w-10 h-10 text-emerald-400 opacity-80" />
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-gray-400 text-sm">Max Drawdown</p>
+              <p className="text-2xl font-bold text-white">{performance?.maxDrawdown != null ? `${performance.maxDrawdown.toFixed(2)}%` : 'N/A'}</p>
+            </div>
+            <TrendingUp className="w-10 h-10 text-cyan-400 opacity-80" />
+          </div>
+        </Card>
+      </div>
+
       <GridContainer columns={2}>
         {/* Allocation */}
         <Card>
@@ -114,22 +192,34 @@ export default function Portfolio() {
         </Card>
       </GridContainer>
 
-      {/* Holdings Table */}
-      <Card className="mt-8">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Wallet size={20} className="text-purple-400" />
-          Holdings
-        </h3>
+      <Card className="mt-8 overflow-hidden">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-6 py-4 border-b border-white/10">
+          <div>
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Wallet size={20} className="text-purple-400" /> Holdings
+            </h3>
+            <p className="text-gray-400 text-sm">Detailed asset list and value exposure.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={!holdings?.length}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowValues((current) => !current)}>
+              {showValues ? 'Hide Values' : 'Show Values'}
+            </Button>
+          </div>
+        </div>
         {holdings && holdings.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-gray-700">
-                  <th className="px-4 py-2 text-left text-gray-400">Token</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Amount</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Price</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Value</th>
-                  <th className="px-4 py-2 text-right text-gray-400">Change</th>
+                  <th className="px-4 py-3 text-left text-gray-400">Token</th>
+                  <th className="px-4 py-3 text-right text-gray-400">Amount</th>
+                  <th className="px-4 py-3 text-right text-gray-400">Price</th>
+                  <th className="px-4 py-3 text-right text-gray-400">Value</th>
+                  <th className="px-4 py-3 text-right text-gray-400">Change</th>
                 </tr>
               </thead>
               <tbody>
@@ -140,19 +230,17 @@ export default function Portfolio() {
                     animate={{ opacity: 1 }}
                     className="border-b border-gray-800 hover:bg-gray-800/50 transition"
                   >
-                    <td className="px-4 py-2 text-white font-semibold">{holding.symbol}</td>
-                    <td className="px-4 py-2 text-right text-gray-300">{holding.amount}</td>
-                    <td className="px-4 py-2 text-right text-gray-300">
-                      ${holding.price.toFixed(2)}
+                    <td className="px-4 py-3 text-white font-semibold">{holding.symbol}</td>
+                    <td className="px-4 py-3 text-right text-gray-300">
+                      {showValues ? holding.amount : '••••'}
                     </td>
-                    <td className="px-4 py-2 text-right text-white font-semibold">
-                      ${holding.value.toFixed(2)}
+                    <td className="px-4 py-3 text-right text-gray-300">
+                      {showValues ? `$${holding.price.toFixed(2)}` : '••••'}
                     </td>
-                    <td
-                      className={`px-4 py-2 text-right font-semibold ${
-                        holding.change >= 0 ? 'text-green-400' : 'text-red-400'
-                      }`}
-                    >
+                    <td className="px-4 py-3 text-right text-white font-semibold">
+                      {showValues ? `$${holding.value.toFixed(2)}` : '••••'}
+                    </td>
+                    <td className={`px-4 py-3 text-right font-semibold ${holding.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {holding.change >= 0 ? '+' : ''}{holding.change.toFixed(2)}%
                     </td>
                   </motion.tr>

@@ -12,6 +12,7 @@ import {
 import {
   useGetActiveTrades,
   useGetSystemStatus,
+  useRealtimeDashboardData,
 } from "../hooks";
 import TerminalConsole from "../components/TerminalConsole";
 import HFTLiveFeed from "../components/HFTLiveFeed";
@@ -26,6 +27,7 @@ import MempoolTransactionViewer from "../components/dashboard/MempoolTransaction
 import CopyTradingSignalFeed from "../components/dashboard/CopyTradingSignalFeed";
 import NetworkCongestionVisualizer from "../components/dashboard/NetworkCongestionVisualizer";
 import ExecutionTerminal from "../components/dashboard/ExecutionTerminal";
+import { DashboardOverview } from "../components/dashboard/StatsCard";
 
 // ─── responsive column builder ───────────────────────────────────────────────
 
@@ -79,8 +81,12 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   });
 
   // ── data
-  const { data: activeTrades = [], isLoading: tradesLoading, error: tradesError } = useGetActiveTrades();
-  const { data: systemStatus } = useGetSystemStatus();
+  const { data: activeTradesData = [], isLoading: tradesLoadingApi, error: tradesErrorApi } = useGetActiveTrades();
+  const { data: systemStatusData } = useGetSystemStatus();
+  const realtimeDashboard = useRealtimeDashboardData();
+  const activeTrades = realtimeDashboard.activeTrades ?? activeTradesData;
+  const tradesLoading = realtimeDashboard.activeTrades == null ? tradesLoadingApi : false;
+  const systemStatus = realtimeDashboard.systemStatus ?? systemStatusData;
 
   // ── chart refs
   const chartContainerRef = useRef(null);
@@ -169,12 +175,12 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
   // ── stats cards
   const rpcHealthLabel = systemStatus?.rpcHealth ? systemStatus.rpcHealth.toUpperCase() : "HEALTHY";
   const statsCards = [
-    { label: "Total PNL",    value: "$18,742.60", change: "+7.8%",   icon: TrendingUp, color: "text-emerald-400" },
-    { label: "Win Rate",    value: "86.3%",       change: "+4.2%",   icon: Activity,   color: "text-emerald-400" },
-    { label: "Total Volume",value: "$127.4K",     change: "+12.5%",  icon: DollarSign, color: "text-cyan-400" },
-    { label: "Active Trades",value:tradesLoading?"…":`${activeTrades.length}`,change:"Realtime",icon:Zap,  color:"text-purple-400" },
-    { label: "RPC Health",  value: rpcHealthLabel,change:systemStatus?.latency?`${systemStatus.latency.toFixed(1)}ms`:"—",icon:Wifi,color:rpcHealthLabel==="HEALTHY"?"text-green-400":"text-amber-400" },
-    { label: "Priority Fee",value: "0.000005",   change: "Optimal", icon: Shield,    color: "text-orange-400" },
+    { label: "Total PNL",    value: "$18,742.60", change: "+7.8%",   icon: TrendingUp, color: "green" },
+    { label: "Win Rate",    value: "86.3%",       change: "+4.2%",   icon: Activity,   color: "green" },
+    { label: "Total Volume",value: "$127.4K",     change: "+12.5%",  icon: DollarSign, color: "blue" },
+    { label: "Realtime WS", value: realtimeDashboard.isConnected ? "CONNECTED" : "DISCONNECTED", change: realtimeDashboard.lastMessageAt ? "Live" : "Idle", icon: Wifi, color: realtimeDashboard.isConnected ? "green" : "red" },
+    { label: "Active Trades",value: tradesLoading ? "…" : `${activeTrades.length}`, change: "Realtime", icon: Zap, color: "purple" },
+    { label: "Alerts",      value: `${realtimeDashboard.alerts?.length ?? 0}`, change: "Realtime", icon: Shield, color: "orange" },
   ];
 
   // ── MainPanel grid helpers
@@ -443,30 +449,8 @@ const HFTDashboard = ({ dashboardConfig: dashboardConfigProp }) => {
 
           {/* ── stats cards card grid ── */}
           {dashboardConfig.showStatsCards && (
-            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
-              {statsCards.map((card, i) => (
-                <motion.div
-                  key={card.label}
-                  {...FADE_UP}
-                  transition={{ delay: i * 0.06 }}
-                  className="group relative bg-gradient-to-br from-black/50 via-black/30 to-black/50 backdrop-blur-xl border border-white/10 rounded-2xl p-3 md:p-4 transition-colors hover:border-cyan-400/30"
-                  style={{ boxShadow: "0 12px 40px rgba(34,211,238,0.08)" }}
-                >
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-2">
-                      <card.icon className={`w-4 h-4 md:w-5 md:h-5 ${card.color} group-hover:scale-110 transition-transform`} />
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                        card.change.startsWith("+") ? "bg-green-500/20 text-green-300"
-                        : card.change.startsWith("-") ? "bg-red-500/20 text-red-300"
-                        : "bg-cyan-500/20 text-cyan-300"
-                      }`}>{card.change}</span>
-                    </div>
-                    {/* truncate values on the smallest screens to avoid overflow */}
-                    <div className="text-base md:text-xl font-bold text-white truncate">{card.value}</div>
-                    <div className="text-[10px] md:text-xs text-gray-400 truncate">{card.label}</div>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="mt-5">
+              <DashboardOverview stats={statsCards} />
             </div>
           )}
         </header>

@@ -490,6 +490,28 @@ router.get('/alerts/active', authenticate, async (req, res) => {
   }
 });
 
+router.get('/predictive-alerts', authenticate, async (req, res) => {
+  try {
+    const predictiveAlertService = diContainer.get('predictiveAlertService');
+    const alerts = await predictiveAlertService.getActiveAlerts(req.user.wallet_id);
+    res.json({ success: true, data: alerts });
+  } catch (error) {
+    logger.error('Error fetching predictive alerts:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/predictive-alerts/:alertId/acknowledge', authenticate, async (req, res) => {
+  try {
+    const predictiveAlertService = diContainer.get('predictiveAlertService');
+    const alert = await predictiveAlertService.acknowledgeAlert(req.params.alertId);
+    res.json({ success: true, data: alert });
+  } catch (error) {
+    logger.error('Error acknowledging predictive alert:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /**
  * @swagger
  * /api/alerts/critical:

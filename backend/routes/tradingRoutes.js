@@ -6,6 +6,7 @@ const auditLogger = require('../utils/audit');
 const WalletModel = require('../models/wallet.model');
 const walletRepository = require('../repositories/wallet.repository');
 const correlationService = require('../services/correlation.service');
+const realtimeService = require('../services/realtime.service');
 const portfolioTrackerService = require('../services/portfolio-tracker.service');
 const rebalancingService = require('../services/portfolio-rebalancing.service');
 const twapService = require('../services/twap.service');
@@ -125,6 +126,8 @@ router.post('/wallet/connect', authenticate, (req, res) => {
     // Audit wallet connection
     auditLogger.logWalletOperation('connect', wallet.publicKey, true, req.ip, req.get('User-Agent'));
 
+    realtimeService.publishWalletUpdate([{ name: wallet.name, publicKey: wallet.publicKey.toString() }]);
+
     res.json({
       success: true,
       wallet: {
@@ -148,6 +151,8 @@ router.post('/wallet/set-active', authenticate, (req, res) => {
 
     // Audit wallet activation
     auditLogger.logWalletOperation('set-active', publicKey, true, req.ip, req.get('User-Agent'));
+
+    realtimeService.publishWalletUpdate([{ publicKey, active: true }]);
 
     res.json({ success: true, message: 'Active wallet set' });
   } catch (error) {

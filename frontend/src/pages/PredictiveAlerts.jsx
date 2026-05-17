@@ -15,26 +15,23 @@ const PredictiveAlerts = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await axios.get(
-        "/api/predictive-alerts",
-      );
-      setAlerts(response.data);
+      const response = await axios.get('/api/predictive-alerts');
+      const payload = response.data?.data || response.data;
+      setAlerts(payload || []);
       setLoading(false);
     } catch (error) {
-      console.error("Failed to fetch alerts:", error);
+      console.error('Failed to fetch alerts:', error);
       setLoading(false);
     }
   };
 
   const handleAcknowledge = async (alertId) => {
     try {
-      await axios.put(
-        `/api/predictive-alerts/${alertId}/acknowledge`,
-      );
+      await axios.put(`/api/predictive-alerts/${alertId}/acknowledge`);
       setAcknowledged(new Set([...acknowledged, alertId]));
       fetchAlerts();
     } catch (error) {
-      console.error("Failed to acknowledge alert:", error);
+      console.error('Failed to acknowledge alert:', error);
     }
   };
 
@@ -137,57 +134,57 @@ const PredictiveAlerts = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-white font-semibold">
-                        {alert.tokenMint}
+                        {alert.tokenMint || alert.token_mint || alert.tokenSymbol || 'Unknown Token'}
                       </h3>
                       <span
                         className={`text-xs px-2 py-1 rounded font-bold capitalize ${
-                          alert.severity === "critical"
-                            ? "bg-red-500/30 text-red-300"
-                            : alert.severity === "high"
-                              ? "bg-orange-500/30 text-orange-300"
-                              : alert.severity === "medium"
-                                ? "bg-yellow-500/30 text-yellow-300"
-                                : "bg-blue-500/30 text-blue-300"
+                          alert.severity === 'critical'
+                            ? 'bg-red-500/30 text-red-300'
+                            : alert.severity === 'high'
+                              ? 'bg-orange-500/30 text-orange-300'
+                              : alert.severity === 'medium'
+                                ? 'bg-yellow-500/30 text-yellow-300'
+                                : 'bg-blue-500/30 text-blue-300'
                         }`}
                       >
-                        {alert.severity}
+                        {alert.severity || 'medium'}
                       </span>
                       <span
                         className={`text-xs px-2 py-1 rounded font-bold capitalize ${
-                          alert.status === "triggered"
-                            ? "bg-red-500/30 text-red-300"
-                            : "bg-blue-500/30 text-blue-300"
+                          alert.status === 'triggered'
+                            ? 'bg-red-500/30 text-red-300'
+                            : 'bg-blue-500/30 text-blue-300'
                         }`}
                       >
-                        {alert.status}
+                        {alert.status || 'active'}
                       </span>
                     </div>
                     <p className="text-sm text-gray-300 mb-2">
-                      {alert.alertType}
+                      {alert.alertType || alert.alert_type || alert.message || 'Predictive alert detected.'}
                     </p>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {new Date(alert.createdAt).toLocaleString()}
+                      {new Date(alert.createdAt || alert.created_at || alert.timestamp || Date.now()).toLocaleString()}
                     </p>
                   </div>
                 </div>
                 <div className="text-right ml-4">
                   <div className="text-lg font-bold text-white mb-2">
-                    {alert.threshold.toFixed(2)}
+                    {Number(alert.threshold || alert.alert_threshold || 0).toFixed(2)}
                   </div>
                   <div className="text-sm text-gray-400 mb-3">
-                    Confidence: {(alert.confidenceScore * 100).toFixed(0)}%
+                    Confidence: {Math.round((Number(alert.confidenceScore || alert.confidence_score || 0) * 100))}%
                   </div>
-                  {!acknowledged.has(alert.id) &&
-                    alert.status === "triggered" && (
+                  {!acknowledged.has(alert.alert_id || alert.id) &&
+                    (alert.status || 'active') === 'triggered' && (
                       <button
-                        onClick={() => handleAcknowledge(alert.id)}
+                        onClick={() => handleAcknowledge(alert.alert_id || alert.id)}
                         className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
                       >
                         Acknowledge
                       </button>
                     )}
-                  {acknowledged.has(alert.id) && (
+                  {acknowledged.has(alert.alert_id || alert.id) && (
                     <span className="text-xs text-gray-500">Acknowledged</span>
                   )}
                 </div>

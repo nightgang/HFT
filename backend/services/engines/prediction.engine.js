@@ -75,6 +75,57 @@ class PredictionEngine {
     }
   }
 
+  async assessRisk(tokenMint, metadata = {}) {
+    try {
+      if (this.aiServiceEnabled) {
+        try {
+          const headers = {};
+          if (process.env.AI_SERVICE_API_KEY) {
+            headers['X-API-Key'] = process.env.AI_SERVICE_API_KEY;
+          }
+
+          const aiResponse = await axios.post(`${this.aiServiceUrl}/risk-assessment`, {
+            tokenMint,
+            metadata
+          }, {
+            timeout: 5000,
+            headers,
+          });
+
+          if (aiResponse.data && aiResponse.data.riskScore !== undefined) {
+            logger.info(`AI risk assessment for ${tokenMint}: ${aiResponse.data.riskScore}`);
+            return {
+              tokenMint,
+              riskScore: aiResponse.data.riskScore,
+              riskFactors: aiResponse.data.riskFactors || [],
+              recommendation: aiResponse.data.recommendation || 'USE CAUTION',
+              riskLevel: aiResponse.data.riskLevel || 'Medium',
+            };
+          }
+        } catch (aiError) {
+          logger.warn('AI risk service unavailable, falling back to placeholder:', aiError.message);
+        }
+      }
+
+      return {
+        tokenMint,
+        riskScore: 50,
+        riskFactors: ['fallback risk model'],
+        recommendation: 'Use caution and verify market conditions before trading.',
+        riskLevel: 'Medium',
+      };
+    } catch (error) {
+      logger.error('Risk assessment error:', error);
+      return {
+        tokenMint,
+        riskScore: 50,
+        riskFactors: ['fallback risk model'],
+        recommendation: 'Use caution.',
+        riskLevel: 'Medium',
+      };
+    }
+  }
+
   getRecommendation(score) {
     if (score >= 70) return 'BUY';
     if (score >= 40) return 'HOLD';

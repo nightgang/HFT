@@ -1,5 +1,6 @@
 const { PredictiveAlertModel, AnomalyLogModel } = require('../models/predictive-alert.model');
 const logger = require('../utils/logger');
+const monitoringService = require('./monitoring/monitoring.service');
 
 class PredictiveAlertService {
   // Create an alert
@@ -7,6 +8,7 @@ class PredictiveAlertService {
     try {
       const alert = await PredictiveAlertModel.create(alertData);
       logger.info(`Alert created: ${alert.alert_id}`);
+      monitoringService.recordPredictiveAlert('created', alert.severity || 'unknown');
       return alert;
     } catch (error) {
       logger.error('Error creating alert:', error);
@@ -100,6 +102,7 @@ class PredictiveAlertService {
     try {
       const alert = await PredictiveAlertModel.acknowledgeAlert(alertId);
       logger.info(`Alert acknowledged: ${alertId}`);
+      monitoringService.recordPredictiveAlert('acknowledged', alert?.severity || 'unknown');
       return alert;
     } catch (error) {
       logger.error('Error acknowledging alert:', error);

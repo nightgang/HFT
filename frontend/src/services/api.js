@@ -3,7 +3,10 @@
  * Handles authentication, error handling, and response formatting
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const envApiUrl = import.meta.env.VITE_API_URL;
+const API_BASE_URL = envApiUrl || (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ? 'http://localhost:3001/api'
+  : '/api');
 
 class ApiClient {
   constructor() {

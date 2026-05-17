@@ -97,6 +97,12 @@ class MonitoringService {
           labelNames: ['endpoint']
         }),
 
+        predictiveAlertsTotal: new promClient.Counter({
+          name: 'predictive_alerts_total',
+          help: 'Total number of predictive alerts created or acknowledged',
+          labelNames: ['action', 'severity']
+        }),
+
         // WebSocket metrics
         websocketConnectionsActive: new promClient.Gauge({
           name: 'websocket_connections_active',
@@ -283,6 +289,13 @@ class MonitoringService {
   // Record rate limit hit
   recordRateLimitHit(endpoint) {
     this.metrics.rateLimitHitsTotal.inc({ endpoint });
+  }
+
+  // Record predictive alert events
+  recordPredictiveAlert(action, severity = 'unknown') {
+    if (this.metrics.predictiveAlertsTotal) {
+      this.metrics.predictiveAlertsTotal.inc({ action, severity });
+    }
   }
 
   // Update WebSocket connections

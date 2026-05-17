@@ -94,6 +94,22 @@ class AIService {
   }
 
   /**
+   * Assess token risk
+   */
+  async assessRisk(tokenMint, metadata = {}, marketData = {}) {
+    try {
+      return await api.post('/ai/risk-assessment', {
+        tokenMint,
+        metadata,
+        marketData,
+      });
+    } catch (error) {
+      console.error('Failed to fetch risk assessment:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Chat with AI
    */
   async chat(message) {

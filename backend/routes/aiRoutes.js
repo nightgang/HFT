@@ -32,4 +32,28 @@ router.post('/predict', async (req, res) => {
   }
 });
 
+router.post('/risk-assessment', async (req, res) => {
+  try {
+    const { tokenMint, metadata = {}, marketData = {} } = req.body;
+
+    if (!tokenMint) {
+      return res.status(400).json({ success: false, error: 'tokenMint is required' });
+    }
+
+    const riskResult = await predictionEngine.assessRisk(tokenMint, {
+      metadata,
+      marketData
+    });
+
+    res.json({
+      success: true,
+      data: riskResult,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    logger.error('AI risk assessment route error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
