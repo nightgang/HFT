@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+const path = require('path');
 const readline = require('readline');
 const WebSocket = require('ws');
 const axios = require('axios');
@@ -23,9 +25,9 @@ if (!API_BASE || !HFT_WS_URL) {
 
 const AVAILABLE_COMMANDS = [
   'start', 'stop', 'status', 'health', 'buy', 'sell', 'select', 'wallets', 'usewallet',
-  'predict', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
+  'predict', 'risk', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
   'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
-  'portfolio', 'settings', 'help', 'exit', 'toggle', 'autotrade'
+  'portfolio', 'settings', 'export-trades', 'help', 'exit', 'toggle', 'autotrade'
 ];
 
 // ============ EMOJIS AND MESSAGES ============
@@ -100,11 +102,12 @@ const MESSAGES = {
 /**
  * Make API call with timeout and error handling
  */
-async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIMEOUT) {
+async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIMEOUT, responseType = 'json') {
   try {
     const config = {
       timeout,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      responseType
     };
 
     if (axios.defaults.headers && axios.defaults.headers.common && axios.defaults.headers.common.Authorization) {
@@ -122,7 +125,7 @@ async function makeApiCall(method, endpoint, data = null, timeout = REQUEST_TIME
       throw new Error(`Unsupported HTTP method: ${method}`);
     }
 
-    return response.data;
+    return responseType === 'text' ? response.data : response.data;
   } catch (error) {
     if (error.code === 'ECONNABORTED') {
       throw new Error(`Request timeout (${timeout}ms). Backend server may be unresponsive.`);
@@ -434,6 +437,7 @@ class HFTSystemTerminal {
       `${styleText('history / trades', STYLES.cyan)} ${styleText('- Show trade history', STYLES.gray)}`,
       `${styleText('orders', STYLES.cyan)} ${styleText('- Show advanced orders', STYLES.gray)}`,
       `${styleText('cancel-order <id>', STYLES.cyan)} ${styleText('- Cancel an advanced order', STYLES.gray)}`,
+      `${styleText('export-trades <days?>', STYLES.cyan)} ${styleText('- Export trade history CSV for current wallet', STYLES.gray)}`,
       `${styleText('risk-heatmap', STYLES.cyan)} ${styleText('- Show portfolio risk heatmap', STYLES.gray)}`,
       `${styleText('alerts', STYLES.cyan)} ${styleText('- Show active predictive alerts', STYLES.gray)}`,
       `${styleText('pnl', STYLES.cyan)} ${styleText('- Show P&L dashboard summary', STYLES.gray)}`,
@@ -514,6 +518,9 @@ class HFTSystemTerminal {
           break;
         case 'cancel-order':
           await this.cancelAdvancedOrder(args[0]);
+          break;
+        case 'export-trades':
+          await this.exportTradeHistory(args);
           break;
         case 'risk-heatmap':
           await this.showRiskHeatmap();
@@ -727,6 +734,34 @@ class HFTSystemTerminal {
       });
     } catch (error) {
       console.log('❌ Failed to fetch wallets:', error.response?.data?.error || error.message);
+    }
+  }
+
+  async exportTradeHistory(args = []) {
+    const firstArg = args[0] || '';
+    const looksLikeWallet = firstArg && (firstArg.length > 20 || /[A-Za-z]/.test(firstArg));
+    const walletId = looksLikeWallet ? firstArg : this.selectedWallet;
+    const days = looksLikeWallet ? (args[1] || '30') : (firstArg || '30');
+
+    if (!walletId) {
+      console.log('❌ No wallet selected. Use "usewallet <publicKey>" or pass a walletId.');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9]+$/.test(walletId)) {
+      console.log('❌ Invalid wallet identifier provided.');
+      return;
+    }
+
+    try {
+      const query = `format=csv&days=${encodeURIComponent(days)}`;
+      const responseText = await makeApiCall('GET', `/api/trading/trade-history/export/${walletId}?${query}`, null, REQUEST_TIMEOUT, 'text');
+      const filename = `trade-history-${walletId}-${days}d-${Date.now()}.csv`;
+      const outputPath = path.join(process.cwd(), filename);
+      await fs.promises.writeFile(outputPath, responseText, 'utf8');
+      console.log(`✅ Exported trade history to ${outputPath}`);
+    } catch (error) {
+      console.log('❌ Failed to export trade history:', error.response?.data?.error || error.message);
     }
   }
 
