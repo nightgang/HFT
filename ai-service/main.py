@@ -21,6 +21,8 @@ import asyncio
 import aiohttp
 from datetime import datetime
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+import json
+import redis.asyncio as aioredis
 
 # ============ CONFIGURATION ============
 SERVICE_NAME = "Solana Trading AI Service"
@@ -67,6 +69,8 @@ MODEL_LOAD_STATUS = Gauge(
 # ============ GLOBALS ============
 models: Dict[str, Any] = {}
 scalers: Dict[str, Any] = {}
+redis_client: Optional[aioredis.Redis] = None
+redis_listener_task: Optional[asyncio.Task] = None
 
 # ============ RATE LIMITING ============
 limiter = Limiter(key_func=get_remote_address)
@@ -81,8 +85,29 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(f"Startup model load failed: {exc}")
         train_advanced_models()
+
+    # Initialize Redis subscriber for EventBus integration
+    global redis_client, redis_listener_task
+    try:
+        redis_url = os.getenv('REDIS_URL') or f"redis://{os.getenv('REDIS_HOST','localhost')}:{os.getenv('REDIS_PORT','6379')}"
+        redis_client = aioredis.from_url(redis_url)
+        redis_listener_task = asyncio.create_task(event_bus_listener())
+        logger.info('AI service connected to EventBus')
+    except Exception as e:
+        logger.warning('AI service failed to connect to EventBus: %s', e)
+
     yield
     logger.info(f"Shutting down {SERVICE_NAME}")
+
+    # Shutdown Redis listener
+    try:
+        if redis_listener_task:
+            redis_listener_task.cancel()
+            await asyncio.sleep(0)
+        if redis_client:
+            await redis_client.close()
+    except Exception:
+        pass
 
 # ============ DATA MODELS ============
 class PredictionRequest(BaseModel):
@@ -207,6 +232,104 @@ async def fetch_real_market_data(token_mint: str, timeout: int = 5) -> Dict[str,
         "price_change_24h": 0,
         "liquidity": 0,
     }
+
+
+async def process_token_detected_event(payload: Dict[str, Any]):
+    try:
+        data = payload.get('data') if isinstance(payload, dict) else payload
+        token_mint = None
+        if isinstance(data, dict):
+            token_mint = data.get('mint') or data.get('tokenMint') or data.get('token')
+        if not token_mint:
+            return
+
+        metadata = data.get('metadata', {}) if isinstance(data, dict) else {}
+        market_data = data.get('marketData') or {}
+        if not market_data:
+            market_data = await fetch_real_market_data(token_mint)
+
+        features = {
+            "category_encoded": 0,
+            "name_length": len(metadata.get("name", "")),
+            "symbol_length": len(metadata.get("symbol", "")),
+            "has_description": 1 if metadata.get("description") else 0,
+            "has_website": 1 if metadata.get("website") else 0,
+            "has_twitter": 1 if metadata.get("twitter") else 0,
+            "has_telegram": 1 if metadata.get("telegram") else 0,
+            "has_github": 1 if metadata.get("github") else 0,
+            "age_days": metadata.get("age_days", 30),
+            "holder_count": metadata.get("holder_count", 1000),
+            "liquidity_usd": market_data.get("liquidity", 50000),
+            "market_cap": market_data.get("market_cap", 100000),
+            "volume_24h": market_data.get("volume_24h", 10000),
+            "price_change_24h": market_data.get("price_change_24h", 0),
+            "price_change_7d": metadata.get("price_change_7d", 0),
+            "twitter_followers": metadata.get("twitter_followers", 0),
+            "telegram_members": metadata.get("telegram_members", 0),
+            "price_volatility": metadata.get("price_volatility", 0.5),
+        }
+
+        prediction = ensemble_predict(features)
+        risk = assess_risk(features)
+
+        score = prediction["score"]
+        risk_level = risk["risk_level"]
+        if score >= 80 and risk_level == "Low":
+            recommendation = "STRONG_BUY"
+        elif score >= 70 and risk_level in ["Low", "Medium"]:
+            recommendation = "BUY"
+        elif score >= 50 and risk_level == "Low":
+            recommendation = "HOLD"
+        elif score >= 30:
+            recommendation = "WATCH"
+        else:
+            recommendation = "AVOID"
+
+        result = {
+            "tokenMint": token_mint,
+            "model": "advanced-ml-signal-model-v2",
+            "score": int(prediction["score"]),
+            "recommendation": recommendation,
+            "confidence": float(prediction["confidence"]),
+            "riskLevel": risk_level,
+            "features": {"rf_score": prediction.get("rf_score"), "gb_score": prediction.get("gb_score"), "risk_factors": risk.get("risk_factors")},
+            "modelVersion": "2.0.0",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        try:
+            if redis_client:
+                await redis_client.publish('ai.prediction', json.dumps(result))
+        except Exception as e:
+            logger.warning('Failed to publish AI prediction to EventBus: %s', e)
+    except Exception as exc:
+        logger.error('Error processing token detected event: %s', exc)
+
+
+async def event_bus_listener():
+    try:
+        global redis_client
+        if not redis_client:
+            return
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe('token.detected')
+        logger.info('AI service subscribed to token.detected')
+
+        async for message in pubsub.listen():
+            if message is None:
+                continue
+            if message.get('type') != 'message':
+                continue
+            raw = message.get('data')
+            try:
+                payload = json.loads(raw)
+            except Exception:
+                payload = raw
+            asyncio.create_task(process_token_detected_event(payload))
+    except asyncio.CancelledError:
+        return
+    except Exception as exc:
+        logger.error('Event bus listener error: %s', exc)
 
 def load_models() -> None:
     global models, scalers

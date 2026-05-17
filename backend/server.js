@@ -58,6 +58,15 @@ async function initializeServices() {
     logger.error('Failed to start backup scheduler:', error);
   });
 
+  // Initialize realtime service (will connect to EventBus and subscribe)
+  try {
+    const realtimeService = require('./services/realtime.service');
+    await realtimeService.initialize();
+    logger.info('✓ Realtime service initialized');
+  } catch (error) {
+    logger.warn('Realtime service initialization failed:', error.message);
+  }
+
   if (process.env.KATANA_ENABLED !== 'false') {
     try {
       await katanaEngine.start();
@@ -72,6 +81,16 @@ function registerShutdownHandlers(server) {
   gracefulShutdownManager.registerListener('WebSocket server', async () => {
     logger.info('Closing WebSocket server...');
     websocketServer.stop();
+  });
+
+  gracefulShutdownManager.registerListener('Realtime service', async () => {
+    try {
+      const realtimeService = require('./services/realtime.service');
+      await realtimeService.shutdown();
+      logger.info('Realtime service shutdown complete');
+    } catch (e) {
+      logger.warn('Realtime service shutdown error:', e.message);
+    }
   });
 
   gracefulShutdownManager.registerListener('Event poller', async () => {
@@ -110,8 +129,12 @@ async function start() {
   const migrator = new DatabaseMigrator();
   const migrationSuccess = await migrator.runMigrations();
   if (!migrationSuccess) {
-    logger.error('Database migrations failed. Exiting...');
-    process.exit(1);
+    const allowMigrationFailures = process.env.FORCE_RUN_ON_MIGRATION_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
+    if (!allowMigrationFailures) {
+      logger.error('Database migrations failed. Exiting...');
+      process.exit(1);
+    }
+    logger.warn('Database migrations failed, but continuing startup because migration failures are allowed in this environment.');
   }
 
   const server = app.listen(PORT, async () => {

@@ -29,6 +29,7 @@ export const useRealtimeDashboardData = () => {
     activeTrades: null,
     wallets: null,
     systemStatus: null,
+    aiPredictions: [],
     lastMessageType: null,
     lastMessageAt: null,
   });
@@ -81,6 +82,13 @@ export const useRealtimeDashboardData = () => {
         }
         default:
           break;
+        case "ai-prediction": {
+          const incoming = lastMessage || {};
+          const existing = current.aiPredictions || [];
+          const nextPred = { ...incoming, receivedAt: Date.now() };
+          next.aiPredictions = [nextPred, ...existing].slice(0, 20);
+          break;
+        }
       }
 
       return next;

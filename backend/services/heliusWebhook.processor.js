@@ -32,9 +32,9 @@ class HeliusWebhookProcessor {
         tokenDetectionSchema.parse(tokenData);
         await sniperEngine.processTokenDetection(tokenData);
 
-        // Broadcast token detection to frontend
-        const websocketServer = require('../ws/websocket.server');
-        websocketServer.broadcast({
+        // Publish token detection event to the EventBus (shared realtime layer)
+        const eventBus = require('./event-bus.service');
+        await eventBus.publish('token.detected', {
           type: 'TOKEN_DETECTED',
           data: tokenData,
         });

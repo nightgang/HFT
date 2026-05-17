@@ -9,3 +9,4 @@ joblib==1.5.3
 prometheus_client==0.17.0
 aiohttp==3.13.5
 slowapi==0.1.9
+redis>=4.6.0
