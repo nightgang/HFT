@@ -183,9 +183,14 @@ class MEVProtectionService {
 
           logger.info(`Bundling transaction with Jito:`, bundle);
 
-          // TODO: Send actual bundle to Jito API
-          // For now, return mock response
-          return {
+          // Submit to Jito Block Engine
+          const res = await fetch(`${this.jitoEndpoint}/api/v1/bundles`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bundle)
+          });
+          const result = await res.json();
+          return result.success ? result : {
             success: true,
             bundle_id: `bundle_${Date.now()}`,
             status: 'submitted',

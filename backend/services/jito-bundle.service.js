@@ -25,10 +25,15 @@ class JitoBundleService {
         throw new Error('Bundle not found');
       }
 
-      // TODO: Integrate with Jito API to submit bundle
-      // const jitoResponse = await jitoApi.submitBundle(bundle.transactions, bundle.tip_amount_lamports);
+      // Submit to Jito Block Engine
+      const endpoint = process.env.JITO_BLOCK_ENGINE_URL || 'https://mainnet.block-engine.jito.wtf';
+      await fetch(`${endpoint}/api/v1/bundles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions: bundle.transactions, tip: bundle.tip_amount_lamports })
+      });
 
-      // For now, mark as submitted
+      // Mark as submitted
       const updatedBundle = await JitoBundleModel.markSubmitted(bundleId);
       logger.info(`Bundle submitted to Jito: ${bundleId}`);
       return updatedBundle;

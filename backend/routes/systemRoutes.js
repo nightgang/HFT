@@ -2,6 +2,7 @@ const express = require('express');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
 const autoTradeService = require('../services/auto-trade.service');
+const realtimeStateService = require('../services/realtime-state.service');
 
 const router = express.Router();
 
@@ -275,6 +276,37 @@ router.get('/detections', (req, res) => {
     });
   } catch (error) {
     logger.error('Error getting detections:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/system/state:
+ *   get:
+ *     summary: Get the shared realtime state snapshot (Single Source of Truth)
+ *     tags: [System]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Complete realtime state snapshot
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/RealtimeState'
+ */
+router.get('/state', authenticate, (req, res) => {
+  try {
+    const snapshot = realtimeStateService.getSnapshot();
+    res.json({ success: true, data: snapshot });
+  } catch (error) {
+    logger.error('Error fetching realtime state:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

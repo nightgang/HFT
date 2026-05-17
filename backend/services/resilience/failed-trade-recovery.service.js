@@ -2,6 +2,7 @@
 const logger = require('../../utils/logger');
 const { query } = require('../../db/connection');
 const circuitBreakerService = require('./circuit-breaker.service');
+const { getKatanaEngine } = require('../engines/katana.engine');
 
 class FailedTradeRecoveryService {
   constructor() {
@@ -110,8 +111,8 @@ class FailedTradeRecoveryService {
       await circuitBreakerService.execute(
         'trade_retry',
         async () => {
-          // TODO: Call actual trade execution function
-          // This would call the actual trading service
+          const engine = getKatanaEngine();
+          await engine.executeTrade(tradeDetail.params);
           logger.info(`Re-executing trade ${tradeId}`);
 
           // Update trade status

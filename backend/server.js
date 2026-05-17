@@ -58,6 +58,16 @@ async function initializeServices() {
     logger.error('Failed to start backup scheduler:', error);
   });
 
+  // Initialize realtime state service (Single Source of Truth) — must start
+  // before RealtimeService so all events are captured from boot
+  try {
+    const realtimeStateService = require('./services/realtime-state.service');
+    await realtimeStateService.initialize();
+    logger.info('✓ Realtime State Service initialized (Single Source of Truth)');
+  } catch (error) {
+    logger.warn('Realtime State Service initialization failed:', error.message);
+  }
+
   // Initialize realtime service (will connect to EventBus and subscribe)
   try {
     const realtimeService = require('./services/realtime.service');
@@ -90,6 +100,16 @@ function registerShutdownHandlers(server) {
       logger.info('Realtime service shutdown complete');
     } catch (e) {
       logger.warn('Realtime service shutdown error:', e.message);
+    }
+  });
+
+  gracefulShutdownManager.registerListener('Realtime State service', async () => {
+    try {
+      const realtimeStateService = require('./services/realtime-state.service');
+      await realtimeStateService.shutdown();
+      logger.info('Realtime State service shutdown complete');
+    } catch (e) {
+      logger.warn('Realtime State service shutdown error:', e.message);
     }
   });
 

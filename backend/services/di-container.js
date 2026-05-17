@@ -16,6 +16,9 @@ class DIContainer {
   }
 }
 
+const eventPoller = require('./eventPoller');
+const realtimeStateService = require('./realtime-state.service');
+
 // Import all services
 const advancedOrdersService = require('./advanced-orders.service');
 const liquidityPoolService = require('./liquidity-pool.service');
@@ -66,5 +69,7 @@ container.register('positionCloningService', new PositionCloningService());
 container.register('optionsFuturesService', new OptionsFuturesService());
 // Katana Engine — registered here and used by both server and katanaRoutes
 container.register('katanaEngine', katanaEngine);
+// Shared Realtime Data Layer — Single Source of Truth
+container.register('realtimeStateService', realtimeStateService);
 
 module.exports = container;
