@@ -1,9 +1,11 @@
+/// <reference types="jest" />
+
 jest.mock('../integrations/jupiter.service');
 jest.mock('../services/cache.service');
 
 const backtestingService = require('../services/backtesting.service');
-const jupiterService = require('../integrations/jupiter.service');
-const cacheService = require('../services/cache.service');
+const jupiterService = /** @type {jest.Mocked<typeof import('../integrations/jupiter.service')>} */ (require('../integrations/jupiter.service'));
+const cacheService = /** @type {{ get: jest.Mock; set: jest.Mock }} */ ((/** @type {unknown} */ require('../services/cache.service')));
 
 describe('BacktestingService', () => {
   beforeEach(() => {
