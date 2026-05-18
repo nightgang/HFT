@@ -108,7 +108,7 @@ class AdvancedOrderService {
   }
 
   // Execute the actual trade for an order
-  async executeOrderTrade(order, currentPrice) {
+  async executeOrderTrade(order, _currentPrice) {
     try {
       // Determine trade direction based on order type
       // For now, assume it's a buy order (input -> output)

@@ -1,6 +1,5 @@
 const { Keypair, PublicKey, Connection, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 const bip39 = require('bip39');
-const { derivePath } = require('ed25519-hd-key');
 const logger = require('../utils/logger');
 const keyService = require('./security/key.service');
 const WalletModel = require('../models/wallet.model');
@@ -29,6 +28,7 @@ class SolanaWalletService {
       const seed = await bip39.mnemonicToSeed(mnemonic);
 
       // Derive keypair from seed using derivation path
+      const { derivePath } = await import('ed25519-hd-key');
       const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
       const keypair = Keypair.fromSeed(derivedSeed);
 
@@ -150,6 +150,7 @@ class SolanaWalletService {
       const seed = await bip39.mnemonicToSeed(mnemonic);
 
       // Derive keypair from seed
+      const { derivePath } = await import('ed25519-hd-key');
       const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
       const keypair = Keypair.fromSeed(derivedSeed);
 

@@ -1,4 +1,4 @@
-const { query, getClient } = require('../db/connection');
+const { query } = require('../db/connection');
 const logger = require('../utils/logger');
 
 class TradeModel {

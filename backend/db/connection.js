@@ -17,11 +17,11 @@ const dbConfig = {
 const pool = new Pool(dbConfig);
 
 // Event handlers for pool
-pool.on('connect', (client) => {
+pool.on('connect', (_client) => {
   logger.info('New client connected to database');
 });
 
-pool.on('error', (err, client) => {
+pool.on('error', (err, _client) => {
   logger.error('Unexpected error on idle client', err);
   // Don't exit process immediately - let graceful shutdown handle it
   // This allows proper cleanup of other services

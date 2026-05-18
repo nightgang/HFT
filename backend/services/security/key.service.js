@@ -3,7 +3,6 @@ const crypto = require('crypto');
 const bip39 = require('bip39');
 const hdkey = require('hdkey');
 const { Keypair } = require('@solana/web3.js');
-const { derivePath } = require('ed25519-hd-key');
 const logger = require('../../utils/logger');
 const { query } = require('../../db/connection');
 
@@ -77,6 +76,7 @@ class KeyService {
     const seed = await bip39.mnemonicToSeed(mnemonic);
 
     // Use ed25519-hd-key for proper Solana key derivation
+    const { derivePath } = await import('ed25519-hd-key');
     const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
     const keypair = Keypair.fromSeed(derivedSeed);
 

@@ -325,7 +325,7 @@ class AlertingService {
   }
 
   // Mock methods for getting metrics (would integrate with actual metrics store)
-  async getErrorRate(since) {
+  async getErrorRate(_since) {
     // Mock implementation - would query actual error metrics
     return Math.random() * 10;
   }
@@ -384,7 +384,7 @@ class AlertingService {
   }
 
   // Resolve alert
-  async resolveAlert(alertId, resolution = 'Resolved automatically') {
+  async resolveAlert(alertId, _resolution = 'Resolved automatically') {
     try {
       const alert = this.activeAlerts.get(alertId);
       if (!alert) return;

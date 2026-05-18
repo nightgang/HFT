@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { Connection, PublicKey, Transaction } = require('@solana/web3.js');
+const { Connection, Transaction } = require('@solana/web3.js');
 const logger = require('../utils/logger');
 const cacheService = require('../services/cache.service');
 const metricsService = require('../services/monitoring/metrics.service');

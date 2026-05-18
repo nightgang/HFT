@@ -30,14 +30,16 @@ describe('API route versioning helper', () => {
 
   it('should register legacy and versioned route paths', () => {
     const app = {
-      use: jest.fn()
+      use: jest.fn(),
+      get: jest.fn()
     };
 
     registerRoutes(app);
 
-    expect(app.use).toHaveBeenCalledWith('/api/trading', expect.any(Object));
-    expect(app.use).toHaveBeenCalledWith('/api/v1/trading', expect.any(Object));
-    expect(app.use).toHaveBeenCalledWith('/api/users', expect.any(Object));
-    expect(app.use).toHaveBeenCalledWith('/api/v1/users', expect.any(Object));
+    expect(app.use).toHaveBeenCalledWith(['/api/trading', '/trading'], expect.any(Function));
+    expect(app.use).toHaveBeenCalledWith('/api/v1/trading', expect.any(Function));
+    expect(app.use).toHaveBeenCalledWith('/api/users', expect.any(Function));
+    expect(app.use).toHaveBeenCalledWith('/api/v1/users', expect.any(Function));
+    expect(app.get).toHaveBeenCalledWith('/sniper/status', expect.any(Function));
   });
 });

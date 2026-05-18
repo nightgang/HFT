@@ -30,7 +30,6 @@ const tradeHistoryAggregationService = require('../services/trade-history-aggreg
 const {
   createWalletSchema,
   connectWalletSchema,
-  multisigWalletSchema,
   taxExportRequestSchema,
   walletHierarchySchema,
   walletLimitsSchema,
@@ -1447,7 +1446,7 @@ router.post('/reports/weekly/:walletId', authenticate, async (req, res) => {
       alerts: analytics.alerts || []
     };
 
-    const result = await emailService.sendWeeklyReport(email, reportData);
+    await emailService.sendWeeklyReport(email, reportData);
     res.json({ success: true, message: 'Weekly report sent successfully', email });
   } catch (error) {
     logger.error('Weekly report error:', error);
@@ -1463,8 +1462,8 @@ router.post('/email/test', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email address required' });
     }
 
-    const result = await emailService.testConfiguration(email);
-    res.json(result);
+    const testResult = await emailService.testConfiguration(email);
+    res.json(testResult);
   } catch (error) {
     logger.error('Email test error:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -1479,7 +1478,7 @@ router.post('/alerts/trade', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email and trade data required' });
     }
 
-    const result = await emailService.sendTradeAlert(email, tradeData);
+    await emailService.sendTradeAlert(email, tradeData);
     res.json({ success: true, message: 'Trade alert sent successfully', email });
   } catch (error) {
     logger.error('Trade alert error:', error);
@@ -1495,7 +1494,7 @@ router.post('/alerts/system', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email and alert data required' });
     }
 
-    const result = await emailService.sendSystemAlert(email, alertData);
+    await emailService.sendSystemAlert(email, alertData);
     res.json({ success: true, message: 'System alert sent successfully', email });
   } catch (error) {
     logger.error('System alert error:', error);

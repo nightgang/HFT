@@ -77,7 +77,7 @@ class ErrorHandlingService {
         alertingService.sendAlert(
           this.mapSeverityToAlertSeverity(severity),
           `Error threshold exceeded: ${errorType}`,
-          `The ${severity} error \"${errorType}\" has occurred ${this.errorCounts[key]} times.`,
+          `The ${severity} error "${errorType}" has occurred ${this.errorCounts[key]} times.`,
           {
             errorType,
             severity,

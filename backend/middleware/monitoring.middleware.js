@@ -77,7 +77,7 @@ function requestLoggingMiddleware(req, res, next) {
 }
 
 // Error handling middleware
-function errorHandlingMiddleware(err, req, res, next) {
+function errorHandlingMiddleware(err, req, res, _next) {
   const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   let statusCode = err.statusCode || err.status || 500;

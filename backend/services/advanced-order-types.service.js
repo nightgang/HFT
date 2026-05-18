@@ -79,7 +79,7 @@ class AdvancedOrderTypesService {
   /**
    * Internal helper to perform the actual trade via the trading engine.
    */
-  async _executeTrade(order, currentPrice) {
+  async _executeTrade(order, _currentPrice) {
     const tradeRequest = {
       inputMint: order.input_token_mint,
       outputMint: order.output_token_mint,

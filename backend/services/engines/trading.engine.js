@@ -76,6 +76,77 @@ class TradingEngine {
     }
   }
 
+  async createMultisigWallet(name, signers, threshold, multisigAddress, notes = null) {
+    try {
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        throw new Error('Multisig wallet requires a name');
+      }
+
+      if (!Array.isArray(signers) || signers.length < 2) {
+        throw new Error('Multisig wallet requires at least 2 signers');
+      }
+
+      if (!Number.isInteger(threshold) || threshold < 2 || threshold > signers.length) {
+        throw new Error('Invalid multisig threshold');
+      }
+
+      if (multisigAddress != null && typeof multisigAddress !== 'string') {
+        throw new Error('Invalid multisig address');
+      }
+
+      if (notes != null && typeof notes !== 'string') {
+        throw new Error('Invalid notes');
+      }
+
+      const walletData = {
+        wallet_address: multisigAddress || `multisig-${Date.now()}`,
+        wallet_name: name.trim(),
+        multisig_signers: signers,
+        multisig_threshold: threshold,
+        multisig_address: multisigAddress || null,
+        notes: notes || null,
+        metadata: {
+          created_via: 'multisig',
+          created_at: new Date().toISOString()
+        }
+      };
+
+      const savedWallet = await WalletModel.createMultisigWallet(walletData);
+      return {
+        walletId: savedWallet.wallet_id,
+        walletAddress: savedWallet.wallet_address,
+        walletName: savedWallet.wallet_name,
+        multisig: true,
+        signers: savedWallet.multisig_signers,
+        threshold: savedWallet.multisig_threshold,
+        multisigAddress: savedWallet.multisig_address,
+        notes: savedWallet.notes
+      };
+    } catch (error) {
+      logger.error('Failed to create multisig wallet:', error);
+      throw error;
+    }
+  }
+
+  async getMultisigWallets() {
+    try {
+      const wallets = await WalletModel.getMultisigWallets();
+      return wallets.map(wallet => ({
+        walletId: wallet.wallet_id,
+        walletAddress: wallet.wallet_address,
+        walletName: wallet.wallet_name,
+        signers: wallet.multisig_signers,
+        threshold: wallet.multisig_threshold,
+        multisigAddress: wallet.multisig_address,
+        notes: wallet.notes,
+        createdAt: wallet.created_at
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch multisig wallets:', error);
+      throw error;
+    }
+  }
+
   async getPortfolioSummary(walletAddress) {
     try {
       const wallet = await solanaWalletService.getWalletInfo(walletAddress);

@@ -695,7 +695,7 @@ class AdvancedBacktestingService {
     return null;
   }
 
-  checkMeanReversion(indicators, index, params) {
+  checkMeanReversion(indicators, index, _params) {
     const sma = indicators.sma_20[index];
     const price = indicators.sma_20[index]; // Proxy
     const deviation = params.deviation || 0.05;
@@ -727,7 +727,7 @@ class AdvancedBacktestingService {
     return null;
   }
 
-  calculateAdvancedAnalytics(priceSeries, trades, startCapital, feeBps) {
+  checkAdvancedAnalytics(priceSeries, trades, startCapital) {
     const buyTrades = trades.filter(t => t.type === 'BUY');
     const sellTrades = trades.filter(t => t.type === 'SELL');
     const winningTrades = sellTrades.filter(t => t.pnl > 0);
@@ -1135,14 +1135,12 @@ class AdvancedBacktestingService {
     return sum / windowSlice.length;
   }
 
-  calculateAnalytics(priceSeries, trades, startCapital, feeBps) {
-    const equityCurve = [];
-    let cash = startCapital;
-    let position = 0;
-    let lastTrade = null;
-    let tradeVolume = 0;
-    let wins = 0;
-    let losses = 0;
+calculateAnalytics(priceSeries, trades, startCapital) {
+      const equityCurve = [];
+      let cash = startCapital;
+      let position = 0;
+      let lastTrade = null;
+      let wins = 0;
     let closedTrades = [];
 
     const tradeQueue = [...trades];
