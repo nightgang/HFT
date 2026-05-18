@@ -195,6 +195,12 @@ class WebSocketServer {
         delete normalized.data;
         break;
       }
+      case 'AI_SIGNAL': {
+        normalized.type = 'ai-signal';
+        normalized.signal = normalized.data || {};
+        delete normalized.data;
+        break;
+      }
       default:
         break;
     }

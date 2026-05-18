@@ -30,6 +30,11 @@ class RealtimeService {
         this.broadcast(message);
       });
 
+      await subscribeChannel('ai.signal', async (payload) => {
+        const message = typeof payload === 'object' ? { type: 'ai-signal', signal: payload } : { type: 'ai-signal', data: payload };
+        this.broadcast(message);
+      });
+
       await subscribeChannel('trade.executed', async (payload) => {
         this.broadcast(payload);
       });

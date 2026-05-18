@@ -310,10 +310,45 @@ async def process_token_detected_event(payload: Dict[str, Any]):
         try:
             if redis_client:
                 await redis_client.publish('ai.prediction', json.dumps(result))
+                signal_payload = generate_ai_signal(result)
+                await redis_client.publish('ai.signal', json.dumps(signal_payload))
         except Exception as e:
-            logger.warning('Failed to publish AI prediction to EventBus: %s', e)
+            logger.warning('Failed to publish AI event to EventBus: %s', e)
     except Exception as exc:
         logger.error('Error processing token detected event: %s', exc)
+
+
+def generate_ai_signal(prediction: Dict[str, Any]) -> Dict[str, Any]:
+    signal_type = 'watch'
+    score = prediction.get('score', 0)
+    risk_level = prediction.get('riskLevel', 'Unknown')
+
+    if score >= 80 and risk_level == 'Low':
+        signal_type = 'strong_buy'
+    elif score >= 70 and risk_level in ['Low', 'Medium']:
+        signal_type = 'buy'
+    elif score >= 50:
+        signal_type = 'hold'
+    elif score >= 30:
+        signal_type = 'watch'
+    else:
+        signal_type = 'avoid'
+
+    return {
+        "type": "ai-signal",
+        "tokenMint": prediction.get('tokenMint'),
+        "signalType": signal_type,
+        "score": prediction.get('score'),
+        "recommendation": prediction.get('recommendation'),
+        "confidence": prediction.get('confidence'),
+        "riskLevel": prediction.get('riskLevel'),
+        "modelVersion": prediction.get('modelVersion'),
+        "timestamp": prediction.get('timestamp'),
+        "meta": {
+            "source": "ai-service",
+            "channel": "ai.signal"
+        }
+    }
 
 
 async def event_bus_listener():

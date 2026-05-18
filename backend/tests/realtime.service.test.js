@@ -35,6 +35,7 @@ describe('RealtimeService', () => {
     expect(eventBus.initialize).toHaveBeenCalled();
     expect(eventBus.subscribe).toHaveBeenCalledWith('token.detected', expect.any(Function));
     expect(eventBus.subscribe).toHaveBeenCalledWith('ai.prediction', expect.any(Function));
+    expect(eventBus.subscribe).toHaveBeenCalledWith('ai.signal', expect.any(Function));
     expect(eventBus.subscribe).toHaveBeenCalledWith('trade.executed', expect.any(Function));
     expect(eventBus.subscribe).toHaveBeenCalledWith('trade.failed', expect.any(Function));
     expect(eventBus.subscribe).toHaveBeenCalledWith('trade.retry', expect.any(Function));
@@ -65,6 +66,24 @@ describe('RealtimeService', () => {
       type: 'ai-prediction',
       tokenMint: 'Token123',
       recommendation: 'BUY'
+    });
+  });
+
+  it('should normalize ai.signal payloads before broadcasting', async () => {
+    await realtimeService.initialize();
+
+    const payload = {
+      tokenMint: 'Token123',
+      signalType: 'strong_buy',
+      score: 92,
+      confidence: 0.93,
+    };
+
+    await channelHandlers['ai.signal'](payload);
+
+    expect(websocketServer.broadcast).toHaveBeenCalledWith({
+      type: 'ai-signal',
+      signal: payload
     });
   });
 

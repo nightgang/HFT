@@ -46,9 +46,8 @@
 
 ### Medium Priority
 - [ ] Configure horizontal scaling (Kubernetes)
-- [ ] Set up CI/CD pipeline
-- [ ] Implement rate limiting for API endpoints
-- [ ] Add API versioning strategy
+- [x] Implement rate limiting for API endpoints
+- [x] Add API versioning strategy
 
 ### Low Priority
 - [ ] Set up distributed tracing (Jaeger)

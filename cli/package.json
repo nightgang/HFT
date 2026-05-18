@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node hft-terminal.js",
     "demo": "node hft-terminal.js --demo",
-    "dev": "node hft-terminal.js"
+    "dev": "node hft-terminal.js",
+    "test": "node test/hft-terminal.test.js"
   },
   "dependencies": {
     "axios": "^1.6.0",

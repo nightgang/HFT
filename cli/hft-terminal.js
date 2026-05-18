@@ -26,7 +26,7 @@ if (!API_BASE || !HFT_WS_URL) {
 const AVAILABLE_COMMANDS = [
   'start', 'stop', 'status', 'health', 'buy', 'sell', 'select', 'wallets', 'usewallet',
   'predict', 'risk', 'positions', 'tokens', 'history', 'trades', 'orders', 'cancel-order',
-  'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
+  'ai-signals', 'risk-heatmap', 'risk-correlation', 'alerts', 'ack-alert', 'sentiment', 'pnl',
   'portfolio', 'settings', 'export-trades', 'help', 'exit', 'toggle', 'autotrade'
 ];
 
@@ -170,7 +170,9 @@ class HFTSystemTerminal {
     this.selectedWallet = null;
     this.latestArbitrageSignal = null;
     this.latestSmartMoneySignal = null;
+    this.latestAiSignal = null;
     this.latestPriceUpdate = null;
+    this.aiSignals = [];
     this.tradeRetryCount = 0;
     this.commandHistory = [];
     this.availableCommands = AVAILABLE_COMMANDS;
@@ -311,7 +313,8 @@ class HFTSystemTerminal {
             'trade-retry',
             'arbitrage-signal',
             'smartmoney-signal',
-            'ai-prediction'
+            'ai-prediction',
+            'ai-signal'
           ]
         }));
       });
@@ -402,6 +405,10 @@ class HFTSystemTerminal {
       case 'ai-prediction':
         this.displayAiPrediction(message);
         break;
+      case 'AI_SIGNAL':
+      case 'ai-signal':
+        this.displayAiSignal(message.signal || message.data || message);
+        break;
       case 'PRICE_UPDATE':
       case 'price-update':
         this.displayPriceUpdate(message.price || message.data || message);
@@ -476,6 +483,27 @@ class HFTSystemTerminal {
     this.rl.prompt();
   }
 
+  displayAiSignal(signal) {
+    if (!signal) return;
+    this.latestAiSignal = signal;
+    this.aiSignals.unshift(signal);
+    if (this.aiSignals.length > 20) this.aiSignals.pop();
+
+    const confidenceValue = signal.confidence != null ? (signal.confidence * 100).toFixed(1) : null;
+    const confidenceText = confidenceValue ? `${confidenceValue}%` : 'N/A';
+    const confidenceStyle = signal.confidence != null && signal.confidence >= 0.85 ? STYLES.green : STYLES.cyan;
+
+    console.log(`\n🤖 AI SIGNAL: ${signal.tokenMint || signal.mint || signal.token || 'UNKNOWN'} - ${signal.signalType || signal.recommendation || 'N/A'}`);
+    console.log(`   Score: ${signal.score != null ? signal.score : 'N/A'}`);
+    console.log(`   Confidence: ${styleText(confidenceText, confidenceStyle)}`);
+    console.log(`   Risk: ${signal.riskLevel || 'N/A'}`);
+    if (signal.confidence != null && signal.confidence >= 0.85) {
+      console.log(styleText('   High confidence AI signal detected', STYLES.green));
+    }
+    this.updateStatusBar();
+    this.rl.prompt();
+  }
+
   displayPriceUpdate(price) {
     if (!price) return;
     this.latestPriceUpdate = price;
@@ -490,8 +518,9 @@ class HFTSystemTerminal {
     const percent = this.formatPercentage(this.pnlData.pnlPercentage);
     const arb = this.latestArbitrageSignal ? 'A' : '-';
     const smart = this.latestSmartMoneySignal ? 'S' : '-';
+    const ai = this.aiSignals.length ? 'AI' : '-';
     const price = this.latestPriceUpdate ? 'P' : '-';
-    process.title = `HFT-SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades} | Arb:${arb} Smart:${smart} Price:${price} Retries:${this.tradeRetryCount}`;
+    process.title = `HFT-SYSTEM TERMINAL | PnL: ${pnl} (${percent}) | Trades: ${this.pnlData.activeTrades} | Arb:${arb} Smart:${smart} AI:${ai} Price:${price} Retries:${this.tradeRetryCount}`;
   }
 
   /**
@@ -505,6 +534,7 @@ class HFTSystemTerminal {
     const latestArb = this.latestArbitrageSignal ? `${(this.latestArbitrageSignal.tokenMint || this.latestArbitrageSignal.mint || this.latestArbitrageSignal.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
     const latestSmartMoney = this.latestSmartMoneySignal ? `${(this.latestSmartMoneySignal.walletAddress || this.latestSmartMoneySignal.tokenMint || this.latestSmartMoneySignal.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
     const latestPrice = this.latestPriceUpdate ? `${(this.latestPriceUpdate.tokenMint || this.latestPriceUpdate.mint || this.latestPriceUpdate.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
+    const latestAiSignal = this.latestAiSignal ? `${(this.latestAiSignal.tokenMint || this.latestAiSignal.mint || this.latestAiSignal.token || 'UNKNOWN').slice(0, 8)}...` : 'None';
 
     console.log('\n' + renderPanel('HFT-SYSTEM', [
       styleText('Unified CLI dashboard matching frontend HFT-SYSTEM experience.', STYLES.gray),
@@ -516,6 +546,7 @@ class HFTSystemTerminal {
       panelLine('Auto Trade', this.autoTradeEnabled ? styleText('ENABLED', STYLES.green) : styleText('DISABLED', STYLES.red)),
       panelLine('Last Arb', latestArb),
       panelLine('Last SmartMoney', latestSmartMoney),
+      panelLine('AI Signals', `${this.aiSignals.length} total / ${this.aiSignals.filter((signal) => (signal.confidence ?? 0) >= 0.85).length} high`),
       panelLine('Last Price', latestPrice),
       panelLine('Retry Count', String(this.tradeRetryCount))
     ]) + demoDisplay);
@@ -530,8 +561,8 @@ class HFTSystemTerminal {
       `${styleText('wallets', STYLES.cyan)} ${styleText('- List configured wallets', STYLES.gray)}`,
       `${styleText('usewallet <pk>', STYLES.cyan)} ${styleText('- Select wallet for trades', STYLES.gray)}`,
       `${styleText('predict <mint>', STYLES.cyan)} ${styleText('- Request AI signal for token', STYLES.gray)}`,
+      `${styleText('ai-signals [high]', STYLES.cyan)} ${styleText('- Show recent AI signals, optionally only high-confidence', STYLES.gray)}`,
       `${styleText('risk <mint>', STYLES.cyan)} ${styleText('- Request token risk assessment', STYLES.gray)}`,
-      `${styleText('positions', STYLES.cyan)} ${styleText('- Show active positions', STYLES.gray)}`,
       `${styleText('tokens', STYLES.cyan)} ${styleText('- Show recent token detections', STYLES.gray)}`,
       `${styleText('history / trades', STYLES.cyan)} ${styleText('- Show trade history', STYLES.gray)}`,
       `${styleText('orders', STYLES.cyan)} ${styleText('- Show advanced orders', STYLES.gray)}`,
@@ -607,6 +638,10 @@ class HFTSystemTerminal {
           break;
         case 'tokens':
           await this.showTokens();
+          break;
+        case 'ai-signals':
+        case 'ai-signal':
+          await this.showAiSignals(args[0]);
           break;
         case 'history':
         case 'trades':
@@ -763,6 +798,39 @@ class HFTSystemTerminal {
     } catch (error) {
       console.log(styleText('❌ Failed to get health:', STYLES.red), error.response?.data?.error || error.message);
     }
+  }
+
+  async showAiSignals(filter = 'all') {
+    const signals = this.aiSignals || [];
+    const highConfidence = signals.filter((signal) => (signal.confidence ?? 0) >= 0.85);
+    const displaySignals = filter === 'high' ? highConfidence : signals;
+    const title = filter === 'high' ? 'AI SIGNALS (HIGH CONFIDENCE)' : 'AI SIGNALS';
+
+    if (!signals.length) {
+      console.log('\n🤖 AI SIGNALS: No recent AI signals available.');
+      return;
+    }
+
+    if (!displaySignals.length) {
+      console.log(`\n🤖 ${title}: No matching signals found.`);
+      return;
+    }
+
+    const lines = [
+      panelLine('Total Signals', String(signals.length)),
+      panelLine('High Confidence', String(highConfidence.length)),
+      panelLine('Filter', filter === 'high' ? 'high confidence' : 'all'),
+      panelLine('Latest Signal', signals[0].tokenMint || signals[0].token || 'UNKNOWN'),
+      ''
+    ];
+
+    displaySignals.slice(0, 6).forEach((signal) => {
+      const confidence = signal.confidence != null ? `${(signal.confidence * 100).toFixed(0)}%` : 'N/A';
+      const label = signal.signalType || signal.recommendation || 'signal';
+      lines.push(`${signal.tokenMint || signal.token || 'UNKNOWN'} | ${label.toUpperCase()} | ${confidence} | Risk: ${signal.riskLevel || 'N/A'}`);
+    });
+
+    console.log('\n' + renderPanel(title, lines));
   }
 
   async executeTrade(side, amount) {

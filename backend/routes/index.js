@@ -30,11 +30,36 @@ const routeDefinitions = [
   { path: '/api', router: advancedFeaturesRoutes },
 ];
 
+function getVersionedPath(basePath) {
+  if (basePath === '/api') {
+    return '/api/v1';
+  }
+
+  if (basePath.startsWith('/api/')) {
+    return `/api/v1${basePath.slice(4)}`;
+  }
+
+  return null;
+}
+
 function registerRoutes(app) {
-  routeDefinitions.forEach(({ path, router }) => app.use(path, router));
+  routeDefinitions.forEach(({ path, router }) => {
+    app.use(path, router);
+
+    const paths = Array.isArray(path) ? path : [path];
+    paths.forEach((basePath) => {
+      const versionedPath = getVersionedPath(basePath);
+      if (versionedPath) {
+        app.use(versionedPath, router);
+      }
+    });
+  });
 
   // Legacy routes: preserve older frontend/CLI paths
   app.get('/sniper/status', (req, res) => res.redirect('/api/sniper/status'));
 }
 
-module.exports = registerRoutes;
+module.exports = {
+  registerRoutes,
+  getVersionedPath
+};

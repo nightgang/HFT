@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { NavLink } from "react-router-dom";
 import { createChart } from "lightweight-charts";
 import {
   LayoutDashboard, Terminal, Zap, Wallet, Target, Briefcase,
@@ -16,6 +17,7 @@ import {
   useGetSystemStatus,
   useRealtimeDashboardData,
 } from "../hooks";
+import { formatSignalConfidence, getSignalConfidenceClass } from "../hooks/aiSignalHelpers.js";
 
 /* ══════════════════════════════════════════════════════════════════════════
    CONSTANTS & DATA
@@ -611,12 +613,14 @@ const Dashboard = ({ dashboardConfig = {} }) => {
   };
 
   const RealtimeSummaryPanel = () => {
-    const aiCount = realtime.aiPredictions?.length || 0;
+    const aiPredictionCount = realtime.aiPredictions?.length || 0;
+    const aiSignalCount = realtime.aiSignals?.length || 0;
+    const highConfidenceAiSignals = realtime.aiSignals?.filter((signal) => (signal.confidence ?? 0) >= 0.85).length || 0;
     const arbCount = realtime.arbitrageSignals?.length || 0;
     const smartCount = realtime.smartMoneySignals?.length || 0;
     const priceCount = realtime.priceUpdates?.length || 0;
     const retryCount = realtime.tradeRetries?.length || 0;
-    const totalCount = aiCount + arbCount + smartCount + priceCount + retryCount;
+    const totalCount = aiPredictionCount + aiSignalCount + arbCount + smartCount + priceCount + retryCount;
 
     if (totalCount === 0) return null;
 
@@ -625,12 +629,16 @@ const Dashboard = ({ dashboardConfig = {} }) => {
         <SectionLabel label="Realtime Summary" right={<span className="pill">Live</span>} />
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-black/30 rounded-xl p-3 border border-white/10">
-            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">AI Signals</div>
-            <div className="text-lg font-bold text-white">{aiCount}</div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">AI Predictions</div>
+            <div className="text-lg font-bold text-white">{aiPredictionCount}</div>
           </div>
           <div className="bg-black/30 rounded-xl p-3 border border-white/10">
-            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Arbitrage</div>
-            <div className="text-lg font-bold text-white">{arbCount}</div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">AI Signals</div>
+            <div className="text-lg font-bold text-white">{aiSignalCount}</div>
+          </div>
+          <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">High Confidence</div>
+            <div className="text-lg font-bold text-emerald-300">{highConfidenceAiSignals}</div>
           </div>
           <div className="bg-black/30 rounded-xl p-3 border border-white/10">
             <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Smart Money</div>
@@ -649,6 +657,73 @@ const Dashboard = ({ dashboardConfig = {} }) => {
     );
   };
 
+  const AiSignalsChartPanel = () => {
+    const aiSignals = realtime.aiSignals || [];
+    const highConfidenceSignals = aiSignals.filter((signal) => (signal.confidence ?? 0) >= 0.85);
+    const avgConfidence = aiSignals.length
+      ? Math.round(aiSignals.reduce((sum, signal) => sum + ((signal.confidence ?? 0) > 1 ? signal.confidence : (signal.confidence ?? 0) * 100), 0) / aiSignals.length)
+      : 0;
+    const displaySignals = aiSignals.slice(0, 10).reverse();
+
+    return (
+      <div className="feed-card">
+        <SectionLabel
+          label="AI Signal Radar"
+          right={<span className="pill">{aiSignals.length} live</span>}
+        />
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3 text-xs text-gray-400">
+            <div className="rounded-3xl border border-white/10 bg-black/30 p-3">
+              <div className="uppercase tracking-[0.24em] text-[10px] text-gray-500">High Confidence</div>
+              <div className="mt-2 text-lg font-semibold text-emerald-300">{highConfidenceSignals.length}</div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-black/30 p-3">
+              <div className="uppercase tracking-[0.24em] text-[10px] text-gray-500">Avg Confidence</div>
+              <div className="mt-2 text-lg font-semibold text-cyan-300">{avgConfidence ? `${avgConfidence}%` : 'N/A'}</div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-black/30 p-3">
+              <div className="uppercase tracking-[0.24em] text-[10px] text-gray-500">Last Signal</div>
+              <div className="mt-2 text-lg font-semibold text-white">{aiSignals[0]?.tokenMint || aiSignals[0]?.token || 'None'}</div>
+            </div>
+          </div>
+          <div className="h-24 rounded-3xl border border-white/10 bg-black/30 p-3">
+            <div className="flex h-full items-end gap-2 px-1">
+              {displaySignals.length ? displaySignals.map((signal, idx) => {
+                const normalized = signal.confidence != null ? (signal.confidence > 1 ? signal.confidence : signal.confidence * 100) : 0;
+                const barHeight = Math.max(14, Math.round(normalized));
+                return (
+                  <div key={`${signal.tokenMint || signal.token || signal.signalType || idx}-${idx}`} className="flex-1 rounded-t-xl overflow-hidden bg-white/5" title={`${signal.tokenMint || signal.token || 'UNKNOWN'} — ${formatSignalConfidence(signal.confidence)}`}>
+                    <div
+                      className={`h-full rounded-t-xl ${getSignalConfidenceClass(signal.confidence)}`}
+                      style={{ height: `${barHeight}%` }}
+                    />
+                  </div>
+                );
+              }) : (
+                <div className="flex items-center justify-center h-full text-xs text-gray-500">Waiting for AI signals...</div>
+              )}
+            </div>
+          </div>
+          <div className="grid gap-2">
+            {highConfidenceSignals.length > 0 ? highConfidenceSignals.slice(0, 3).map((signal, idx) => (
+              <div key={`${signal.tokenMint || signal.token || idx}-${idx}`} className="rounded-3xl border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-3 text-sm font-semibold text-white">
+                  <span>{signal.tokenMint || signal.token || 'UNKNOWN'}</span>
+                  <span className={`rounded-full px-2 py-1 text-[11px] font-bold ${getSignalConfidenceClass(signal.confidence)}`}>
+                    {formatSignalConfidence(signal.confidence)}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-400 pt-1">{signal.signalType ? signal.signalType.replace(/_/g, ' ').toUpperCase() : signal.recommendation || 'Signal'}</div>
+              </div>
+            )) : (
+              <div className="rounded-3xl border border-white/10 bg-black/30 p-3 text-xs text-gray-500">No high-confidence AI signals available.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const AiPredictionsPanel = () => {
     const aiPredictions = realtime.aiPredictions || [];
     return (
@@ -660,6 +735,23 @@ const Dashboard = ({ dashboardConfig = {} }) => {
               <div className="text-xs text-gray-300">{p.recommendation || p.model || ''} — score {p.score ?? p.data?.score ?? 'N/A'}</div>
             </div>
             <div className="text-right text-xs text-gray-400">{formatRealtimeTimestamp(p.timestamp || p.receivedAt)}</div>
+          </div>
+        ))}
+      </RealtimePanel>
+    );
+  };
+
+  const AiSignalsPanel = () => {
+    const aiSignals = realtime.aiSignals || [];
+    return (
+      <RealtimePanel title="AI Signals" count={aiSignals.length}>
+        {aiSignals.map((signal, idx) => (
+          <div key={signal.tokenMint || signal.signalType || idx} className="p-2 bg-black/30 rounded-md">
+            <div className="text-sm font-semibold text-white">{signal.tokenMint || signal.token || 'UNKNOWN'}</div>
+            <div className="text-xs text-gray-300">{signal.signalType ? signal.signalType.replace(/_/g, ' ').toUpperCase() : signal.recommendation || 'signal'}</div>
+            <div className="text-xs text-gray-300">Score: {signal.score != null ? signal.score : 'N/A'} · Conf: {signal.confidence != null ? `${(signal.confidence * 100).toFixed(0)}%` : 'N/A'}</div>
+            <div className="text-xs text-gray-300">Risk: {signal.riskLevel || 'N/A'}</div>
+            <div className="text-right text-[10px] text-gray-500">{formatRealtimeTimestamp(signal.timestamp || signal.receivedAt)}</div>
           </div>
         ))}
       </RealtimePanel>
@@ -1525,12 +1617,74 @@ const Dashboard = ({ dashboardConfig = {} }) => {
   /* ══════════════════════════════════════════════════════════════════════
      19 · AI SIGNAL CENTER  (right-panel in Desktop, standalone in Mobile)
      ══════════════════════════════════════════════════════════════════════ */
-  const SignalCenter = () => (
-    <div className="feed-card">
-      <SectionLabel label="AI Signal Center" right={<span className="pill purple">Conf 93%</span>} />
-      {SIGNALS.map((s) => <InsightRow key={s.label} {...s} />)}
-    </div>
+  const QuickSignalsCard = () => (
+    <NavLink
+      to="/signals"
+      className="group rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950/70 to-black/40 p-6 transition hover:border-purple-400/30 hover:bg-purple-500/10"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-[0.24em] text-gray-400">Fast access</div>
+          <h3 className="mt-3 text-xl font-semibold text-white">AI Signals Hub</h3>
+          <p className="mt-2 text-sm leading-6 text-gray-400">
+            Open the dedicated AI Signals page for live high-confidence signal analytics.
+          </p>
+        </div>
+        <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-cyan-500/10 text-cyan-300 transition group-hover:bg-cyan-500/20">
+          <Brain className="w-6 h-6" />
+        </div>
+      </div>
+      <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
+        <span>View signals</span>
+        <ChevronRight size={14} />
+      </div>
+    </NavLink>
   );
+
+  const SignalCenter = () => {
+    const aiSignals = realtime.aiSignals || [];
+    const highConfidenceCount = aiSignals.filter((signal) => (signal.confidence ?? 0) >= 0.85).length;
+    const topSignals = aiSignals.slice(0, 3);
+
+    return (
+      <div className="feed-card">
+        <SectionLabel
+          label="AI Signal Center"
+          right={
+            <span className="pill purple">
+              {aiSignals.length ? `${aiSignals.length} active` : 'Waiting'}
+            </span>
+          }
+        />
+        {aiSignals.length > 0 ? (
+          <div className="space-y-3">
+            <div className="text-[10px] text-gray-400 uppercase tracking-[0.24em]">High confidence signals</div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-semibold text-white">{highConfidenceCount}</span>
+              <span className="text-xs text-gray-400">high confidence</span>
+            </div>
+            {topSignals.map((signal, idx) => (
+              <div key={`${signal.tokenMint || signal.token || signal.signalType || idx}-${idx}`} className="rounded-3xl border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold text-white">{signal.tokenMint || signal.token || 'UNKNOWN'}</div>
+                    <div className="text-xs text-gray-400">{signal.signalType ? signal.signalType.replace(/_/g, ' ').toUpperCase() : signal.recommendation || 'Signal'}</div>
+                  </div>
+                  <div className={`rounded-full px-2 py-1 text-[11px] font-bold ${getSignalConfidenceClass(signal.confidence)}`}>
+                    {formatSignalConfidence(signal.confidence)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-white/10 bg-black/30 p-4 text-xs text-gray-500">
+            Waiting for AI signals to populate the signal center.
+          </div>
+        )}
+      </div>
+    );
+  };
 
   /* ══════════════════════════════════════════════════════════════════════
      20 · DESKTOP VIEW
@@ -1542,6 +1696,11 @@ const Dashboard = ({ dashboardConfig = {} }) => {
         {/* ── Stats Row ── */}
         <div className="dsk-stats-grid">
           {STATS.map((s) => <StatCard key={s.label} {...s} />)}
+        </div>
+
+        {/* ── Quick Access ── */}
+        <div className="grid gap-4 pb-6 xl:grid-cols-[1.5fr_auto]">
+          <QuickSignalsCard />
         </div>
 
         {/* ── Chart Panel ── */}
@@ -1575,6 +1734,7 @@ const Dashboard = ({ dashboardConfig = {} }) => {
         </div>
 
         <RealtimeSummaryPanel />
+        <AiSignalsChartPanel />
 
         {/* ── Lower grid: TradeTabs / Trades / Right col ── */}
         <div className="dsk-low-grid">
@@ -1640,6 +1800,10 @@ const Dashboard = ({ dashboardConfig = {} }) => {
           {STATS.map((s) => <StatCard key={s.label} {...s} />)}
         </div>
 
+        <div className="pb-4">
+          <QuickSignalsCard />
+        </div>
+
         {/* Chart */}
         <div className="mob-card chart-panel" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", borderTop: "none", borderLeft: "none", borderRight: "none" }}>
@@ -1657,10 +1821,8 @@ const Dashboard = ({ dashboardConfig = {} }) => {
               ))}
             </div>
           </div>
-          <div style={{ padding: 0, minHeight: 260 }}>
-            <MainPanel />
-          </div>
           <RealtimeSummaryPanel />
+          <AiSignalsChartPanel />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             {CC_MARKET.map((m) => (
               <div key={m.label} style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)", borderLeft: "1px solid rgba(255,255,255,0.04)" }}>
@@ -1684,9 +1846,8 @@ const Dashboard = ({ dashboardConfig = {} }) => {
 
         {/* Two-col: Signals + Wallet */}
         <div className="mob-2col-grid">
-          <div className="mob-card feed-card" style={{ padding: 14, minHeight: 0 }}>
-            <SectionLabel label="AI Signals" right={<span className="pill purple">93%</span>} />
-            {SIGNALS.map((s) => <InsightRow key={s.label} {...s} />)}
+          <div>
+            <AiSignalsPanel />
           </div>
           <div className="mob-card feed-card" style={{ padding: 14, minHeight: 0 }}>
             <SectionLabel label="Wallet" />
@@ -1849,6 +2010,7 @@ const Dashboard = ({ dashboardConfig = {} }) => {
   const RealtimeOverlay = () => {
     const hasPanels = [
       realtime.aiPredictions?.length,
+      realtime.aiSignals?.length,
       realtime.arbitrageSignals?.length,
       realtime.smartMoneySignals?.length,
       realtime.priceUpdates?.length,
@@ -1860,6 +2022,7 @@ const Dashboard = ({ dashboardConfig = {} }) => {
     return (
       <div className="fixed right-6 bottom-6 z-50 flex flex-col gap-3 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2">
         <AiPredictionsPanel />
+        <AiSignalsPanel />
         <ArbitrageSignalsPanel />
         <SmartMoneySignalsPanel />
         <PriceUpdatesPanel />

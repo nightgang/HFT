@@ -14,6 +14,7 @@ export { default as PnLDashboard } from './PnLDashboard';
 export { default as PerformanceAnalytics } from './PerformanceAnalytics';
 export { default as RiskHeatmap } from './RiskHeatmap';
 export { default as PredictiveAlerts } from './PredictiveAlerts';
+export { default as AiSignalsPage } from './AiSignalsPage';
 export { default as SentimentAnalysis } from './SentimentAnalysis';
 export { default as MarketScreener } from './MarketScreener';
 export { default as LiquidityPools } from './LiquidityPools';

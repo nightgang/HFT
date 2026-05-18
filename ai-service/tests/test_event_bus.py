@@ -51,16 +51,23 @@ class TestAIServiceEventBus(unittest.IsolatedAsyncioTestCase):
 
         await main.process_token_detected_event(payload)
 
-        main.redis_client.publish.assert_awaited_once()
-        channel, message = main.redis_client.publish.call_args.args
-        self.assertEqual(channel, "ai.prediction")
+        self.assertEqual(main.redis_client.publish.await_count, 2)
+        self.assertEqual(main.redis_client.publish.call_args_list[0][0][0], "ai.prediction")
+        self.assertEqual(main.redis_client.publish.call_args_list[1][0][0], "ai.signal")
 
-        published = json.loads(message)
+        published = json.loads(main.redis_client.publish.call_args_list[0][0][1])
         self.assertEqual(published["tokenMint"], "TokenTestMint1234567890abcdef")
         self.assertIn("recommendation", published)
         self.assertIn("score", published)
         self.assertIn("confidence", published)
         self.assertIn("riskLevel", published)
+
+        signal = json.loads(main.redis_client.publish.call_args_list[1][0][1])
+        self.assertEqual(signal["type"], "ai-signal")
+        self.assertEqual(signal["tokenMint"], "TokenTestMint1234567890abcdef")
+        self.assertIn("signalType", signal)
+        self.assertIn("confidence", signal)
+        self.assertIn("riskLevel", signal)
 
 if __name__ == "__main__":
     unittest.main()

@@ -375,6 +375,12 @@ ws://localhost:3000/ws/trades/{user_id}
 ├─ Status updates
 └─ Fills & partial fills
 
+// AI trading intelligence
+ws://localhost:3000/ws/ai
+├─ AI prediction payloads
+├─ Tactical ai.signal alerts
+└─ Strategy recommendations & confidence scores
+
 // Portfolio updates
 ws://localhost:3000/ws/portfolio/{user_id}
 ├─ Balance changes

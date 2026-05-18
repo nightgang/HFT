@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Link as LinkIcon,
   Activity,
+  Brain,
 } from "lucide-react";
 
 import {
@@ -28,6 +29,7 @@ import {
   CrossChainBridge,
   LiquidityPools,
   JitoBundles,
+  AiSignalsPage,
   Settings,
   PortfolioDashboard,
   PortfolioPage,
@@ -126,6 +128,12 @@ const routes = [
     label: "Alerts",
     icon: Bell,
     component: PredictiveAlerts,
+  },
+  {
+    path: "/signals",
+    label: "AI Signals",
+    icon: Brain,
+    component: AiSignalsPage,
   },
   {
     path: "/sentiment",

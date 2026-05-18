@@ -257,37 +257,40 @@ Built with React, Vite, and Tailwind CSS:
 
 ## 🔗 API Documentation
 
-### Base URL
+### Base URLs
 ```
-http://localhost:3000/api
+http://localhost:3001/api
+http://localhost:3001/api/v1
 ```
 
 ### Main Endpoints
 
 #### Authentication
-- `POST /auth/login` - User login
-- `POST /auth/logout` - User logout
-- `POST /auth/register` - New user registration
+- `POST /auth/login` - Admin login
+- `POST /auth/logout` - Admin logout
+- `POST /auth/register` - New user registration (user routes)
+- `POST /api/v1/users/login` - User login
+- `POST /api/v1/users/register` - User registration
 
 #### Trading
-- `POST /trades/execute` - Execute a trade
-- `GET /trades/history` - Get trade history
-- `GET /trades/:id` - Get trade details
+- `POST /api/v1/trading/trades/execute` - Execute a trade
+- `GET /api/v1/trading/trades/history` - Get trade history
+- `GET /api/v1/trading/trades/:id` - Get trade details
 
 #### Portfolio
-- `GET /portfolio` - Get portfolio overview
-- `GET /portfolio/balance` - Get current balance
+- `GET /api/v1/trading/portfolio` - Get portfolio overview
+- `GET /api/v1/trading/portfolio/balance` - Get current balance
 
 #### Advanced Features
-- `GET /advanced-orders` - List advanced orders
-- `POST /advanced-orders` - Create advanced order
-- `DELETE /advanced-orders/:id` - Cancel order
+- `GET /api/v1/advanced-orders` - List advanced orders
+- `POST /api/v1/advanced-orders` - Create advanced order
+- `DELETE /api/v1/advanced-orders/:id` - Cancel order
 
 #### System
-- `GET /health` - Health check
-- `GET /metrics` - Prometheus metrics
+- `GET /api/v1/health` - Health check
+- `GET /api/v1/metrics` - Prometheus metrics
 
-Full API documentation available at: `http://localhost:3000/api-docs` (Swagger UI)
+Full API documentation available at: `http://localhost:3001/api-docs` (Swagger UI)
 
 ---
 
@@ -470,6 +473,7 @@ The optional AI service provides:
 - Price prediction signals
 - Anomaly detection
 - Risk scoring
+- Actionable trading signals via the shared `ai.signal` EventBus channel
 
 To enable:
 

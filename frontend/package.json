@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/hooks/realtimeMessageParser.test.js"
+    "test": "node src/hooks/realtimeMessageParser.test.js && node src/hooks/aiSignalHelpers.test.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",

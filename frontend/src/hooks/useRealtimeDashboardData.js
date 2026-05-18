@@ -31,6 +31,7 @@ export const useRealtimeDashboardData = () => {
     wallets: null,
     systemStatus: null,
     aiPredictions: [],
+    aiSignals: [],
     arbitrageSignals: [],
     smartMoneySignals: [],
     priceUpdates: [],
@@ -90,6 +91,13 @@ export const useRealtimeDashboardData = () => {
           const existing = current.aiPredictions || [];
           const nextPred = { ...incoming, receivedAt: Date.now() };
           next.aiPredictions = [nextPred, ...existing].slice(0, 20);
+          break;
+        }
+        case "ai-signal": {
+          const incoming = getRealtimePayload(lastMessage) || {};
+          const existing = current.aiSignals || [];
+          const nextSignal = { ...incoming, receivedAt: Date.now() };
+          next.aiSignals = [nextSignal, ...existing].slice(0, 20);
           break;
         }
         case "arbitrage-signal": {

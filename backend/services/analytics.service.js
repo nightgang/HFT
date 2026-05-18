@@ -1,6 +1,6 @@
 // Analytics and Reporting Service
-const logger = require('../../utils/logger');
-const { query } = require('../../db/connection');
+const logger = require('../utils/logger');
+const { query } = require('../db/connection');
 const nodemailer = require('nodemailer');
 
 class AnalyticsService {
@@ -17,7 +17,7 @@ class AnalyticsService {
         secure: process.env.SMTP_PORT === '465',
         auth: {
           user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASSWORD
+          pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD
         }
       });
       logger.info('Analytics Service initialized with email support');

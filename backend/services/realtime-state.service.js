@@ -20,7 +20,7 @@
  *   katana.status | ai.prediction| autotrade-status | arbitrage.signal |
  *   smartmoney.signal | system-status
  */
-const logger = require('../../utils/logger');
+const logger = require('../utils/logger');
 
 // ── Channel → handled-state-key mapping ────────────────────────────────────────
 const CHANNEL_MAP = {
