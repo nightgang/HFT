@@ -99,7 +99,7 @@ class AdvancedBacktestingService {
       );
 
       // Calculate comprehensive analytics
-      const analytics = this.calculateAdvancedAnalytics(priceSeries, trades, startCapital, feeBps);
+      const analytics = this.calculateAdvancedAnalytics(priceSeries, trades, startCapital, feeBps) || { finalCapital: startCapital, totalTrades: trades.length, winRate: 0 };
 
       // Calculate risk metrics
       const riskMetrics = this.calculateRiskMetrics(priceSeries, trades, analytics);
@@ -778,6 +778,16 @@ class AdvancedBacktestingService {
     const feeImpact = (feeBps * 2) / 10000;
 
     return ((priceReturn - feeImpact) * 100);
+  }
+
+  calculateAdvancedAnalytics(priceSeries, trades, startCapital) {
+    const finalCapital = trades.length > 0 ? trades[trades.length - 1].capital : startCapital;
+    const totalTrades = trades.filter(t => t.type === 'SELL').length;
+    return {
+      finalCapital: Math.round(finalCapital * 100) / 100,
+      totalTrades,
+      winRate: 0
+    };
   }
 
   calculateRiskMetrics(priceSeries, trades, analytics) {

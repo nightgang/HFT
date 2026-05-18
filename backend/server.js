@@ -174,6 +174,16 @@ async function start() {
     }
   });
 
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      logger.error(`Port ${PORT} is already in use. Please free the port or set a different PORT.`);
+      process.exit(1);
+    } else {
+      logger.error('Server error:', error);
+      process.exit(1);
+    }
+  });
+
   websocketServer.start(websocketPort);
   websocketServer.initializeAutoTradeBroadcast();
   eventPoller.start();

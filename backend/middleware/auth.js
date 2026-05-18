@@ -191,9 +191,32 @@ const verifyWebhookSignature = (payload, signature) => {
   }
 };
 
+// Role-based authorization middleware
+const authorize = (allowedRoles = []) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
+      auditLogger.logSecurityEvent('UNAUTHORIZED_ROLE', {
+        endpoint: req.path,
+        method: req.method,
+        userRole: req.user.role,
+        requiredRoles: allowedRoles
+      }, req.ip, req.get('User-Agent'));
+      return res.status(403).json({
+        error: 'Insufficient permissions',
+        code: 'AUTH_INSUFFICIENT_ROLE'
+      });
+    }
+    next();
+  };
+};
+
 module.exports = {
   authenticate,
   authenticateApiKey,
+  authorize,
   encrypt,
   decrypt,
   generateToken,

@@ -162,8 +162,8 @@ class KeyService {
           userAgent
         ]);
       } catch (dbError) {
-        if (dbError.code === '42P01') { // Table doesn't exist
-          logger.warn('audit_logs table does not exist, creating security log in memory');
+        if (dbError.code === '42P01') {
+          logger.warn('audit_logs missing; fallback to mem log for stability');
         } else {
           throw dbError;
         }
