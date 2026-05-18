@@ -19,7 +19,7 @@ router.post('/predict', async (req, res) => {
     const prediction = await predictionEngine.scoreTrade(tokenMint, {
       ...metadata,
       marketData
-    });
+    }, req.id);
 
     res.json({
       success: true,
@@ -43,7 +43,7 @@ router.post('/risk-assessment', async (req, res) => {
     const riskResult = await predictionEngine.assessRisk(tokenMint, {
       metadata,
       marketData
-    });
+    }, req.id);
 
     res.json({
       success: true,

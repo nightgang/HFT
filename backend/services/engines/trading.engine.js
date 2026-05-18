@@ -58,6 +58,47 @@ class TradingEngine {
     }
   }
 
+  getTradeMode(tradeRequest) {
+    const mode = tradeRequest.mode ? String(tradeRequest.mode).toLowerCase() : 'live';
+    return ['paper', 'shadow'].includes(mode) ? mode : 'live';
+  }
+
+  isSimulationMode(mode) {
+    return mode === 'paper' || mode === 'shadow';
+  }
+
+  buildTradeRecord(tradeData, mode) {
+    const simulated = this.isSimulationMode(mode);
+    return {
+      ...tradeData,
+      strategy_type: simulated ? `${mode}_trading` : 'trading',
+      status: simulated ? mode : 'completed',
+      tx_signature: simulated ? null : tradeData.tx_signature,
+      tx_confirmation_status: simulated ? 'simulated' : tradeData.tx_confirmation_status,
+      notes: simulated ? `Simulated ${mode} trade - no on-chain broadcast` : tradeData.notes,
+      executed_at: tradeData.executed_at || new Date(),
+      settlement_at: simulated ? null : tradeData.settlement_at,
+      pnl_usd: tradeData.pnl_usd ?? 0,
+      pnl_percent: tradeData.pnl_percent ?? 0
+    };
+  }
+
+  async recordTradeMetrics(walletRecord, mode, tradeRecord) {
+    if (this.isSimulationMode(mode)) {
+      return;
+    }
+
+    await WalletModel.updatePerformance(walletRecord.wallet_id, {
+      total_trades: 1,
+      successful_trades: 1,
+      failed_trades: 0,
+      total_pnl: 0,
+      roi_percent: 0,
+      win_rate_percent: 100,
+      last_trade_at: new Date()
+    });
+  }
+
   async getWallets() {
     try {
       return await solanaWalletService.listWallets();
@@ -202,6 +243,7 @@ class TradingEngine {
       }
 
       const validated = tradeBuyRequestSchema.parse(tradeRequest);
+      const mode = this.getTradeMode(validated);
       const buyAmount = validated.amount || parseFloat(process.env.DEFAULT_BUY_AMOUNT_SOL || '0.1');
 
       if (!this.activeWallet) {
@@ -217,12 +259,6 @@ class TradingEngine {
       // Check if wallet is external (read-only)
       if (walletRecord.is_external) {
         throw new Error('Cannot execute trades with external wallets - use manual signing');
-      }
-
-      // Get keypair for signing
-      const keypair = await solanaWalletService.getKeypair(this.activeWallet.address);
-      if (!keypair) {
-        throw new Error('Failed to retrieve wallet keypair');
       }
 
       // Risk check before execution
@@ -247,12 +283,26 @@ class TradingEngine {
       const amountLamports = Math.floor(buyAmount * 1e9); // Convert SOL to lamports
 
       // Get best quote across all exchanges
+      const slippageBps = validated.slippageBps ?? parseInt(process.env.MAX_SLIPPAGE_BPS || '50');
       const quoteResult = await multiExchangeService.getBestQuote({
         inputMint: wsolMint,
         outputMint: validated.tokenMint,
         amount: amountLamports,
-        slippageBps: validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
+        slippageBps
       });
+
+      if (quoteResult.priceImpactPct && quoteResult.priceImpactPct > slippageBps / 100) {
+        logger.warn('Buy trade aborted: quote exceeds slippage tolerance', {
+          priceImpactPct: quoteResult.priceImpactPct,
+          slippageBps
+        });
+        return {
+          success: false,
+          error: 'Quote exceeds configured slippage tolerance',
+          slippageBps,
+          quote: quoteResult
+        };
+      }
 
       const quote = {
         inAmount: quoteResult.inAmount,
@@ -261,7 +311,9 @@ class TradingEngine {
         route: quoteResult.route,
         swapTransaction: quoteResult.swapTransaction,
         exchange: quoteResult.exchange,
-        exchangeName: quoteResult.exchangeName
+        exchangeName: quoteResult.exchangeName,
+        routeLiquidity: quoteResult.routeLiquidity,
+        qualityScore: quoteResult.qualityScore,
       };
 
       logger.info(`Best quote from ${quoteResult.exchangeName}: ${quoteResult.outAmount} tokens`);
@@ -271,7 +323,8 @@ class TradingEngine {
         wsolMint,
         validated.tokenMint,
         amountLamports,
-        quote.route || {}
+        quote.route || {},
+        slippageBps
       );
 
       if (!slippageSim.slippageProtection) {
@@ -294,21 +347,25 @@ class TradingEngine {
         };
       }
 
-      // Execute trade with best exchange
-      const result = await multiExchangeService.executeBestSwap(
-        quote,
-        {
-          publicKey: keypair.publicKey,
-          keypair: keypair
-        }
-      );
-
-      logger.info(`Buy executed successfully on ${quote.exchangeName}: ${result.txId}`);
+      // Execute trade or simulate depending on mode
+      let result;
+      if (this.isSimulationMode(mode)) {
+        result = {
+          signature: null,
+          outputAmount: quote.outAmount,
+          fee: 0,
+          priorityFee: 0,
+          simulated: true
+        };
+        logger.info(`Paper/shadow buy simulated for ${quote.exchangeName}`);
+      } else {
+        result = await multiExchangeService.executeBestSwap(quote, walletRecord);
+        logger.info(`Buy executed successfully on ${quote.exchangeName}: ${result.txId}`);
+      }
 
       // Record trade in database
-      const tradeData = {
+      const tradeData = this.buildTradeRecord({
         wallet_id: walletRecord.wallet_id,
-        strategy_type: 'trading',
         direction: 'buy',
         input_token_mint: wsolMint,
         input_token_symbol: 'SOL',
@@ -319,29 +376,24 @@ class TradingEngine {
         expected_price: quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
         actual_price: result.price || quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
         slippage_percent: quote.priceImpactPct || 0,
+        slippage_bps: slippageBps,
+        route_liquidity: quote.routeLiquidity,
+        quality_score: quote.qualityScore,
         transaction_fee: result.fee || 0,
         priority_fee: result.priorityFee || 0,
         total_cost_usd: buyAmount * 100, // Approximate USD value
         executed_at: new Date(),
         tx_signature: result.signature,
-        tx_confirmation_status: 'confirmed',
+        tx_confirmation_status: this.isSimulationMode(mode) ? 'simulated' : 'confirmed',
         pnl_usd: 0, // Will be calculated later
         pnl_percent: 0,
-        status: 'completed'
-      };
+        notes: this.isSimulationMode(mode) ? `Simulated ${mode} buy trade` : undefined
+      }, mode);
 
       const tradeRecord = await TradeModel.create(tradeData);
 
-      // Update wallet performance
-      await WalletModel.updatePerformance(walletRecord.wallet_id, {
-        total_trades: 1,
-        successful_trades: 1,
-        failed_trades: 0,
-        total_pnl: 0,
-        roi_percent: 0,
-        win_rate_percent: 100,
-        last_trade_at: new Date()
-      });
+      // Update wallet performance for live trades only
+      await this.recordTradeMetrics(walletRecord, mode, tradeRecord);
 
       // Publish trade execution event using the shared EventBus
       {
@@ -430,6 +482,7 @@ class TradingEngine {
       }
 
       const validated = tradeSellRequestSchema.parse(tradeRequest);
+      const mode = this.getTradeMode(validated);
 
       if (!this.activeWallet) {
         throw new Error('No active wallet set');
@@ -444,12 +497,6 @@ class TradingEngine {
       // Check if wallet is external (read-only)
       if (walletRecord.is_external) {
         throw new Error('Cannot execute trades with external wallets - use manual signing');
-      }
-
-      // Get keypair for signing
-      const keypair = await solanaWalletService.getKeypair(this.activeWallet.address);
-      if (!keypair) {
-        throw new Error('Failed to retrieve wallet keypair');
       }
 
       // Risk check before execution
@@ -475,12 +522,26 @@ class TradingEngine {
       const amountTokens = Math.floor(validated.amount * Math.pow(10, 6)); // Assume 6 decimals
 
       // Get best quote across all exchanges
+      const slippageBps = validated.slippageBps ?? parseInt(process.env.MAX_SLIPPAGE_BPS || '50');
       const quoteResult = await multiExchangeService.getBestQuote({
         inputMint: validated.tokenMint,
         outputMint: wsolMint,
         amount: amountTokens,
-        slippageBps: validated.slippageBps || parseInt(process.env.MAX_SLIPPAGE_BPS)
+        slippageBps
       });
+
+      if (quoteResult.priceImpactPct && quoteResult.priceImpactPct > slippageBps / 100) {
+        logger.warn('Sell trade aborted: quote exceeds slippage tolerance', {
+          priceImpactPct: quoteResult.priceImpactPct,
+          slippageBps
+        });
+        return {
+          success: false,
+          error: 'Quote exceeds configured slippage tolerance',
+          slippageBps,
+          quote: quoteResult
+        };
+      }
 
       const quote = {
         inAmount: quoteResult.inAmount,
@@ -489,15 +550,17 @@ class TradingEngine {
         route: quoteResult.route,
         swapTransaction: quoteResult.swapTransaction,
         exchange: quoteResult.exchange,
-        exchangeName: quoteResult.exchangeName
+        exchangeName: quoteResult.exchangeName,
+        routeLiquidity: quoteResult.routeLiquidity,
+        qualityScore: quoteResult.qualityScore,
       };
 
-      // MEV protection: Simulate slippage
       const slippageSim = await mevService.simulateSlippage(
         validated.tokenMint,
         wsolMint,
         amountTokens,
-        quote.route || {}
+        quote.route || {},
+        slippageBps
       );
 
       if (!slippageSim.slippageProtection) {
@@ -520,21 +583,25 @@ class TradingEngine {
         };
       }
 
-      // Execute trade with best exchange
-      const result = await multiExchangeService.executeBestSwap(
-        quote,
-        {
-          publicKey: keypair.publicKey,
-          keypair: keypair
-        }
-      );
-
-      logger.info(`Sell executed successfully on ${quote.exchangeName}: ${result.txId}`);
+      // Execute trade or simulate depending on mode
+      let result;
+      if (this.isSimulationMode(mode)) {
+        result = {
+          signature: null,
+          outputAmount: quote.outAmount,
+          fee: 0,
+          priorityFee: 0,
+          simulated: true
+        };
+        logger.info(`Paper/shadow sell simulated for ${quote.exchangeName}`);
+      } else {
+        result = await multiExchangeService.executeBestSwap(quote, walletRecord);
+        logger.info(`Sell executed successfully on ${quote.exchangeName}: ${result.txId}`);
+      }
 
       // Record trade in database
-      const tradeData = {
+      const tradeData = this.buildTradeRecord({
         wallet_id: walletRecord.wallet_id,
-        strategy_type: 'trading',
         direction: 'sell',
         input_token_mint: validated.tokenMint,
         input_amount: validated.amount,
@@ -545,29 +612,24 @@ class TradingEngine {
         expected_price: quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
         actual_price: result.price || quote.priceImpactPct ? (1 / (1 + quote.priceImpactPct / 100)) : 1,
         slippage_percent: quote.priceImpactPct || 0,
+        slippage_bps: slippageBps,
+        route_liquidity: quote.routeLiquidity,
+        quality_score: quote.qualityScore,
         transaction_fee: result.fee || 0,
         priority_fee: result.priorityFee || 0,
         total_cost_usd: validated.amount * 0.00001, // Approximate USD value
         executed_at: new Date(),
         tx_signature: result.signature,
-        tx_confirmation_status: 'confirmed',
+        tx_confirmation_status: this.isSimulationMode(mode) ? 'simulated' : 'confirmed',
         pnl_usd: 0, // Will be calculated later
         pnl_percent: 0,
-        status: 'completed'
-      };
+        notes: this.isSimulationMode(mode) ? `Simulated ${mode} sell trade` : undefined
+      }, mode);
 
       const tradeRecord = await TradeModel.create(tradeData);
 
-      // Update wallet performance
-      await WalletModel.updatePerformance(walletRecord.wallet_id, {
-        total_trades: 1,
-        successful_trades: 1,
-        failed_trades: 0,
-        total_pnl: 0,
-        roi_percent: 0,
-        win_rate_percent: 100,
-        last_trade_at: new Date()
-      });
+      // Update wallet performance for live trades only
+      await this.recordTradeMetrics(walletRecord, mode, tradeRecord);
 
       // Publish trade execution event using the shared EventBus
       {
@@ -640,6 +702,17 @@ class TradingEngine {
         error: error.message,
       };
     }
+  }
+
+  async executeTrade(tradeRequest) {
+    const type = tradeRequest.type ? String(tradeRequest.type).toLowerCase() : 'buy';
+    if (type === 'buy') {
+      return this.executeBuy(tradeRequest);
+    }
+    if (type === 'sell') {
+      return this.executeSell(tradeRequest);
+    }
+    throw new Error('Unsupported trade type. Use buy or sell.');
   }
 
   // Manual trade execution (for external wallets)

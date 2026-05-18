@@ -182,7 +182,14 @@ class JupiterService {
         // Sign the transaction
         const signedTransaction = await signTransaction(transaction);
 
-        // Step 4: Send and confirm transaction
+        // Step 4: Simulate before broadcasting
+        const simulation = await this.connection.simulateTransaction(signedTransaction);
+        if (simulation.value.err) {
+          logger.error('Transaction simulation failed:', simulation.value.err);
+          throw new Error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
+        }
+
+        // Step 5: Send and confirm transaction
         const signature = await this.connection.sendRawTransaction(signedTransaction.serialize());
         logger.info(`Transaction sent: ${signature}`);
 

@@ -84,6 +84,12 @@ router.get('/', async (req, res) => {
  *                 type: string
  *                 default: "m/44'/501'/0'/0'"
  *                 description: HD derivation path
+ *               type:
+ *                 type: string
+ *                 description: Wallet type (hot, treasury, hardware, standard, imported)
+ *               walletAddress:
+ *                 type: string
+ *                 description: External wallet address for treasury or hardware wallets
  *     responses:
  *       201:
  *         description: Wallet created successfully
@@ -94,7 +100,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, derivationPath } = req.body;
+    const { name, derivationPath, type, walletAddress } = req.body;
 
     if (!name) {
       return res.status(400).json({
@@ -105,7 +111,9 @@ router.post('/', async (req, res) => {
 
     const wallet = await solanaWalletService.createWallet({
       name,
-      derivationPath
+      derivationPath,
+      walletType: type,
+      walletAddress
     });
 
     res.status(201).json({
@@ -163,7 +171,7 @@ router.post('/import', async (req, res) => {
       });
     }
 
-    const wallet = await solanaWalletService.importWallet(privateKey, { name });
+    const wallet = await solanaWalletService.importWallet(privateKey, { name, walletType: type });
 
     res.status(201).json({
       success: true,
@@ -226,7 +234,8 @@ router.post('/import-mnemonic', async (req, res) => {
 
     const wallet = await solanaWalletService.importFromMnemonic(mnemonic, {
       name,
-      derivationPath
+      derivationPath,
+      walletType: type
     });
 
     res.status(201).json({

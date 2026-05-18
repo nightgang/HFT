@@ -30,6 +30,10 @@ class AdvancedBacktestingService {
     };
   }
 
+  getSupportedStrategies() {
+    return this.supportedStrategies;
+  }
+
   async runBacktest({
     tokenMint,
     strategy = 'moving_average_crossover',
@@ -727,7 +731,7 @@ class AdvancedBacktestingService {
     return null;
   }
 
-  checkAdvancedAnalytics(priceSeries, trades, startCapital) {
+  calculateAdvancedAnalytics(priceSeries, trades, startCapital, feeBps = 25) {
     const buyTrades = trades.filter(t => t.type === 'BUY');
     const sellTrades = trades.filter(t => t.type === 'SELL');
     const winningTrades = sellTrades.filter(t => t.pnl > 0);
@@ -737,7 +741,7 @@ class AdvancedBacktestingService {
     const winRate = totalTrades > 0 ? (winningTrades.length / totalTrades) * 100 : 0;
 
     const totalPnl = sellTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const totalReturn = (totalPnl / startCapital) * 100;
+    const totalReturn = startCapital > 0 ? (totalPnl / startCapital) * 100 : 0;
 
     const avgWin = winningTrades.length > 0 ?
       winningTrades.reduce((sum, t) => sum + t.pnl, 0) / winningTrades.length : 0;
@@ -747,15 +751,16 @@ class AdvancedBacktestingService {
     const profitFactor = Math.abs(avgLoss) > 0 ? avgWin / Math.abs(avgLoss) : 0;
 
     const totalFees = trades.reduce((sum, t) => sum + (t.fee || 0), 0);
-    const maxCapital = Math.max(...trades.map(t => t.capital));
+    const maxCapital = trades.length > 0 ? Math.max(...trades.map(t => t.capital)) : startCapital;
     const finalCapital = trades.length > 0 ? trades[trades.length - 1].capital : startCapital;
 
     return {
+      startCapital,
       totalTrades,
       winningTrades: winningTrades.length,
       losingTrades: losingTrades.length,
       winRate: Math.round(winRate * 100) / 100,
-      totalPnl,
+      totalPnl: Math.round(totalPnl * 100) / 100,
       totalReturn: Math.round(totalReturn * 100) / 100,
       avgWin: Math.round(avgWin * 100) / 100,
       avgLoss: Math.round(avgLoss * 100) / 100,
@@ -778,16 +783,6 @@ class AdvancedBacktestingService {
     const feeImpact = (feeBps * 2) / 10000;
 
     return ((priceReturn - feeImpact) * 100);
-  }
-
-  calculateAdvancedAnalytics(priceSeries, trades, startCapital) {
-    const finalCapital = trades.length > 0 ? trades[trades.length - 1].capital : startCapital;
-    const totalTrades = trades.filter(t => t.type === 'SELL').length;
-    return {
-      finalCapital: Math.round(finalCapital * 100) / 100,
-      totalTrades,
-      winRate: 0
-    };
   }
 
   calculateRiskMetrics(priceSeries, trades, analytics) {
@@ -942,6 +937,192 @@ class AdvancedBacktestingService {
       avgSharpeRatio: Math.round(avgSharpe * 100) / 100,
       tokenResults: results
     };
+  }
+
+  async runWalkForwardValidation({
+    tokenMint,
+    strategy = 'moving_average_crossover',
+    startCapital = 10000,
+    startDate,
+    endDate,
+    windowSizeDays = 60,
+    stepSizeDays = 20,
+    parameters = {},
+    feeBps = 25,
+    slippageBps = 10,
+    positionSizePercent = 100,
+    enableRiskManagement = true,
+    stopLossPercent = 5,
+    takeProfitPercent = 20
+  }) {
+    try {
+      if (!tokenMint) {
+        throw new Error('Token mint is required for walk-forward validation');
+      }
+
+      const start = startDate ? new Date(startDate) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate) : new Date();
+
+      if (end <= start) {
+        throw new Error('End date must be after start date');
+      }
+
+      const priceSeries = await this.getHistoricalPrices(tokenMint, start, end);
+      if (priceSeries.length < windowSizeDays + stepSizeDays) {
+        throw new Error('Insufficient historical data for walk-forward validation');
+      }
+
+      const windows = [];
+      let windowStartIndex = 0;
+
+      while (windowStartIndex + windowSizeDays + stepSizeDays <= priceSeries.length) {
+        const trainingSlice = priceSeries.slice(windowStartIndex, windowStartIndex + windowSizeDays);
+        const validationSlice = priceSeries.slice(windowStartIndex + windowSizeDays, windowStartIndex + windowSizeDays + stepSizeDays);
+
+        windows.push({ trainingSlice, validationSlice });
+        windowStartIndex += stepSizeDays;
+      }
+
+      const results = [];
+      for (const window of windows) {
+        const trainingStart = window.trainingSlice[0].date;
+        const trainingEnd = window.trainingSlice[window.trainingSlice.length - 1].date;
+        const validationStart = window.validationSlice[0].date;
+        const validationEnd = window.validationSlice[window.validationSlice.length - 1].date;
+
+        const trainingBacktest = await this.runBacktest({
+          tokenMint,
+          strategy,
+          startCapital,
+          startDate: trainingStart,
+          endDate: trainingEnd,
+          parameters,
+          feeBps,
+          slippageBps,
+          positionSizePercent,
+          enableRiskManagement,
+          stopLossPercent,
+          takeProfitPercent
+        });
+
+        const validationBacktest = await this.runBacktest({
+          tokenMint,
+          strategy,
+          startCapital,
+          startDate: validationStart,
+          endDate: validationEnd,
+          parameters,
+          feeBps,
+          slippageBps,
+          positionSizePercent,
+          enableRiskManagement,
+          stopLossPercent,
+          takeProfitPercent
+        });
+
+        results.push({
+          training: {
+            start: trainingStart,
+            end: trainingEnd,
+            analytics: trainingBacktest.analytics,
+            riskMetrics: trainingBacktest.riskMetrics,
+            trades: trainingBacktest.trades.length
+          },
+          validation: {
+            start: validationStart,
+            end: validationEnd,
+            analytics: validationBacktest.analytics,
+            riskMetrics: validationBacktest.riskMetrics,
+            trades: validationBacktest.trades.length
+          }
+        });
+      }
+
+      return {
+        success: true,
+        tokenMint,
+        strategy,
+        windows: results,
+        windowSizeDays,
+        stepSizeDays,
+        totalWindows: results.length,
+        generatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      logger.error('Walk-forward validation error:', error);
+      return {
+        success: false,
+        error: error.message,
+        tokenMint,
+        strategy
+      };
+    }
+  }
+
+  async runPaperTrading({
+    tokenMint,
+    strategy = 'moving_average_crossover',
+    startCapital = 10000,
+    startDate,
+    endDate,
+    parameters = {},
+    feeBps = 25,
+    slippageBps = 10,
+    positionSizePercent = 100,
+    enableRiskManagement = true,
+    stopLossPercent = 5,
+    takeProfitPercent = 20
+  }) {
+    const result = await this.runBacktest({
+      tokenMint,
+      strategy,
+      startCapital,
+      startDate,
+      endDate,
+      parameters,
+      feeBps,
+      slippageBps,
+      positionSizePercent,
+      enableRiskManagement,
+      stopLossPercent,
+      takeProfitPercent
+    });
+    result.mode = 'paper';
+    result.trades = result.trades.map(trade => ({ ...trade, simulated: true }));
+    return result;
+  }
+
+  async runShadowMode({
+    tokenMint,
+    strategy = 'moving_average_crossover',
+    startCapital = 10000,
+    startDate,
+    endDate,
+    parameters = {},
+    feeBps = 25,
+    slippageBps = 10,
+    positionSizePercent = 100,
+    enableRiskManagement = true,
+    stopLossPercent = 5,
+    takeProfitPercent = 20
+  }) {
+    const result = await this.runBacktest({
+      tokenMint,
+      strategy,
+      startCapital,
+      startDate,
+      endDate,
+      parameters,
+      feeBps,
+      slippageBps,
+      positionSizePercent,
+      enableRiskManagement,
+      stopLossPercent,
+      takeProfitPercent
+    });
+    result.mode = 'shadow';
+    result.trades = result.trades.map(trade => ({ ...trade, simulated: true, shadow: true }));
+    return result;
   }
 
   simulateStrategy(strategy, priceSeries, startCapital, parameters, feeBps) {
@@ -1263,10 +1444,6 @@ calculateAnalytics(priceSeries, trades, startCapital) {
     });
 
     return worstDate;
-  }
-
-  getSupportedStrategies() {
-    return this.supportedStrategies;
   }
 }
 

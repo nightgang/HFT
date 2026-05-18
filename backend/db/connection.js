@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
+const secretsService = require('../services/security/secrets.service');
 
 // Database configuration
 const dbConfig = {
@@ -7,7 +8,7 @@ const dbConfig = {
   port: parseInt(process.env.DB_PORT, 10) || 5432,
   database: process.env.DB_NAME || 'hft_trading',
   user: process.env.DB_USER || 'hft_user',
-  password: process.env.DB_PASSWORD,
+  password: secretsService.getSecretSync('DB_PASSWORD') || process.env.DB_PASSWORD,
   max: parseInt(process.env.DB_MAX_CONNECTIONS, 10) || 20, // Connection pool size
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

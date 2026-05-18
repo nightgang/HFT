@@ -3,6 +3,7 @@ const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = 
 const logger = require('../../utils/logger');
 const metricsService = require('../monitoring/metrics.service');
 const { backoff } = require('../resilience.service');
+const jupiterService = require('../../integrations/jupiter.service');
 
 class MEVProtectionService {
   constructor() {
@@ -80,21 +81,23 @@ class MEVProtectionService {
   }
 
   // Simulate slippage for a trade
-  async simulateSlippage(tokenIn, tokenOut, amountIn, route) {
+  async simulateSlippage(tokenIn, tokenOut, amountIn, route, slippageToleranceBps = 50) {
     try {
       const startTime = Date.now();
 
       // Get current market price
       const currentPrice = await this.getCurrentPrice(tokenIn, tokenOut);
 
-      // Simulate price impact based on trade size
-      const priceImpact = this.calculatePriceImpact(amountIn, route.liquidity);
+      const routeLiquidity = this.getRouteLiquidity(route);
+
+      // Simulate price impact based on trade size and route liquidity
+      const priceImpact = this.calculatePriceImpact(amountIn, routeLiquidity);
+      const tolerancePercent = slippageToleranceBps / 100;
+      const maxAcceptableImpact = Math.min(this.maxSlippagePercent, tolerancePercent);
 
       // Calculate expected output with slippage
       const expectedOutput = amountIn * currentPrice * (1 - priceImpact / 100);
-
-      // Apply maximum slippage protection
-      const maxSlippageOutput = amountIn * currentPrice * (1 - this.maxSlippagePercent / 100);
+      const maxSlippageOutput = amountIn * currentPrice * (1 - maxAcceptableImpact / 100);
 
       const simulation = {
         tokenIn,
@@ -102,9 +105,12 @@ class MEVProtectionService {
         amountIn,
         currentPrice,
         priceImpactPercent: priceImpact,
+        tolerancePercent,
+        maxAcceptableImpact,
+        routeLiquidity,
         expectedOutput,
         maxSlippageOutput,
-        slippageProtection: expectedOutput > maxSlippageOutput,
+        slippageProtection: priceImpact <= maxAcceptableImpact,
         simulationTime: Date.now() - startTime
       };
 
@@ -134,9 +140,27 @@ class MEVProtectionService {
 
   // Get current price for token pair
   async getCurrentPrice(tokenIn, tokenOut) {
-    // This would integrate with Jupiter API or other price feeds
-    // For now, return a mock price
-    return 0.00001; // Mock SOL/USDC price
+    try {
+      const priceData = await jupiterService.getTokenPrice(tokenIn, tokenOut);
+      return parseFloat(priceData.price) || 0.00001;
+    } catch (error) {
+      logger.warn('Failed to fetch current price from Jupiter, using fallback:', error.message);
+      return 0.00001; // Mock fallback price
+    }
+  }
+
+  getRouteLiquidity(route) {
+    if (!route) return 0;
+    if (Array.isArray(route)) {
+      return route.reduce((sum, step) => {
+        const liquidity = parseFloat(step.liquidity || step.estimatedLiquidity || 0) || 0;
+        return sum + liquidity;
+      }, 0);
+    }
+    if (typeof route === 'object') {
+      return parseFloat(route.liquidity || route.estimatedLiquidity || 0) || 0;
+    }
+    return 0;
   }
 
   // Detect potential sandwich attacks

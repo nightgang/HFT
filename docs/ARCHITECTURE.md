@@ -76,6 +76,25 @@ HFT is a distributed, modular trading system built on modern web technologies wi
 
 ---
 
+## 🔗 Request Tracing and Data Flow
+
+The platform carries a propagated request identifier across service boundaries for improved observability and simpler debugging.
+
+- Backend middleware preserves or assigns `X-Request-ID` for every incoming request.
+- The backend forwards the same header to downstream services such as the AI service.
+- The AI service returns the same trace header in responses and logs operations with the request ID.
+
+### Trace flow example
+
+```
+Client -> Backend Express API -> AI Service
+X-Request-ID: REQ-...    X-Request-ID: REQ-...
+```
+
+This makes it easier to connect frontend/CLI requests, backend execution, and AI prediction calls into a single trace path without requiring a full distributed tracing platform yet.
+
+---
+
 ## 📁 Backend Directory Structure
 
 ```

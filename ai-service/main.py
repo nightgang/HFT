@@ -23,6 +23,7 @@ from datetime import datetime
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import json
 import redis.asyncio as aioredis
+import uuid
 
 # ============ CONFIGURATION ============
 SERVICE_NAME = "Solana Trading AI Service"
@@ -187,8 +188,16 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-API-Key"],
+    allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
 )
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or f"REQ-{uuid.uuid4().hex[:12]}"
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    logger.info(f"Incoming request {request.method} {request.url.path} request_id={request_id}")
+    return response
 
 @app.middleware("http")
 async def prometheus_middleware(request: Request, call_next):
@@ -499,7 +508,9 @@ async def predict_token_score(
     prediction_request: PredictionRequest,
     api_key: str = Depends(verify_api_key),
 ) -> PredictionResponse:
+    request_id = request.headers.get("x-request-id") or "unknown"
     token_mint = prediction_request.tokenMint
+    logger.info(f"Predict request received tokenMint={token_mint} request_id={request_id}")
     metadata = prediction_request.metadata or {}
     market_data = prediction_request.marketData or {}
     if not market_data:
@@ -560,7 +571,9 @@ async def assess_token_risk(
     assessment_request: RiskAssessmentRequest,
     api_key: str = Depends(verify_api_key),
 ) -> RiskAssessment:
+    request_id = request.headers.get("x-request-id") or "unknown"
     token_mint = assessment_request.tokenMint
+    logger.info(f"Risk assessment request received tokenMint={token_mint} request_id={request_id}")
     metadata = assessment_request.metadata or {}
     market_data = assessment_request.marketData or {}
     if not market_data:

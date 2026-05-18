@@ -102,13 +102,28 @@ class WalletModel {
   }
 
   // Get all active wallets
-  static async getAllActive() {
-    const sql = 'SELECT * FROM wallets WHERE is_active = true ORDER BY created_at DESC';
+  static async getAll(active = true) {
+    const sql = 'SELECT * FROM wallets WHERE is_active = $1 ORDER BY created_at DESC';
     try {
-      const result = await query(sql);
+      const result = await query(sql, [active]);
       return result.rows;
     } catch (error) {
-      logger.error('Error getting all active wallets:', error);
+      logger.error('Error getting all wallets:', error);
+      throw error;
+    }
+  }
+
+  static async getAllActive() {
+    return this.getAll(true);
+  }
+
+  static async getByType(type, active = true) {
+    const sql = 'SELECT * FROM wallets WHERE wallet_type = $1 AND is_active = $2 ORDER BY created_at DESC';
+    try {
+      const result = await query(sql, [type, active]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting wallets by type:', error);
       throw error;
     }
   }

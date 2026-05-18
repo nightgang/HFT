@@ -1,5 +1,6 @@
 const axios = require('axios');
 const logger = require('../../utils/logger');
+const { buildTraceHeaders } = require('../../utils/http.client');
 
 class PredictionEngine {
   constructor() {
@@ -8,12 +9,12 @@ class PredictionEngine {
     this.aiServiceEnabled = process.env.AI_SERVICE_ENABLED === 'true';
   }
 
-  async scoreTrade(tokenMint, metadata = {}) {
+  async scoreTrade(tokenMint, metadata = {}, requestId) {
     try {
       // Try external AI service first if enabled
       if (this.aiServiceEnabled) {
         try {
-          const headers = {};
+          const headers = buildTraceHeaders(requestId);
           if (process.env.AI_SERVICE_API_KEY) {
             headers['X-API-Key'] = process.env.AI_SERVICE_API_KEY;
           }
@@ -75,11 +76,11 @@ class PredictionEngine {
     }
   }
 
-  async assessRisk(tokenMint, metadata = {}) {
+  async assessRisk(tokenMint, metadata = {}, requestId) {
     try {
       if (this.aiServiceEnabled) {
         try {
-          const headers = {};
+          const headers = buildTraceHeaders(requestId);
           if (process.env.AI_SERVICE_API_KEY) {
             headers['X-API-Key'] = process.env.AI_SERVICE_API_KEY;
           }

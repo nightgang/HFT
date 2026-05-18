@@ -2,7 +2,8 @@ const axios = require('axios');
 const { Connection, PublicKey } = require('@solana/web3.js');
 const logger = require('../utils/logger');
 const cacheService = require('../services/cache.service');
-const metricsService = require('../services/monitoring/metrics.service');
+const metricsService = require('../services/monitoring/monitoring.service');
+const signingService = require('./security/signing.service');
 
 class MultiExchangeService {
   constructor() {
@@ -38,6 +39,43 @@ class MultiExchangeService {
     this.cacheTTL = 30; // 30 seconds
     this.maxRetries = 2;
     this.timeout = 10000; // 10 seconds
+  }
+
+  computeRouteLiquidity(route) {
+    if (!route) return 0;
+    if (Array.isArray(route)) {
+      return route.reduce((sum, segment) => {
+        const liquidity = parseFloat(segment.liquidity || segment.estimatedLiquidity || 0) || 0;
+        return sum + liquidity;
+      }, 0);
+    }
+
+    if (typeof route === 'object') {
+      return parseFloat(route.liquidity || route.estimatedLiquidity || 0) || 0;
+    }
+
+    return 0;
+  }
+
+  buildQuoteQuality(quote, slippageBps) {
+    const outAmount = parseFloat(quote.outAmount) || 0;
+    const priceImpact = parseFloat(quote.priceImpactPct) || 0;
+    const feeAmount = parseFloat(quote.fee?.amount || 0) || 0;
+    const routeLiquidity = this.computeRouteLiquidity(quote.route);
+    const slippageTolerance = (slippageBps || 50) / 100;
+    const liquidityScore = Math.min(routeLiquidity / 1000000, 1);
+    const impactPenalty = 1 + priceImpact * 0.01;
+    const feePenalty = Math.min(feeAmount / Math.max(outAmount, 1), 0.05);
+
+    const qualityScore = outAmount / impactPenalty + liquidityScore * 1000 - feePenalty * 100;
+
+    return {
+      ...quote,
+      routeLiquidity,
+      effectiveOutAmount: outAmount,
+      qualityScore,
+      isSafe: priceImpact <= slippageTolerance * 100
+    };
   }
 
   /**
@@ -86,11 +124,17 @@ class MultiExchangeService {
         throw new Error('No quotes available from any exchange');
       }
 
-      // Sort by output amount (best rate first)
-      quotes.sort((a, b) => parseFloat(b.outAmount) - parseFloat(a.outAmount));
+      const enrichedQuotes = quotes.map(quote => this.buildQuoteQuality(quote, slippageBps));
+      const safeQuotes = enrichedQuotes.filter(quote => quote.isSafe);
+      const orderedQuotes = safeQuotes.length > 0 ? safeQuotes : enrichedQuotes;
 
-      const bestQuote = quotes[0];
+      orderedQuotes.sort((a, b) => b.qualityScore - a.qualityScore);
+      const bestQuote = orderedQuotes[0];
       const duration = Date.now() - startTime;
+
+      if (!bestQuote.isSafe) {
+        logger.warn(`No quotes matched requested slippage tolerance; returning best available quote from ${bestQuote.exchangeName}`);
+      }
 
       logger.info(`Best quote from ${bestQuote.exchangeName}: ${bestQuote.outAmount} ${outputMint} (${duration}ms)`);
 
@@ -98,8 +142,8 @@ class MultiExchangeService {
 
       return {
         ...bestQuote,
-        allQuotes: quotes,
-        comparison: this.generateQuoteComparison(quotes)
+        allQuotes: orderedQuotes,
+        comparison: this.generateQuoteComparison(orderedQuotes)
       };
 
     } catch (error) {
@@ -322,20 +366,12 @@ class MultiExchangeService {
    */
   async executeJupiterSwap(quote, wallet) {
     const jupiterService = require('../integrations/jupiter.service');
-    const solanaWalletService = require('./solana-wallet.service');
 
     try {
-      // Get the keypair for signing
-      const keypair = wallet.keypair || await solanaWalletService.getKeypair(wallet.publicKey.toString());
+      const signTransaction = await signingService.getSignTransaction(wallet);
+      const walletPublicKey = wallet.publicKey || wallet.wallet_address || wallet.address;
 
-      // Create signTransaction function
-      const signTransaction = async (transaction) => {
-        transaction.sign(keypair);
-        return transaction;
-      };
-
-      // Execute the swap using Jupiter service
-      const result = await jupiterService.executeSwap(quote.swapTransaction, wallet.publicKey, signTransaction);
+      const result = await jupiterService.executeSwap(quote.swapTransaction, walletPublicKey, signTransaction);
 
       return {
         success: true,

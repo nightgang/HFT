@@ -3,10 +3,10 @@ const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const csurf = require('csurf');
 const swaggerJSDoc = require('swagger-jsdoc');
+const { apiLimiter, strictLimiter } = require('./middleware/rateLimiters');
 const swaggerUi = require('swagger-ui-express');
 
 const logger = require('./utils/logger');
@@ -76,52 +76,6 @@ const swaggerOptions = {
   apis: ['./routes/*.js', './app.js'],
 };
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-    code: 'RATE_LIMIT_EXCEEDED',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    try {
-      monitoringService.recordRateLimitHit(req.path);
-    } catch (error) {
-      logger.debug('Failed to record rate limit hit:', error.message);
-    }
-
-    res.status(429).json({
-      error: 'Too many requests from this IP, please try again later.',
-      code: 'RATE_LIMIT_EXCEEDED',
-    });
-  }
-});
-
-const strictLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: {
-    error: 'Too many sensitive requests, please try again later.',
-    code: 'STRICT_RATE_LIMIT_EXCEEDED',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    try {
-      monitoringService.recordRateLimitHit(req.path);
-    } catch (error) {
-      logger.debug('Failed to record rate limit hit:', error.message);
-    }
-
-    res.status(429).json({
-      error: 'Too many sensitive requests, please try again later.',
-      code: 'STRICT_RATE_LIMIT_EXCEEDED',
-    });
-  }
-});
-
 const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
@@ -152,7 +106,7 @@ app.use(requestIdMiddleware);
 app.use(requestLoggingMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(limiter);
+app.use(apiLimiter);
 
 const csrfProtection = csurf({
   cookie: {
@@ -307,7 +261,7 @@ app.post('/webhook/helius', strictLimiter, authenticateApiKey, async (req, res) 
 app.get('/prediction/:tokenMint', async (req, res) => {
   try {
     const { tokenMint } = req.params;
-    const prediction = await predictionEngine.scoreTrade(tokenMint, {});
+    const prediction = await predictionEngine.scoreTrade(tokenMint, {}, req.id);
     res.json(prediction);
   } catch (error) {
     logger.error('Prediction route error:', error);

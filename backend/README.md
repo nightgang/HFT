@@ -8,6 +8,7 @@ The backend service powers the HFT trading platform with:
 - PostgreSQL persistence
 - Redis-based realtime state and event bus
 - Prometheus metrics and health endpoints
+- Request tracing via propagated `X-Request-ID` between backend and AI service
 - Audit logging and rate limiting
 - Optional AI service integration
 

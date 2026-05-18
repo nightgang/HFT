@@ -9,9 +9,12 @@ const sanitizePath = (path) => {
     .replace(new RegExp('/[0-9]+(/|$)', 'g'), '/:id$1')
     .replace(new RegExp('/[^/]+\\.[^/]+', 'g'), '/:resource');
 };
+
+const generateRequestId = () => `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 // Request ID middleware
 function requestIdMiddleware(req, res, next) {
-  req.id = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  req.id = req.get('X-Request-ID') || generateRequestId();
   res.setHeader('X-Request-ID', req.id);
   next();
 }

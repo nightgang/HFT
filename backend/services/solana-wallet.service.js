@@ -1,5 +1,6 @@
 const { Keypair, PublicKey, Connection, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 const bip39 = require('bip39');
+const bs58 = require('bs58');
 const logger = require('../utils/logger');
 const keyService = require('./security/key.service');
 const WalletModel = require('../models/wallet.model');
@@ -19,47 +20,58 @@ class SolanaWalletService {
    */
   async createWallet(options = {}) {
     try {
-      const { name = 'New Wallet', derivationPath = "m/44'/501'/0'/0'" } = options;
+      const {
+        name = 'New Wallet',
+        derivationPath = "m/44'/501'/0'/0'",
+        walletType = 'hot',
+        walletAddress = null
+      } = options;
 
-      // Generate BIP39 mnemonic
-      const mnemonic = bip39.generateMnemonic();
+      const validTypes = ['hot', 'treasury', 'hardware', 'standard', 'imported'];
+      if (!validTypes.includes(walletType)) {
+        throw new Error(`Invalid wallet type. Allowed types are: ${validTypes.join(', ')}`);
+      }
 
-      // Derive seed from mnemonic
-      const seed = await bip39.mnemonicToSeed(mnemonic);
-
-      // Derive keypair from seed using derivation path
-      const { derivePath } = await import('ed25519-hd-key');
-      const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
-      const keypair = Keypair.fromSeed(derivedSeed);
-
-      // Encrypt private key
-      const privateKeyHex = Buffer.from(keypair.secretKey).toString('hex');
-      const encryptedPrivateKey = await keyService.encryptPrivateKey(privateKeyHex);
-
-      // Prepare wallet data for database
-      const walletData = {
-        wallet_address: keypair.publicKey.toBase58(),
+      let walletData = {
         wallet_name: name,
-        wallet_type: 'standard',
-        encrypted_private_key: encryptedPrivateKey,
-        key_derivation_path: derivationPath,
+        wallet_type: walletType,
         metadata: {
-          created_via: 'bip39',
-          derivation_path: derivationPath,
+          created_via: walletType === 'hot' ? 'bip39' : walletType,
           created_at: new Date().toISOString()
         }
       };
 
+      if (walletType === 'treasury' || walletType === 'hardware') {
+        if (!walletAddress) {
+          throw new Error('Treasury and hardware wallets must specify walletAddress and cannot store private key material.');
+        }
+
+        walletData.wallet_address = walletAddress;
+      } else {
+        // Generate BIP39 mnemonic for hot and standard wallets
+        const mnemonic = bip39.generateMnemonic();
+        const seed = await bip39.mnemonicToSeed(mnemonic);
+        const { derivePath } = await import('ed25519-hd-key');
+        const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
+        const keypair = Keypair.fromSeed(derivedSeed);
+        const privateKeyHex = Buffer.from(keypair.secretKey).toString('hex');
+        const encryptedPrivateKey = await keyService.encryptPrivateKey(privateKeyHex);
+
+        walletData.wallet_address = keypair.publicKey.toBase58();
+        walletData.encrypted_private_key = encryptedPrivateKey;
+        walletData.key_derivation_path = derivationPath;
+        walletData.metadata.mnemonic = mnemonic;
+      }
+
       // Save to database
       const savedWallet = await WalletModel.create(walletData);
 
-      logger.info(`Created new Solana wallet: ${keypair.publicKey.toBase58()}`);
+      logger.info(`Created new Solana wallet: ${walletData.wallet_address}`);
 
       return {
         wallet_id: savedWallet.wallet_id,
-        publicKey: keypair.publicKey.toBase58(),
-        mnemonic: mnemonic, // WARNING: Only return mnemonic for new wallets, never store it
-        derivationPath,
+        publicKey: walletData.wallet_address,
+        walletType,
         name,
         created: true
       };
@@ -77,17 +89,20 @@ class SolanaWalletService {
    */
   async importWallet(privateKey, options = {}) {
     try {
-      const { name = 'Imported Wallet' } = options;
+      const { name = 'Imported Wallet', walletType = 'imported' } = options;
+
+      if (walletType === 'treasury' || walletType === 'hardware') {
+        throw new Error('Treasury and hardware wallets must be registered without private key material. Use wallet registration instead.');
+      }
 
       let keypair;
 
       // Try to parse as base58 first, then hex
       try {
         // Assume base58 encoded secret key
-        const secretKey = Uint8Array.from(Buffer.from(privateKey, 'base64'));
+        const secretKey = bs58.decode(privateKey);
         keypair = Keypair.fromSecretKey(secretKey);
       } catch (e) {
-        // Try hex format
         const secretKey = Uint8Array.from(Buffer.from(privateKey, 'hex'));
         keypair = Keypair.fromSecretKey(secretKey);
       }
@@ -106,7 +121,7 @@ class SolanaWalletService {
       const walletData = {
         wallet_address: keypair.publicKey.toBase58(),
         wallet_name: name,
-        wallet_type: 'imported',
+        wallet_type: walletType,
         encrypted_private_key: encryptedPrivateKey,
         metadata: {
           imported_at: new Date().toISOString(),
@@ -139,7 +154,15 @@ class SolanaWalletService {
    */
   async importFromMnemonic(mnemonic, options = {}) {
     try {
-      const { name = 'Imported Wallet', derivationPath = "m/44'/501'/0'/0'" } = options;
+      const {
+        name = 'Imported Wallet',
+        derivationPath = "m/44'/501'/0'/0'",
+        walletType = 'imported'
+      } = options;
+
+      if (walletType === 'treasury' || walletType === 'hardware') {
+        throw new Error('Treasury and hardware wallets must be registered without mnemonic import. Use wallet registration instead.');
+      }
 
       // Validate mnemonic
       if (!bip39.validateMnemonic(mnemonic)) {
@@ -168,7 +191,7 @@ class SolanaWalletService {
       const walletData = {
         wallet_address: keypair.publicKey.toBase58(),
         wallet_name: name,
-        wallet_type: 'imported',
+        wallet_type: walletType,
         encrypted_private_key: encryptedPrivateKey,
         key_derivation_path: derivationPath,
         metadata: {
@@ -260,7 +283,6 @@ class SolanaWalletService {
 
       let wallets;
       if (type) {
-        // This would need to be implemented in WalletModel
         wallets = await WalletModel.getByType(type, active);
       } else {
         wallets = await WalletModel.getAll(active);

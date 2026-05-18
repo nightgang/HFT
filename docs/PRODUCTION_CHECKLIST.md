@@ -43,6 +43,7 @@
 - [ ] Set up log aggregation (ELK stack or similar)
 - [ ] Configure automated backups (cron jobs)
 - [ ] Set up SSL/TLS certificates for HTTPS
+- [ ] Instrument full span-level distributed tracing (Jaeger/OTel); request ID propagation across backend and AI service is already enabled
 
 ### Medium Priority
 - [ ] Configure horizontal scaling (Kubernetes)

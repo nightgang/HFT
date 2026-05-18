@@ -15,12 +15,14 @@ const tradeBuyRequestSchema = z.object({
   tokenMint: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
   amount: z.number().positive().optional(),
   slippageBps: z.number().int().min(0).max(10000).optional(),
+  mode: z.enum(['live', 'paper', 'shadow']).optional(),
 });
 
 const tradeSellRequestSchema = z.object({
   tokenMint: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
   amount: z.number().positive(),
   slippageBps: z.number().int().min(0).max(10000).optional(),
+  mode: z.enum(['live', 'paper', 'shadow']).optional(),
 });
 
 const walletSchema = z.object({

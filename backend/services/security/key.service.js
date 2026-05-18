@@ -4,6 +4,7 @@ const bip39 = require('bip39');
 const hdkey = require('hdkey');
 const { Keypair } = require('@solana/web3.js');
 const logger = require('../../utils/logger');
+const secretsService = require('./secrets.service');
 const { query } = require('../../db/connection');
 
 class KeyService {
@@ -26,16 +27,14 @@ class KeyService {
 
   // Get master encryption key from environment or generate one
   getMasterKey() {
-    const envKey = process.env.MASTER_ENCRYPTION_KEY;
+    const envKey = secretsService.getSecretSync('MASTER_ENCRYPTION_KEY') || process.env.MASTER_ENCRYPTION_KEY;
     if (envKey) {
-      // Use provided key (should be 32 bytes hex)
       return Buffer.from(envKey, 'hex');
-    } else {
-      // Generate a new key (in production, this should be stored securely)
-      logger.warn('No MASTER_ENCRYPTION_KEY provided, generating temporary key');
-      logger.warn('This is NOT secure for production - key will be lost on restart');
-      return crypto.randomBytes(32);
     }
+
+    logger.warn('No MASTER_ENCRYPTION_KEY provided, generating temporary key');
+    logger.warn('This is NOT secure for production - key will be lost on restart');
+    return crypto.randomBytes(32);
   }
 
   // Encrypt private key

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const auditLogger = require('../utils/audit');
 const logger = require('../utils/logger');
+const secretsService = require('../services/security/secrets.service');
 const UserModel = require('../models/user.model');
 
 // Cache encryption key to improve performance
@@ -10,10 +11,11 @@ let cachedEncryptionKey = null;
 
 const getEncryptionKey = () => {
   if (!cachedEncryptionKey) {
-    if (!process.env.ENCRYPTION_KEY) {
+    const encryptionKey = secretsService.getSecretSync('ENCRYPTION_KEY') || process.env.ENCRYPTION_KEY;
+    if (!encryptionKey) {
       throw new Error('ENCRYPTION_KEY environment variable is required');
     }
-    cachedEncryptionKey = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
+    cachedEncryptionKey = crypto.scryptSync(encryptionKey, 'salt', 32);
   }
   return cachedEncryptionKey;
 };
@@ -36,7 +38,7 @@ const authenticate = (req, res, next) => {
   const token = authHeader.substring(7); // Remove 'Bearer '
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, secretsService.getSecretSync('JWT_SECRET') || process.env.JWT_SECRET);
     req.user = decoded;
 
     // Log successful API access
@@ -172,12 +174,13 @@ const comparePasswords = async (rawPassword, hashedPassword) => {
 };
 
 const verifyWebhookSignature = (payload, signature) => {
-  if (!signature || !process.env.WEBHOOK_SIGNATURE_SECRET) {
+  const webhookSecret = secretsService.getSecretSync('WEBHOOK_SIGNATURE_SECRET') || process.env.WEBHOOK_SIGNATURE_SECRET;
+  if (!signature || !webhookSecret) {
     return false;
   }
 
   const expectedSignature = crypto
-    .createHmac('sha256', process.env.WEBHOOK_SIGNATURE_SECRET)
+    .createHmac('sha256', webhookSecret)
     .update(JSON.stringify(payload))
     .digest('hex');
 

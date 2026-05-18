@@ -2,6 +2,7 @@ const express = require('express');
 const logger = require('../utils/logger');
 const tradingEngine = require('../services/engines/trading.engine');
 const { authenticate } = require('../middleware/auth');
+const { tradeExecutionLimiter } = require('../middleware/rateLimiters');
 const auditLogger = require('../utils/audit');
 const WalletModel = require('../models/wallet.model');
 const walletRepository = require('../repositories/wallet.repository');
@@ -424,7 +425,7 @@ router.get('/trades/:walletPublicKey', (req, res) => {
  *       500:
  *         description: Trade execution failed
  */
-router.post('/buy', authenticate, async (req, res) => {
+router.post('/buy', authenticate, tradeExecutionLimiter, async (req, res) => {
   try {
     const result = await tradingEngine.executeBuy(req.body);
 
@@ -457,7 +458,7 @@ router.post('/buy', authenticate, async (req, res) => {
   }
 });
 
-router.post('/sell', authenticate, async (req, res) => {
+router.post('/sell', authenticate, tradeExecutionLimiter, async (req, res) => {
   try {
     const result = await tradingEngine.executeSell(req.body);
 
@@ -486,6 +487,61 @@ router.post('/sell', authenticate, async (req, res) => {
     );
 
     logger.error('Sell trade error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/trade', authenticate, tradeExecutionLimiter, async (req, res) => {
+  try {
+    const result = await tradingEngine.executeTrade(req.body);
+
+    // Audit trade execution
+    await auditLogger.logTradeExecution(
+      result.wallet || req.body.walletPublicKey,
+      req.body.tokenMint,
+      req.body.amount,
+      req.body.type || 'buy',
+      result.success !== false,
+      req.ip,
+      req.get('User-Agent')
+    );
+
+    res.json(result);
+  } catch (error) {
+    // Audit failed trade
+    await auditLogger.logTradeExecution(
+      req.body.walletPublicKey,
+      req.body.tokenMint,
+      req.body.amount,
+      req.body.type || 'buy',
+      false,
+      req.ip,
+      req.get('User-Agent')
+    );
+
+    logger.error('Trade error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/trade/paper', authenticate, tradeExecutionLimiter, async (req, res) => {
+  try {
+    req.body.mode = 'paper';
+    const result = await tradingEngine.executeTrade(req.body);
+    res.json(result);
+  } catch (error) {
+    logger.error('Paper trade error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/trade/shadow', authenticate, tradeExecutionLimiter, async (req, res) => {
+  try {
+    req.body.mode = 'shadow';
+    const result = await tradingEngine.executeTrade(req.body);
+    res.json(result);
+  } catch (error) {
+    logger.error('Shadow trade error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1368,6 +1424,39 @@ router.post('/backtest', authenticate, async (req, res) => {
     res.json(result);
   } catch (error) {
     logger.error('Backtest execution error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/backtest/walk-forward', authenticate, async (req, res) => {
+  try {
+    const walkForwardOptions = req.body;
+    const result = await backtestingService.runWalkForwardValidation(walkForwardOptions);
+    res.json(result);
+  } catch (error) {
+    logger.error('Walk-forward validation error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/backtest/paper', authenticate, async (req, res) => {
+  try {
+    const paperOptions = req.body;
+    const result = await backtestingService.runPaperTrading(paperOptions);
+    res.json(result);
+  } catch (error) {
+    logger.error('Paper backtest error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/backtest/shadow', authenticate, async (req, res) => {
+  try {
+    const shadowOptions = req.body;
+    const result = await backtestingService.runShadowMode(shadowOptions);
+    res.json(result);
+  } catch (error) {
+    logger.error('Shadow backtest error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -54,4 +54,49 @@ describe('BacktestingService', () => {
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Unsupported strategy/);
   });
+
+  it('should run walk-forward validation successfully', async () => {
+    const result = await backtestingService.runWalkForwardValidation({
+      tokenMint: 'So11111111111111111111111111111111111111112',
+      strategy: 'buy_and_hold',
+      startCapital: 10000,
+      startDate: '2025-01-01',
+      endDate: '2025-04-15',
+      windowSizeDays: 30,
+      stepSizeDays: 15
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.totalWindows).toBeGreaterThan(0);
+    expect(Array.isArray(result.windows)).toBe(true);
+    expect(result.windows[0].training.analytics).toBeDefined();
+  });
+
+  it('should run paper backtesting with simulated trades', async () => {
+    const result = await backtestingService.runPaperTrading({
+      tokenMint: 'So11111111111111111111111111111111111111112',
+      strategy: 'moving_average_crossover',
+      startCapital: 10000,
+      startDate: '2025-01-01',
+      endDate: '2025-02-01'
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.mode).toBe('paper');
+    expect(result.trades.every(t => t.simulated)).toBe(true);
+  });
+
+  it('should run shadow backtesting with simulated shadow mode', async () => {
+    const result = await backtestingService.runShadowMode({
+      tokenMint: 'So11111111111111111111111111111111111111112',
+      strategy: 'buy_and_hold',
+      startCapital: 10000,
+      startDate: '2025-01-01',
+      endDate: '2025-02-01'
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.mode).toBe('shadow');
+    expect(result.trades.every(t => t.shadow === true)).toBe(true);
+  });
 });
