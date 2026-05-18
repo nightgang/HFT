@@ -5,9 +5,9 @@ const { query } = require('../db/connection');
 
 const sanitizePath = (path) => {
   return path
-    .replace(/\/[0-9a-fA-F-]{8,36}/g, '/:id')
-    .replace(/\/[0-9]+(\/|$)/g, '/:id$1')
-    .replace(/\/[^\/]+\.[^\/]+/g, '/:resource');
+    .replace(new RegExp('/[0-9a-fA-F-]{8,36}', 'g'), '/:id')
+    .replace(new RegExp('/[0-9]+(/|$)', 'g'), '/:id$1')
+    .replace(new RegExp('/[^/]+\\.[^/]+', 'g'), '/:resource');
 };
 // Request ID middleware
 function requestIdMiddleware(req, res, next) {

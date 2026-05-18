@@ -528,7 +528,14 @@ Untuk mengkonfigurasi base API URL, set environment variable:
 VITE_API_URL=http://api.example.com/api
 ```
 
-Default adalah `http://localhost:3000/api`
+Untuk mengkonfigurasi WebSocket host dan port:
+
+```
+VITE_WS_HOST=localhost
+VITE_WS_PORT=3002
+```
+
+Default API base URL adalah `http://localhost:3001/api`.
 
 ## Structure
 

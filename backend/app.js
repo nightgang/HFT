@@ -23,7 +23,7 @@ const {
 } = require('./middleware/monitoring.middleware');
 const websocketServer = require('./ws/websocket.server');
 const heliusWebhookProcessor = require('./services/heliusWebhook.processor');
-const registerRoutes = require('./routes');
+const { registerRoutes } = require('./routes');
 const predictionEngine = require('./services/engines/prediction.engine');
 const sniperEngine = require('./services/engines/sniper.engine');
 const monitoringService = require('./services/monitoring/monitoring.service');

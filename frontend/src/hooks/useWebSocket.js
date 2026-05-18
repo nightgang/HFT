@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import ReconnectingWebSocket from "reconnecting-websocket";
 
+const getWebSocketUrl = (path = "/ws") => {
+  if (typeof window === "undefined") return null;
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const defaultPort = import.meta.env.VITE_WS_PORT || "3002";
+  const host = import.meta.env.VITE_WS_HOST || window.location.hostname;
+  const wsHost = `${protocol}//${host}:${defaultPort}`;
+
+  return `${wsHost}${path}`;
+};
+
 export const useWebSocket = (url, options = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
@@ -63,17 +74,17 @@ export const useWebSocket = (url, options = {}) => {
 
 // Specialized hooks for different WebSocket endpoints
 export const useTradeWebSocket = () => {
-  return useWebSocket("ws://localhost:3000/ws/trades");
+  return useWebSocket(getWebSocketUrl("/ws/trades"));
 };
 
 export const useMarketDataWebSocket = () => {
-  return useWebSocket("ws://localhost:3000/ws/market-data");
+  return useWebSocket(getWebSocketUrl("/ws/market-data"));
 };
 
 export const useNotificationsWebSocket = () => {
-  return useWebSocket("ws://localhost:3000/ws/notifications");
+  return useWebSocket(getWebSocketUrl("/ws/notifications"));
 };
 
 export const usePortfolioWebSocket = () => {
-  return useWebSocket("ws://localhost:3000/ws/portfolio");
+  return useWebSocket(getWebSocketUrl("/ws/portfolio"));
 };
