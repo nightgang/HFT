@@ -26,9 +26,13 @@ END
 $$;
 
 -- Grant basic permissions
-GRANT CONNECT ON DATABASE hft_trading TO hft_app_role;
-GRANT USAGE ON SCHEMA public TO hft_app_role;
-GRANT USAGE ON SCHEMA audit TO hft_app_role;
+DO $$ BEGIN
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO hft_app_role', current_database());
+    EXECUTE format('GRANT USAGE ON SCHEMA public TO hft_app_role');
+    EXECUTE format('GRANT USAGE ON SCHEMA audit TO hft_app_role');
+END $$;
 
 -- Configure database-level settings
-ALTER DATABASE hft_trading SET "app.current_user" TO 'hft_system';
+DO $$ BEGIN
+    EXECUTE format('ALTER DATABASE %I SET "app.current_user" TO ''hft_system''', current_database());
+END $$;

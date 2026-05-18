@@ -3,7 +3,7 @@
 
 -- Create custom types
 DO $$ BEGIN
-    CREATE TYPE trade_status AS ENUM ('pending', 'executing', 'completed', 'failed', 'cancelled');
+    CREATE TYPE trade_status AS ENUM ('pending', 'active', 'executing', 'executed', 'completed', 'failed', 'cancelled');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -463,15 +463,14 @@ END
 $$;
 
 -- Grant permissions
-GRANT CONNECT ON DATABASE hft_trading TO hft_app_role;
-GRANT USAGE ON SCHEMA public TO hft_app_role;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO hft_app_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO hft_app_role;
+DO $$ BEGIN
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO hft_app_role', current_database());
+    EXECUTE format('GRANT USAGE ON SCHEMA public TO hft_app_role');
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO hft_app_role');
+    EXECUTE format('GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role');
+    EXECUTE format('GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO hft_app_role');
+END $$;
 
 -- Restrict audit schema
 GRANT SELECT ON ALL TABLES IN SCHEMA audit TO hft_app_role;
 REVOKE INSERT, UPDATE, DELETE ON audit.key_access_logs FROM hft_app_role;
-
--- Insert this migration record
-INSERT INTO schema_migrations (migration_name) VALUES ('001_initial_schema');

@@ -62,7 +62,7 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_wallet ON advanced_orders(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_advanced_orders_status ON advanced_orders(status, wallet_id);
-CREATE INDEX IF NOT EXISTS idx_advanced_orders_triggers ON advanced_orders(trigger_price, expires_at) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_advanced_orders_triggers ON advanced_orders(trigger_price, expires_at);
 
 -- ============================================================================
 -- 2. LIQUIDITY POOL MANAGEMENT
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS limit_orders (
 
 CREATE INDEX IF NOT EXISTS idx_limit_orders_wallet ON limit_orders(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_limit_orders_status ON limit_orders(status, wallet_id);
-CREATE INDEX IF NOT EXISTS idx_limit_orders_active ON limit_orders(created_at DESC) WHERE status IN ('open', 'partially_filled');
+CREATE INDEX IF NOT EXISTS idx_limit_orders_active ON limit_orders(created_at DESC);
 
 -- ============================================================================
 -- 4. REAL-TIME P&L DASHBOARD
@@ -351,7 +351,7 @@ CREATE TABLE IF NOT EXISTS predictive_alerts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_predictive_alerts_wallet ON predictive_alerts(wallet_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_predictive_alerts_severity ON predictive_alerts(severity) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_predictive_alerts_severity ON predictive_alerts(severity);
 
 CREATE TABLE IF NOT EXISTS anomaly_logs (
     log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -566,7 +566,7 @@ CREATE TABLE IF NOT EXISTS cache_store (
     partition_key VARCHAR(50)
 );
 
-CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache_store(expires_at) WHERE expires_at > CURRENT_TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache_store(expires_at);
 CREATE INDEX IF NOT EXISTS idx_cache_key ON cache_store(cache_key);
 
 -- ============================================================================

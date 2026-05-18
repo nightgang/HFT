@@ -131,20 +131,10 @@ BEGIN
         ALTER TABLE jito_bundles ADD COLUMN submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         ALTER TABLE jito_bundles ADD COLUMN slot_submitted BIGINT;
         ALTER TABLE jito_bundles ADD COLUMN slot_landed BIGINT;
-        ALTER TABLE jito_bundles ADD COLUMN landed_at TIMESTAMP;
-        ALTER TABLE jito_bundles ADD COLUMN mev_reward_lamports BIGINT;
-    END IF;
-
-    -- Add metadata if missing
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'jito_bundles' AND column_name = 'metadata'
-    ) THEN
-        ALTER TABLE jito_bundles ADD COLUMN metadata JSONB;
+        ALTER TABLE jito_bundles ADD COLUMN IF NOT EXISTS landed_at TIMESTAMP;
+        ALTER TABLE jito_bundles ADD COLUMN IF NOT EXISTS metadata JSONB;
     END IF;
 END $$;
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 CREATE INDEX IF NOT EXISTS idx_jito_bundles_wallet ON jito_bundles(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_jito_bundles_status ON jito_bundles(status);
